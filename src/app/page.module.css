@@ -7,7 +7,7 @@
 }
 
 .leftPanel {
-  width: 260px;
+  width: 280px;
   border-right: 1px solid var(--f-border);
   background-color: var(--f-surface);
   display: flex;
@@ -29,7 +29,7 @@
 }
 
 .rightPanel {
-  width: 380px;
+  width: 340px;
   border-left: 1px solid var(--f-border);
   background-color: var(--f-surface);
   display: flex;

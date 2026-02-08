@@ -2,11 +2,15 @@ import { AIProvider } from './AIProvider';
 import { FormFactor, BlockType } from '../core/schema';
 import { Operation } from 'rfc6902';
 
+export interface AIResponse {
+  patches: Operation[];
+  summary: string;
+}
+
 export class GeminiProvider implements AIProvider {
   private apiKey: string | null = null;
 
   constructor(apiKey?: string) {
-    // [PLACEHOLDER] In a real app, this would be retrieved from secure storage or .env
     this.apiKey = apiKey || process.env.NEXT_PUBLIC_GEMINI_API_KEY || null;
   }
 
@@ -15,13 +19,27 @@ export class GeminiProvider implements AIProvider {
   }
 
   async generatePatch(prompt: string, currentSchema: FormFactor): Promise<Operation[]> {
+    const result = await this.generatePatchWithSummary(prompt, currentSchema);
+    return result.patches;
+  }
+
+  async generatePatchWithSummary(
+    prompt: string, 
+    currentSchema: FormFactor,
+    onSummaryChunk?: (chunk: string) => void
+  ): Promise<AIResponse> {
     if (!this.apiKey) {
       throw new Error('Gemini API Key is missing. Please provide it in settings.');
     }
 
     try {
+      // Use streaming if callback provided
+      if (onSummaryChunk) {
+        return await this.streamGenerate(prompt, currentSchema, onSummaryChunk);
+      }
+
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${this.apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${this.apiKey}`,
         {
           method: 'POST',
           headers: {
@@ -49,19 +67,118 @@ export class GeminiProvider implements AIProvider {
         throw new Error('No response from Gemini');
       }
 
-      // Gemini sometimes wraps result in markdown code blocks
       const cleanJson = textResponse.replace(/```json\n?|```/g, '').trim();
-      const patches = JSON.parse(cleanJson);
+      const result = JSON.parse(cleanJson);
 
-      if (!Array.isArray(patches)) {
-        throw new Error('AI returned invalid patch format (not an array)');
+      // Handle both old format (array) and new format (object with patches and summary)
+      if (Array.isArray(result)) {
+        return { patches: result, summary: this.generateDefaultSummary(result) };
       }
 
-      return patches as Operation[];
+      if (result.patches && Array.isArray(result.patches)) {
+        return { 
+          patches: result.patches, 
+          summary: result.summary || this.generateDefaultSummary(result.patches) 
+        };
+      }
+
+      throw new Error('AI returned invalid format');
     } catch (error: any) {
       console.error('[Gemini] Integration Error:', error);
       throw error;
     }
+  }
+
+  private async streamGenerate(
+    prompt: string,
+    currentSchema: FormFactor,
+    onSummaryChunk: (chunk: string) => void
+  ): Promise<AIResponse> {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${this.apiKey}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: this.buildPrompt(prompt, currentSchema) }] }],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            temperature: 0.1,
+          }
+        })
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error?.message || 'Gemini API request failed');
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error('No response body');
+
+    const decoder = new TextDecoder();
+    let fullText = '';
+    let summaryStarted = false;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value, { stream: true });
+      const lines = chunk.split('\n');
+      
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          try {
+            const data = JSON.parse(line.slice(6));
+            const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            fullText += text;
+            
+            // Try to stream summary as it comes
+            if (text.includes('"summary"')) {
+              summaryStarted = true;
+            }
+            if (summaryStarted && text) {
+              // Extract summary text pieces as they arrive
+              const summaryMatch = text.match(/"summary"\s*:\s*"([^"]*)"/);
+              if (summaryMatch) {
+                onSummaryChunk(summaryMatch[1]);
+              }
+            }
+          } catch (e) {
+            // Ignore parse errors for incomplete chunks
+          }
+        }
+      }
+    }
+
+    const cleanJson = fullText.replace(/```json\n?|```/g, '').trim();
+    const result = JSON.parse(cleanJson);
+
+    if (Array.isArray(result)) {
+      return { patches: result, summary: this.generateDefaultSummary(result) };
+    }
+
+    return { 
+      patches: result.patches || [], 
+      summary: result.summary || this.generateDefaultSummary(result.patches || [])
+    };
+  }
+
+  private generateDefaultSummary(patches: Operation[]): string {
+    const adds = patches.filter(p => p.op === 'add').length;
+    const removes = patches.filter(p => p.op === 'remove').length;
+    const replaces = patches.filter(p => p.op === 'replace').length;
+    
+    const parts = [];
+    if (adds > 0) parts.push(`${adds}개 추가`);
+    if (removes > 0) parts.push(`${removes}개 삭제`);
+    if (replaces > 0) parts.push(`${replaces}개 수정`);
+    
+    return parts.length > 0 ? parts.join(', ') + '했습니다.' : '변경 사항을 적용했습니다.';
   }
 
   private buildPrompt(userPrompt: string, schema: FormFactor): string {
@@ -85,11 +202,16 @@ Your task is to generate an RFC 6902 JSON Patch array to transform the provided 
       - body: (required for info, markdown string)
 
 ### OUTPUT SPECIFICATION:
-- MUST return ONLY a valid JSON array of JSON Patch operations (op, path, value/from).
-- Do NOT provide any explanation outside the JSON.
+Return a JSON object with this structure:
+{
+  "patches": [ /* RFC 6902 JSON Patch operations */ ],
+  "summary": "한국어로 변경 내용을 간결하게 설명 (1-2문장)"
+}
+
+- patches: Array of JSON Patch operations (op, path, value/from)
+- summary: Brief description of changes in Korean (e.g., "견종 질문에서 '푸들'을 '실버푸들'로 변경하고 '기타' 옵션을 삭제했습니다.")
 - Operations should target the "/pages/n/blocks/m" path.
 - For new blocks, generate a unique random string for "id".
-- If the user wants to add a page, target "/pages/-".
 
 ### CURRENT SCHEMA:
 ${JSON.stringify(schema, null, 2)}
@@ -97,6 +219,6 @@ ${JSON.stringify(schema, null, 2)}
 ### USER REQUEST:
 "${userPrompt}"
 
-JSON Patch Result:`.trim();
+JSON Response:`.trim();
   }
 }

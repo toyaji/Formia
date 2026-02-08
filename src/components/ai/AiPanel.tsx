@@ -4,9 +4,19 @@ import { useState, useRef, useEffect } from 'react';
 import { useFormStore, Message, PatchItem } from '@/store/useFormStore';
 import { useAIPatch } from '@/hooks/useAIPatch';
 import styles from './AiPanel.module.css';
-import { Send, Trash2, Bot, User, Loader2, Check, X, AlertCircle } from 'lucide-react';
+import { Send, Trash2, Check, X, AlertCircle } from 'lucide-react';
 import { convertOperationsToPatchItems } from '@/lib/utils/patchUtils';
 
+// Typing Indicator Component
+const TypingIndicator = () => (
+  <div className={styles.typingIndicator}>
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+);
+
+// Proposed Changes Card
 const ProposedChanges = () => {
   const { 
     pendingPatches, acceptAllPatches, rejectAllPatches, 
@@ -67,7 +77,7 @@ export const AiPanel = () => {
     messages, addMessage, clearMessages, config, formFactor,
     saveSnapshot, setReviewMode, setPendingPatches, setActiveBlockId
   } = useFormStore();
-  const { generatePatch, isLoading } = useAIPatch();
+  const { generatePatchWithSummary, isLoading, streamingText } = useAIPatch();
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -77,7 +87,7 @@ export const AiPanel = () => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, isLoading, streamingText]);
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -85,7 +95,7 @@ export const AiPanel = () => {
     if (!config.geminiApiKey) {
       addMessage({
         role: 'system_error',
-        content: 'Gemini API 키가 설정되지 않았습니다. 설정에서 키를 먼저 등록해주세요.',
+        content: 'Gemini API 키가 설정되지 않았습니다. 상단 설정(⚙️) 버튼을 눌러 키를 등록하세요.',
       });
       return;
     }
@@ -93,36 +103,29 @@ export const AiPanel = () => {
     const userQuery = input;
     setInput('');
 
-    // Add user message
     addMessage({
       role: 'user',
       content: userQuery,
     });
 
-    const patches = await generatePatch(userQuery);
+    const result = await generatePatchWithSummary(userQuery, false);
 
-    if (patches && patches.length > 0 && formFactor) {
-      // Save current state before review
+    if (result && result.patches.length > 0 && formFactor) {
       saveSnapshot();
-      
-      // Clear any active editing
       setActiveBlockId(null);
       
-      // Convert to PatchItems and enter review mode
-      const patchItems = convertOperationsToPatchItems(patches, formFactor);
+      const patchItems = convertOperationsToPatchItems(result.patches, formFactor);
       setPendingPatches(patchItems);
       setReviewMode(true);
       
       addMessage({
         role: 'assistant',
-        content: `${patches.length}개의 변경 사항이 제안되었습니다. 캔버스에서 각 변경을 확인하고 수락/거절하세요.`,
+        content: result.summary,
       });
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.nativeEvent.isComposing) return;
-    
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -134,79 +137,97 @@ export const AiPanel = () => {
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.titleGroup}>
-          <Bot className={styles.botIcon} size={20} />
           <span className={styles.title}>Formia AI</span>
         </div>
-        <button 
-          onClick={clearMessages} 
-          className={styles.clearBtn}
-          title="대화 내역 지우기"
-        >
-          <Trash2 size={16} />
+        <button className={styles.clearBtn} onClick={clearMessages} title="대화 초기화">
+          <Trash2 size={18} />
         </button>
       </div>
 
-      {/* Message List */}
+      {/* Message List - Modern Style */}
       <div className={styles.messageList}>
-        {!config.geminiApiKey && (
-          <div className={`${styles.systemMessage} ${styles.info}`}>
-            <AlertCircle size={14} />
-            <span>AI 기능을 사용하려면 상단 설정(⚙️)에서 Gemini API 키를 등록해주세요.</span>
+        {/* API Key Setup Prompt */}
+        {!config.geminiApiKey && messages.length === 0 && (
+          <div className={styles.setupPrompt}>
+            <div className={styles.setupIcon}>🔑</div>
+            <h3 className={styles.setupTitle}>Gemini API 키를 설정해주세요</h3>
+            <p className={styles.setupDesc}>
+              AI 기능을 사용하려면 먼저 Gemini API 키를 등록해야 합니다.
+              <br />
+              상단 설정(⚙️) 버튼을 눌러 키를 입력하세요.
+            </p>
           </div>
         )}
-        
-        {messages.map((m: Message) => {
-          const isSystem = m.role === 'system_error' || m.role === 'system_info';
-          
-          if (isSystem) {
+
+        {/* Welcome message when API key is set */}
+        {config.geminiApiKey && messages.length === 0 && (
+          <div className={styles.assistantMessage}>
+            안녕하세요! 어떤 폼을 만들고 싶으신가요?
+          </div>
+        )}
+
+        {messages.map((msg: Message, idx: number) => {
+          if (msg.role === 'system_error') {
             return (
-              <div key={m.id} className={`${styles.systemMessage} ${m.role === 'system_error' ? styles.error : styles.info}`}>
-                <AlertCircle size={14} />
-                <span>{m.content}</span>
+              <div key={idx} className={`${styles.systemMessage} ${styles.error}`}>
+                <AlertCircle size={16} />
+                {msg.content}
               </div>
             );
           }
 
+          if (msg.role === 'user') {
+            return (
+              <div key={idx} className={styles.userMessage}>
+                {msg.content}
+              </div>
+            );
+          }
+
+          // Assistant message - clean text style
           return (
-            <div 
-              key={m.id} 
-              className={`${styles.messageWrapper} ${m.role === 'user' ? styles.user : styles.assistant}`}
-            >
-              <div className={styles.avatar}>
-                {m.role === 'user' ? <User size={14} /> : <Bot size={14} />}
-              </div>
-              <div className={styles.messageBubble}>
-                {m.content}
-              </div>
+            <div key={idx} className={styles.assistantMessage}>
+              {msg.content}
+
             </div>
           );
         })}
-        
+
+        {/* Typing Indicator */}
+        {isLoading && <TypingIndicator />}
+
+        {/* Streaming Text Preview */}
+        {streamingText && (
+          <div className={styles.assistantMessage}>
+            {streamingText}
+          </div>
+        )}
+
+        {/* Proposed Changes Card */}
         <ProposedChanges />
         
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area */}
+      {/* Input Area - Floating Style */}
       <div className={styles.inputArea}>
         <div className={styles.inputWrapper}>
           <textarea
             className={styles.textarea}
-            placeholder="여기에 요청하세요 (예: '연령대 선택 필드 추가해줘')"
+            placeholder="여기에 요청하세요..."
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyPress}
-            rows={2}
+            onKeyDown={handleKeyDown}
+            rows={1}
           />
           <button 
-            onClick={handleSend} 
-            className={styles.sendBtn}
-            disabled={!input.trim() || isLoading}
+            className={styles.sendBtn} 
+            onClick={handleSend}
+            disabled={isLoading || !input.trim()}
           >
-            {isLoading ? <Loader2 size={18} className={styles.spin} /> : <Send size={18} />}
+            <Send size={18} />
           </button>
         </div>
-        <p className={styles.hint}>Shift + Enter로 줄바꿈</p>
       </div>
     </div>
   );

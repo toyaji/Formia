@@ -7,7 +7,7 @@ import { BlockRenderer } from '@/components/builder/BlockRenderer';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { AiPanel } from '@/components/ai/AiPanel';
 import { Header } from '@/components/layout/Header';
-import { Undo2, Redo2, Save } from 'lucide-react';
+import { Undo2, Redo2 } from 'lucide-react';
 import { getNewBlockPreviews } from '@/lib/utils/patchUtils';
 
 export default function Home() {
@@ -185,17 +185,13 @@ export default function Home() {
             )}
           </div>
 
-          {/* Floating Action Bar for History/Save */}
+          {/* Floating Action Bar for History */}
           <div className={styles.floatingActions}>
             <button onClick={undo} disabled={history.length === 0} className={styles.actionBtn} title="Undo">
               <Undo2 size={18} />
             </button>
             <button onClick={redo} disabled={future.length === 0} className={styles.actionBtn} title="Redo">
               <Redo2 size={18} />
-            </button>
-            <div className={styles.vDivider} />
-            <button className={styles.saveBtn}>
-              <Save size={16} /> 적용하기
             </button>
           </div>
         </div>
