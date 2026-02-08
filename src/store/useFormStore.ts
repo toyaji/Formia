@@ -1,12 +1,17 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { FormFactor } from '@/lib/core/schema';
 import { applyPatch, Operation } from 'rfc6902';
 
 export interface Message {
   id: string;
-  role: 'user' | 'assistant';
+  role: 'user' | 'assistant' | 'system_error' | 'system_info';
   content: string;
   timestamp: string;
+}
+
+interface AppConfig {
+  geminiApiKey: string | null;
 }
 
 interface FormState {
@@ -28,9 +33,15 @@ interface FormState {
   undo: () => void;
   redo: () => void;
   recordAction: () => void;
+  
+  // Settings
+  config: AppConfig;
+  setConfig: (config: Partial<AppConfig>) => void;
 }
 
-export const useFormStore = create<FormState>((set: any, get: any) => ({
+export const useFormStore = create<FormState>()(
+  persist(
+    (set: any, get: any) => ({
   formFactor: null,
   isDraft: false,
   messages: [
@@ -128,10 +139,26 @@ export const useFormStore = create<FormState>((set: any, get: any) => ({
     const newFuture = future.slice(1);
     const newHistory = [JSON.parse(JSON.stringify(formFactor)), ...history];
 
-    set({
-      formFactor: next,
-      history: newHistory,
-      future: newFuture
-    });
-  },
-}));
+      set({
+        formFactor: next,
+        history: newHistory,
+        future: newFuture
+      });
+    },
+
+    // Settings
+    config: {
+      geminiApiKey: null,
+    },
+    setConfig: (newConfig: Partial<AppConfig>) => set((state: FormState) => ({
+      config: { ...state.config, ...newConfig }
+    })),
+  }),
+  {
+    name: 'formia-storage',
+    partialize: (state) => ({ 
+      config: state.config,
+    }),
+  }
+)
+);

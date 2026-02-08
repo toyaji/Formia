@@ -19,63 +19,80 @@ export class GeminiProvider implements AIProvider {
       throw new Error('Gemini API Key is missing. Please provide it in settings.');
     }
 
-    console.log(`[Gemini] Processing prompt: ${prompt}`);
-    
-    // [PLACEHOLDER] In a real app, we would call the Gemini API here.
-    // We would provide the system prompt, current schema, and user prompt.
-    // The response would be parsed as a JSON Patch array.
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${this.apiKey}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: this.buildPrompt(prompt, currentSchema) }] }],
+            generationConfig: {
+              responseMimeType: 'application/json',
+              temperature: 0.1,
+            }
+          })
+        }
+      );
 
-    /*
-    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=' + this.apiKey, {
-      method: 'POST',
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: this.buildPrompt(prompt, currentSchema) }] }],
-        generationConfig: { responseMimeType: 'application/json' }
-      })
-    });
-    */
-
-    // Returning a dummy patch for verification in placeholder mode
-    if (prompt.includes('추가')) {
-      let content: any = { label: '새로운 필드', placeholder: '내용을 입력하세요.' };
-      let type: BlockType = 'text';
-
-      if (prompt.includes('연령') || prompt.includes('나이')) {
-        type = 'choice';
-        content = { label: '연령대', options: ['10대', '20대', '30대', '40대 이상'] };
-      } else if (prompt.includes('연락처') || prompt.includes('전화')) {
-        type = 'text';
-        content = { label: '연락처', placeholder: '010-0000-0000' };
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || 'Gemini API request failed');
       }
 
-      return [{
-        op: 'add',
-        path: '/blocks/-',
-        value: {
-          id: Math.random().toString(36).substring(7),
-          type,
-          content
-        }
-      }];
-    }
-    
-    if (prompt.includes('삭제') && currentSchema.blocks.length > 0) {
-      return [{
-        op: 'remove',
-        path: '/blocks/0'
-      }];
-    }
+      const data = await response.json();
+      const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
-    return [];
+      if (!textResponse) {
+        throw new Error('No response from Gemini');
+      }
+
+      // Gemini sometimes wraps result in markdown code blocks
+      const cleanJson = textResponse.replace(/```json\n?|```/g, '').trim();
+      const patches = JSON.parse(cleanJson);
+
+      if (!Array.isArray(patches)) {
+        throw new Error('AI returned invalid patch format (not an array)');
+      }
+
+      return patches as Operation[];
+    } catch (error: any) {
+      console.error('[Gemini] Integration Error:', error);
+      throw error;
+    }
   }
 
   private buildPrompt(userPrompt: string, schema: FormFactor): string {
     return `
-      You are an AI Form Architect. Your goal is to modify the provided Form Factor JSON schema.
-      Current Schema: ${JSON.stringify(schema)}
-      User Request: ${userPrompt}
-      
-      Output MUST be a valid JSON Patch (RFC 6902) array.
-    `.trim();
+You are a "JSON Patch Architect" specialized in Form Design.
+Your task is to generate an RFC 6902 JSON Patch array to transform the provided "Form Factor" schema based on user intent.
+
+### FORM FACTOR SCHEMA RULES:
+- version: "1.0"
+- blocks: An array of block objects.
+  - type: 'text' | 'choice' | 'rating' | 'description'
+  - id: Unique string (usually random)
+  - content:
+    - label: (required for text/choice/rating)
+    - placeholder: (optional for text)
+    - options: (required for choice, array of strings)
+    - maxRating: (required for rating, number 1-10)
+    - body: (required for description, markdown string)
+
+### OUTPUT SPECIFICATION:
+- MUST return ONLY a valid JSON array of JSON Patch operations (op, path, value/from).
+- Do NOT provide any explanation outside the JSON.
+- Operations should target the "/blocks" path or specific metadata if requested.
+- For new blocks, generate a unique random string for "id".
+
+### CURRENT SCHEMA:
+${JSON.stringify(schema, null, 2)}
+
+### USER REQUEST:
+"${userPrompt}"
+
+JSON Patch Result:`.trim();
   }
 }

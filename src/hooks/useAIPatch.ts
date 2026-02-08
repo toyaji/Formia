@@ -4,11 +4,11 @@ import { GeminiProvider } from '@/lib/ai/GeminiProvider';
 import { Operation } from 'rfc6902';
 
 export const useAIPatch = () => {
-  const { formFactor, addMessage } = useFormStore();
+  const { formFactor, addMessage, config } = useFormStore();
   const [isLoading, setIsLoading] = useState(false);
   
-  // Singleton provider for now
-  const provider = new GeminiProvider();
+  // Initialize provider with the key from our store
+  const provider = new GeminiProvider(config.geminiApiKey || undefined);
 
   const generatePatch = async (prompt: string): Promise<Operation[] | null> => {
     if (!formFactor) return null;
@@ -29,8 +29,8 @@ export const useAIPatch = () => {
     } catch (error: any) {
       console.error('AI Patch Generation Error:', error);
       addMessage({
-        role: 'assistant',
-        content: `오류가 발생했습니다: ${error.message || '알 수 없는 오류'}`,
+        role: 'system_error',
+        content: `AI 처리 중 오류가 발생했습니다: ${error.message || '알 수 없는 오류'}`,
       });
       return null;
     } finally {

@@ -63,16 +63,6 @@ export const AiPanel = () => {
     scrollToBottom();
   }, [messages]);
 
-  // Initial welcome/onboarding
-  useEffect(() => {
-    if (!config.geminiApiKey && messages.length <= 1) {
-      addMessage({
-        role: 'system_info',
-        content: 'AI 기능을 사용하려면 상단 설정(⚙️)에서 Gemini API 키를 등록해주세요.',
-      });
-    }
-  }, [config.geminiApiKey, messages.length]);
-
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
@@ -132,6 +122,13 @@ export const AiPanel = () => {
 
       {/* Message List */}
       <div className={styles.messageList}>
+        {!config.geminiApiKey && (
+          <div className={`${styles.systemMessage} ${styles.info}`}>
+            <AlertCircle size={14} />
+            <span>AI 기능을 사용하려면 상단 설정(⚙️)에서 Gemini API 키를 등록해주세요.</span>
+          </div>
+        )}
+        
         {messages.map((m: Message) => {
           const isSystem = m.role === 'system_error' || m.role === 'system_info';
           
