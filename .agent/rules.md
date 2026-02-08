@@ -18,3 +18,7 @@ Before starting any task in this codebase, the AI Agent must review the followin
 2.  **Schema-Driven**: All changes to the form must be initiated through the Form Factor schema.
 3.  **Local-First**: Always assume data is stored locally and API keys are provided by the user (BYOK).
 4.  **Araform Aesthetic**: Maintain a clean, modern, minimalist look with Pretendard font.
+5.  **Step-wise Execution**: Break down every task into the smallest possible units (Micro-steps). Never implement more than one micro-step at a time.
+6.  **Continuous Verification**: Run tests (Vitest, Playwright, or Manual) after every micro-step.
+7.  **Mindful Logging**: Record every potential issue, technical debt, or "later" task in `task.md` or `docs/implementation_backlog.md` immediately.
+8.  **Port-Adapter Integrity**: Ensure persistence logic is always decoupled via the Repository interface.
