@@ -12,9 +12,12 @@ Inspired by Araform's builder, the workspace is split into three main regions:
 
 ### 2.1 Left Panel (Structure & Navigation)
 
-- Vertical list showing the form flow (Start → Questions → End).
-- Drag-and-drop support to reorder the form structure.
-- Collapsible to maximize canvas space.
+- **Structure**:
+  1.  **Start Page** (Fixed): "시작 페이지".
+  2.  **Question Pages**: Auto-numbered ("1페이지", "2페이지"...). **No custom names.** User cannot likely rename these to avoid confusion with AI generation.
+  3.  **Ending Page** (Fixed): "설문 종료".
+- **Ordering**: Strict order (Start -> Questions -> End). Drag-and-drop only allowed within Question pages.
+- **Collapsible**: To maximize canvas space.
 
 ### 2.2 Center Canvas (The WYSIWYG Builder)
 

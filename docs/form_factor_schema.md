@@ -1,4 +1,4 @@
-# Form Factor Specification: Draft v1
+# Form Factor Specification: v2.0.0
 
 The "Form Factor" is the core JSON object that represents a form's lifecycle.
 
@@ -6,7 +6,7 @@ The "Form Factor" is the core JSON object that represents a form's lifecycle.
 
 ```json
 {
-  "version": "1.0",
+  "version": "2.0.0",
   "metadata": {
     "title": "Untitled Form",
     "description": "",
@@ -14,84 +14,72 @@ The "Form Factor" is the core JSON object that represents a form's lifecycle.
     "updatedAt": "ISO-TIMESTAMP"
   },
   "theme": {
-    "primaryColor": "#4F46E5",
-    "background": "glassmorphic",
-    "typography": "Inter"
+    "mode": "light | dark | system",
+    "tokens": {
+      "primary": "#3B82F6",
+      "background": "#FFFFFF",
+      "surface": "#F6F9FF",
+      "radius": "8px"
+    }
   },
-  "blocks": [],
-  "logic": []
-}
-```
-
-## 2. Block Definition (Expanded)
-
-```json
-{
-  "id": "uuid",
-  "type": "text | choice | rating | date | file | section",
-  "content": {
-    "label": "Question Text",
-    "placeholder": "Type here...",
-    "helperText": "Additional info",
-    "tooltip": ""
-  },
-  "validation": {
-    "required": true,
-    "pattern": "^[0-9]+$",
-    "min": 0,
-    "max": 100,
-    "customError": "Please enter a valid age."
-  },
-  "options": [{ "id": "opt1", "label": "Option A", "value": "a" }],
-  "style": {
-    "layout": "default | compact | wide",
-    "variant": "outline | ghost | solid",
-    "customCss": {}
+  "pages": [],
+  "settings": {
+    "submitButtonLabel": "제출하기",
+    "successMessage": "성공적으로 제출되었습니다."
   }
 }
 ```
 
-## 3. Theme & Design Tokens
+## 2. Page & Ordering Rules
 
-Instead of hardcoded colors, the Factor uses a token-based system inspired by Figma or Tailwind.
+The `pages` array must follow a strict order:
+
+1.  **Start Page** (1, Fixed): Type `start`. Title fixed as "시작 페이지".
+2.  **Default Pages** (0..N): Type `default`.
+    - **No User Titles**: Identified purely by their sequential index (e.g., "1페이지", "2페이지").
+    - Contains Question Blocks.
+3.  **Ending Page** (1, Fixed): Type `ending`. Title fixed as "설문 종료".
+    - Contains only Info/General Blocks.
 
 ```json
 {
-  "theme": {
-    "tokens": {
-      "primary": "var(--formia-blue)",
-      "surface": "rgba(255, 255, 255, 0.8)",
-      "radius": "12px",
-      "blur": "10px"
-    },
-    "font": {
-      "family": "Inter, sans-serif",
-      "size": "16px"
-    }
+  "id": "uuid",
+  "type": "start | default | ending",
+  "title": "(optional, restricted for default pages)",
+  "blocks": []
+}
+```
+
+## 3. Block Definition
+
+```json
+{
+  "id": "uuid",
+  "type": "text | choice | rating | date | file | info | textarea",
+  "content": {
+    "label": "Question Text",
+    "placeholder": "Type here...",
+    "options": ["Option 1", "Option 2"],
+    "maxRating": 5,
+    "body": "Markdown content"
+  },
+  "validation": {
+    "required": true
   }
 }
 ```
 
 ## 4. AI Interaction Strategy: JSON Patch
 
-To minimize tokens and ensure atomic updates, the Agent should emit **JSON Patches** (RFC 6902) rather than the whole schema.
+Agents emit **RFC 6902 JSON Patches**.
 
-### Example: "Add a field for Name"
+- **Page Addition**: Must check for Ending Page index and insert **before** it.
+- **Page Naming**: AI must NOT assign custom titles to default pages. Use generic identifiers or let UI handle numbering.
 
-**Agent Output:**
+### Example: "Add a Name Question"
 
 ```json
 [
-  {
-    "op": "add",
-    "path": "/blocks/-",
-    "value": { "id": "uuid-name", "type": "text", "label": "Name?" }
-  }
+  { "op": "add", "path": "/pages/1/blocks/-", "value": { ... } }
 ]
 ```
-
-## 5. Persistence & Local-First
-
-- **File-per-Form**: Each form is saved as a `.formia` file (UTF-8 JSON).
-- **Auto-Save**: The app monitors the in-memory Factor and debounces writes to disk.
-- **Git Compatibility**: Since it's plain JSON, users can version control their forms easily.
