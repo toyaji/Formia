@@ -1,0 +1,46 @@
+.container {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background-color: var(--f-background);
+}
+
+.leftPanel {
+  width: 260px;
+  border-right: 1px solid var(--f-border);
+  background-color: var(--f-surface);
+  display: flex;
+  flex-direction: column;
+}
+
+.centerCanvas {
+  flex: 1;
+  overflow-y: auto;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.rightPanel {
+  width: 380px;
+  border-left: 1px solid var(--f-border);
+  background-color: var(--f-surface);
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  height: 60px;
+  border-bottom: 1px solid var(--f-border);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  justify-content: space-between;
+}
+
+.title {
+  font-weight: 700;
+  font-size: 1.2rem;
+}

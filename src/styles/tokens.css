@@ -1,0 +1,39 @@
+/* Araform-inspired Design Tokens for Formia */
+
+:root {
+  /* Colors - Light Mode */
+  --f-primary: #3b82f6;
+  --f-background: #f6f9ff;
+  --f-surface: #ffffff;
+  --f-text-main: #1e293b;
+  --f-text-muted: #64748b;
+  --f-border: #e2e8f0;
+
+  /* Effects */
+  --f-glass-blur: 12px;
+  --f-glass-opacity: 0.7;
+  --f-shadow-premium:
+    0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
+
+  /* Spacing & Radius */
+  --f-radius-xl: 16px;
+  --f-radius-md: 8px;
+  --f-radius-sm: 4px;
+  --f-spacing-unit: 4px;
+
+  /* Typography */
+  --f-font-sans:
+    "Pretendard", -apple-system, BlinkMacSystemFont, system-ui, Roboto,
+    sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --f-primary: #60a5fa;
+    --f-background: #0f172a;
+    --f-surface: #1e293b;
+    --f-text-main: #f8fafc;
+    --f-text-muted: #94a3b8;
+    --f-border: #334155;
+  }
+}
