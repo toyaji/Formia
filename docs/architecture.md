@@ -6,17 +6,23 @@
 graph TD
     User((User))
     Agent[Formia AI Agent]
-    State[Form Builder State]
+    State[Form Builder Store]
     Editor[Live Canvas Editor]
-    API[Backend API]
-    DB[(Database)]
+    Repo[Form Repository Interface]
+    Local[Local FS Adapter]
+    Remote[Remote API Adapter]
 
     User <--> Agent
     Agent <--> State
     State <--> Editor
-    State <--> API
-    API <--> DB
+    State <--> Repo
+    Repo <--> Local
+    Repo -.-> Remote
 ```
+
+### 2.4 Decoupled Persistence Layer
+
+Formia uses a **Port-Adapter (Hexagonal)** architecture for data storage. The application logic interacts only with the `Repository` interface. This allows us to start with a **Local-First (Tauri)** implementation and seamlessly migrate to or support a **Cloud Backend** later by simply swapping the adapter.
 
 ## 2. Key Components
 
