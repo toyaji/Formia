@@ -8,17 +8,22 @@ import { Sidebar } from '@/components/layout/Sidebar';
 import { AiPanel } from '@/components/ai/AiPanel';
 import { Header } from '@/components/layout/Header';
 import { Undo2, Redo2, Save } from 'lucide-react';
+import { getNewBlockPreviews } from '@/lib/utils/patchUtils';
 
 export default function Home() {
   const { 
-    formFactor, setFormFactor, getEffectiveFactor, proposedPatches, 
+    formFactor, setFormFactor, getEffectiveFactor, 
     activePageId, viewport, undo, redo, history, future, 
-    activeBlockId, setActiveBlockId, applyJsonPatch 
+    activeBlockId, setActiveBlockId, applyJsonPatch,
+    isReviewMode, pendingPatches
   } = useFormStore();
   const effectiveFactor = getEffectiveFactor();
 
   // Find current active page
   const activePage = effectiveFactor?.pages.find(p => p.id === activePageId) || effectiveFactor?.pages[0];
+  
+  // Get new blocks that need to be previewed
+  const newBlockPreviews = getNewBlockPreviews(pendingPatches);
 
   // Initialize with a default schema for testing (v2)
   useEffect(() => {
@@ -80,17 +85,20 @@ export default function Home() {
           padding: '40px 20px'
         }}>
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            {proposedPatches && (
+            {isReviewMode && (
               <span style={{ 
-                fontSize: '0.7rem', 
-                background: 'var(--f-primary)', 
+                fontSize: '0.75rem', 
+                background: 'linear-gradient(135deg, #22C55E, #16A34A)', 
                 color: 'white', 
-                padding: '2px 8px', 
-                borderRadius: '10px',
-                fontWeight: 700,
-                textTransform: 'uppercase'
+                padding: '4px 12px', 
+                borderRadius: '20px',
+                fontWeight: 600,
+                boxShadow: '0 2px 8px rgba(34, 197, 94, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
               }}>
-                Preview Mode
+                ✨ 리뷰 모드 - 변경사항을 확인하세요
               </span>
             )}
           </div>
@@ -103,19 +111,20 @@ export default function Home() {
             display: 'flex',
             flexDirection: 'column',
             gap: '32px',
-            border: proposedPatches ? '3px solid var(--f-primary)' : '1px solid var(--f-border)',
+            border: isReviewMode ? '2px solid #22C55E' : '1px solid var(--f-border)',
             transition: 'all 0.3s ease',
             position: 'relative'
           }}>
             {/* Form Title and Description integrated into container */}
             <div 
-              className={`${styles.metadataContainer} ${activeBlockId === 'form-metadata' ? styles.activeMetadata : ''}`}
+              className={`${styles.metadataContainer} ${activeBlockId === 'form-metadata' && !isReviewMode ? styles.activeMetadata : ''}`}
               onClick={(e) => {
+                if (isReviewMode) return; // Disable in review mode
                 e.stopPropagation();
                 setActiveBlockId('form-metadata');
               }}
             >
-              {activeBlockId === 'form-metadata' ? (
+              {activeBlockId === 'form-metadata' && !isReviewMode ? (
                 <>
                   <input 
                     className={styles.titleInput}
@@ -160,7 +169,16 @@ export default function Home() {
               <BlockRenderer key={block.id} block={block} />
             ))}
             
-            {(!activePage || activePage.blocks.length === 0) && (
+            {/* Render new block previews from AI suggestions */}
+            {newBlockPreviews.map((preview) => (
+              <BlockRenderer 
+                key={preview.targetBlockId} 
+                block={preview.block} 
+                previewBlockId={preview.targetBlockId}
+              />
+            ))}
+            
+            {(!activePage || activePage.blocks.length === 0) && newBlockPreviews.length === 0 && (
               <p style={{ textAlign: 'center', color: 'var(--f-text-muted)', marginTop: '40px' }}>
                 이 페이지에 아직 문항이 없습니다.
               </p>

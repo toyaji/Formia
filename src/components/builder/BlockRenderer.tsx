@@ -1,16 +1,78 @@
 import { FormBlock } from '@/lib/core/schema';
 import styles from './BlockRenderer.module.css';
-import { useFormStore } from '@/store/useFormStore';
-import { Trash2, Plus, X } from 'lucide-react';
+import { useFormStore, PatchItem } from '@/store/useFormStore';
+import { Trash2, Plus, X, Check } from 'lucide-react';
+import { 
+  hasBlockLevelChange, 
+  getPendingPatchForField,
+  getOptionPatches,
+  getAllPendingPatchesForBlock 
+} from '@/lib/utils/patchUtils';
 
 interface BlockRendererProps {
   block: FormBlock;
+  previewBlockId?: string;
 }
 
-export const BlockRenderer = ({ block }: BlockRendererProps) => {
-  const { type, content, id } = block;
-  const { activeBlockId, setActiveBlockId, applyJsonPatch, activePageId, formFactor } = useFormStore();
-  const isActive = activeBlockId === id;
+// Mini component for field-level diff overlay
+const FieldDiffBadge = ({ 
+  patch, 
+  onAccept, 
+  onReject 
+}: { 
+  patch: PatchItem; 
+  onAccept: () => void; 
+  onReject: () => void;
+}) => (
+  <div 
+    className={styles.fieldDiffBadge} 
+    data-change-type={patch.changeType}
+    onClick={(e) => e.stopPropagation()}
+  >
+    <span className={styles.fieldDiffLabel}>
+      {patch.changeType === 'add' && '추가'}
+      {patch.changeType === 'remove' && '삭제'}
+      {patch.changeType === 'replace' && '수정'}
+    </span>
+    <button 
+      className={styles.fieldDiffAcceptBtn}
+      onClick={(e) => { e.stopPropagation(); onAccept(); }}
+      title="수락"
+    >
+      <Check size={12} />
+    </button>
+    <button 
+      className={styles.fieldDiffRejectBtn}
+      onClick={(e) => { e.stopPropagation(); onReject(); }}
+      title="거절"
+    >
+      <X size={12} />
+    </button>
+  </div>
+);
+
+export const BlockRenderer = ({ block, previewBlockId }: BlockRendererProps) => {
+  const { type, content, id: blockId } = block;
+  const id = previewBlockId || blockId;
+  
+  const { 
+    activeBlockId, setActiveBlockId, applyJsonPatch, activePageId, formFactor,
+    isReviewMode, pendingPatches, acceptPatch, rejectPatch,
+    acceptPatchesByBlockId, rejectPatchesByBlockId
+  } = useFormStore();
+  const isActive = activeBlockId === id && !isReviewMode;
+  
+  // Check for block-level changes (entire block add/remove)
+  const blockLevelPatch = hasBlockLevelChange(id, pendingPatches);
+  const isBlockLevelChange = !!blockLevelPatch;
+  
+  // Check for field-level changes
+  const labelPatch = getPendingPatchForField(id, 'label', pendingPatches);
+  const optionPatches = getOptionPatches(id, pendingPatches);
+  
+  // Any pending changes at all
+  const allBlockPatches = getAllPendingPatchesForBlock(id, pendingPatches);
+  const hasPendingChange = allBlockPatches.length > 0;
 
   const handleLabelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const pageIndex = formFactor?.pages.findIndex(p => p.id === activePageId);
@@ -71,6 +133,14 @@ export const BlockRenderer = ({ block }: BlockRendererProps) => {
     }]);
   };
 
+  // Helper to get option patch by index
+  const getOptionPatchByIndex = (optionIndex: number): PatchItem | undefined => {
+    return optionPatches.find(p => 
+      p.targetField === `options/${optionIndex}` || 
+      p.targetField === 'options/-'
+    );
+  };
+
   const renderInput = () => {
     switch (type) {
       case 'text':
@@ -91,28 +161,54 @@ export const BlockRenderer = ({ block }: BlockRendererProps) => {
       case 'choice':
         return (
           <div className={styles.options}>
-            {content.options?.map((opt: string, i: number) => (
-              <div key={i} className={styles.optionItem}>
-                <input type="radio" disabled />
-                {isActive ? (
-                  <div className={styles.optionEditWrapper}>
-                    <input 
-                      className={styles.optionInput}
-                      value={opt}
-                      onChange={(e) => handleOptionChange(i, e.target.value)}
+            {content.options?.map((opt: string, i: number) => {
+              const optPatch = getOptionPatchByIndex(i);
+              const hasOptionChange = !!optPatch;
+              
+              return (
+                <div 
+                  key={i} 
+                  className={`${styles.optionItem} ${hasOptionChange ? styles.optionHasDiff : ''}`}
+                  style={hasOptionChange ? {
+                    backgroundColor: optPatch.changeType === 'remove' 
+                      ? 'rgba(239, 68, 68, 0.12)' 
+                      : optPatch.changeType === 'add'
+                        ? 'rgba(34, 197, 94, 0.12)'
+                        : 'rgba(234, 179, 8, 0.12)',
+                    borderRadius: '8px',
+                    position: 'relative'
+                  } : {}}
+                >
+                  <input type="radio" disabled />
+                  {isActive ? (
+                    <div className={styles.optionEditWrapper}>
+                      <input 
+                        className={styles.optionInput}
+                        value={opt}
+                        onChange={(e) => handleOptionChange(i, e.target.value)}
+                      />
+                      <button 
+                        className={styles.removeOptionBtn}
+                        onClick={() => removeOption(i)}
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ) : (
+                    <span className={styles.optionText}>{opt}</span>
+                  )}
+                  
+                  {/* Field-level diff badge for this option */}
+                  {hasOptionChange && (
+                    <FieldDiffBadge 
+                      patch={optPatch}
+                      onAccept={() => acceptPatch(optPatch.id)}
+                      onReject={() => rejectPatch(optPatch.id)}
                     />
-                    <button 
-                      className={styles.removeOptionBtn}
-                      onClick={() => removeOption(i)}
-                    >
-                      <X size={12} />
-                    </button>
-                  </div>
-                ) : (
-                  <span className={styles.optionText}>{opt}</span>
-                )}
-              </div>
-            ))}
+                  )}
+                </div>
+              );
+            })}
             {isActive && (
               <button className={styles.addOptionBtn} onClick={addOption}>
                 <Plus size={14} /> 옵션 추가
@@ -131,25 +227,93 @@ export const BlockRenderer = ({ block }: BlockRendererProps) => {
     }
   };
 
+  // Block-level styling for add/remove entire block
+  const getBlockDiffStyle = () => {
+    if (!isBlockLevelChange || !blockLevelPatch) return {};
+    const colors = {
+      add: 'rgba(34, 197, 94, 0.12)',
+      remove: 'rgba(239, 68, 68, 0.12)',
+      replace: 'rgba(234, 179, 8, 0.12)',
+    };
+    return { backgroundColor: colors[blockLevelPatch.changeType] };
+  };
+
   return (
     <div 
-      className={`${styles.blockContainer} ${isActive ? styles.active : ''}`}
+      className={`${styles.blockContainer} ${isActive ? styles.active : ''} ${isBlockLevelChange ? styles.hasDiff : ''}`}
+      style={getBlockDiffStyle()}
       onClick={(e) => {
+        if (isReviewMode) return;
         e.stopPropagation();
         setActiveBlockId(id);
       }}
     >
-      {isActive ? (
-        <input 
-          className={styles.labelInput}
-          value={content.label || ''}
-          onChange={handleLabelChange}
-          placeholder="문항 제목을 입력하세요"
-          autoFocus
-        />
-      ) : (
-        content.label && <label className={styles.label}>{content.label}</label>
+      {/* Block-level diff badge (only for entire block add/remove) */}
+      {isBlockLevelChange && blockLevelPatch && (
+        <div className={styles.diffBadge} data-change-type={blockLevelPatch.changeType}>
+          <span className={styles.diffLabel}>
+            {blockLevelPatch.changeType === 'add' && '문항 추가'}
+            {blockLevelPatch.changeType === 'remove' && '문항 삭제'}
+          </span>
+          <div className={styles.diffActions}>
+            <button 
+              className={styles.diffAcceptBtn}
+              onClick={(e) => {
+                e.stopPropagation();
+                acceptPatchesByBlockId(id);
+              }}
+              title="수락"
+            >
+              <Check size={14} />
+            </button>
+            <button 
+              className={styles.diffRejectBtn}
+              onClick={(e) => {
+                e.stopPropagation();
+                rejectPatchesByBlockId(id);
+              }}
+              title="거절"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        </div>
       )}
+
+      {/* Label with inline diff */}
+      <div 
+        className={`${styles.labelWrapper} ${labelPatch ? styles.labelHasDiff : ''}`}
+        style={labelPatch ? {
+          backgroundColor: labelPatch.changeType === 'replace' 
+            ? 'rgba(234, 179, 8, 0.15)' 
+            : 'transparent',
+          borderRadius: '8px',
+          padding: '4px 8px',
+          margin: '-4px -8px',
+          position: 'relative'
+        } : {}}
+      >
+        {isActive ? (
+          <input 
+            className={styles.labelInput}
+            value={content.label || ''}
+            onChange={handleLabelChange}
+            placeholder="문항 제목을 입력하세요"
+            autoFocus
+          />
+        ) : (
+          content.label && <label className={styles.label}>{content.label}</label>
+        )}
+        
+        {/* Field-level diff badge for label */}
+        {labelPatch && (
+          <FieldDiffBadge 
+            patch={labelPatch}
+            onAccept={() => acceptPatch(labelPatch.id)}
+            onReject={() => rejectPatch(labelPatch.id)}
+          />
+        )}
+      </div>
       
       {content.helpText && <p className={styles.helpText}>{content.helpText}</p>}
       

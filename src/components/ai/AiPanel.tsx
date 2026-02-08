@@ -1,27 +1,34 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { useFormStore, Message } from '@/store/useFormStore';
+import { useFormStore, Message, PatchItem } from '@/store/useFormStore';
 import { useAIPatch } from '@/hooks/useAIPatch';
 import styles from './AiPanel.module.css';
 import { Send, Trash2, Bot, User, Loader2, Check, X, AlertCircle } from 'lucide-react';
+import { convertOperationsToPatchItems } from '@/lib/utils/patchUtils';
 
 const ProposedChanges = () => {
-  const { proposedPatches, setProposedPatches, applyJsonPatch, addMessage } = useFormStore();
+  const { 
+    pendingPatches, acceptAllPatches, rejectAllPatches, 
+    isReviewMode, addMessage 
+  } = useFormStore();
 
-  if (!proposedPatches) return null;
+  if (!isReviewMode || pendingPatches.length === 0) return null;
 
-  const handleApply = () => {
-    applyJsonPatch(proposedPatches);
+  const pendingCount = pendingPatches.filter((p: PatchItem) => p.status === 'pending').length;
+  const totalCount = pendingPatches.length;
+  const acceptedCount = pendingPatches.filter((p: PatchItem) => p.status === 'accepted').length;
+
+  const handleApplyAll = () => {
+    acceptAllPatches();
     addMessage({
       role: 'assistant',
-      content: '변경 사항이 적용되었습니다.',
+      content: `모든 변경 사항(${totalCount}개)이 적용되었습니다.`,
     });
-    setProposedPatches(null);
   };
 
-  const handleCancel = () => {
-    setProposedPatches(null);
+  const handleCancelAll = () => {
+    rejectAllPatches();
     addMessage({
       role: 'assistant',
       content: '변경 사항이 취소되었습니다.',
@@ -35,22 +42,31 @@ const ProposedChanges = () => {
         <span>변경 제안 수락 준비 완료</span>
       </div>
       <p className={styles.proposedDesc}>
-        {proposedPatches.length}개의 변경 사항이 제안되었습니다. 캔버스에서 미리보기를 확인하고 결정하세요.
+        {pendingCount > 0 ? (
+          <>{totalCount}개 중 {pendingCount}개 미처리. 캔버스에서 개별 확인하거나 아래에서 전체 적용하세요.</>
+        ) : (
+          <>모든 변경 사항이 처리되었습니다. ({acceptedCount}개 수락)</>
+        )}
       </p>
-      <div className={styles.proposedActions}>
-        <button onClick={handleApply} className={styles.acceptBtn}>
-          <Check size={16} /> 적용하기
-        </button>
-        <button onClick={handleCancel} className={styles.cancelBtn}>
-          <X size={16} /> 취소
-        </button>
-      </div>
+      {pendingCount > 0 && (
+        <div className={styles.proposedActions}>
+          <button onClick={handleApplyAll} className={styles.acceptBtn}>
+            <Check size={16} /> 전체 적용
+          </button>
+          <button onClick={handleCancelAll} className={styles.cancelBtn}>
+            <X size={16} /> 전체 취소
+          </button>
+        </div>
+      )}
     </div>
   );
 };
 
 export const AiPanel = () => {
-  const { messages, addMessage, clearMessages, setProposedPatches, config } = useFormStore();
+  const { 
+    messages, addMessage, clearMessages, config, formFactor,
+    saveSnapshot, setReviewMode, setPendingPatches, setActiveBlockId
+  } = useFormStore();
   const { generatePatch, isLoading } = useAIPatch();
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -85,11 +101,21 @@ export const AiPanel = () => {
 
     const patches = await generatePatch(userQuery);
 
-    if (patches && patches.length > 0) {
-      setProposedPatches(patches);
+    if (patches && patches.length > 0 && formFactor) {
+      // Save current state before review
+      saveSnapshot();
+      
+      // Clear any active editing
+      setActiveBlockId(null);
+      
+      // Convert to PatchItems and enter review mode
+      const patchItems = convertOperationsToPatchItems(patches, formFactor);
+      setPendingPatches(patchItems);
+      setReviewMode(true);
+      
       addMessage({
         role: 'assistant',
-        content: `제안된 변경 사항이 ${patches.length}개 있습니다. 아래 버튼을 통해 적용하거나 취소할 수 있습니다.`,
+        content: `${patches.length}개의 변경 사항이 제안되었습니다. 캔버스에서 각 변경을 확인하고 수락/거절하세요.`,
       });
     }
   };

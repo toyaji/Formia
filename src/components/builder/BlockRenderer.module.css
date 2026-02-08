@@ -195,3 +195,163 @@
   transform: scale(1.1) rotate(5deg);
   background-color: #DC2626;
 }
+
+/* Phase 13: Diff Overlay Styles */
+.hasDiff {
+  border-radius: var(--f-radius-lg);
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.diffBadge {
+  position: absolute;
+  top: -8px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.diffBadge[data-change-type="add"] {
+  background-color: #22C55E;
+  color: white;
+}
+
+.diffBadge[data-change-type="remove"] {
+  background-color: #EF4444;
+  color: white;
+}
+
+.diffBadge[data-change-type="replace"] {
+  background-color: #EAB308;
+  color: white;
+}
+
+.diffLabel {
+  letter-spacing: 0.02em;
+}
+
+.diffActions {
+  display: flex;
+  gap: 4px;
+}
+
+.diffAcceptBtn,
+.diffRejectBtn {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.diffAcceptBtn {
+  background-color: rgba(255,255,255,0.3);
+  color: white;
+}
+
+.diffAcceptBtn:hover {
+  background-color: white;
+  color: #22C55E;
+  transform: scale(1.1);
+}
+
+.diffRejectBtn {
+  background-color: rgba(255,255,255,0.3);
+  color: white;
+}
+
+.diffRejectBtn:hover {
+  background-color: white;
+  color: #EF4444;
+  transform: scale(1.1);
+}
+
+/* Field-level diff styles */
+.labelWrapper {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+
+.labelHasDiff {
+  display: inline-block;
+  position: relative;
+}
+
+.optionHasDiff {
+  position: relative;
+  padding-right: 80px;
+}
+
+.fieldDiffBadge {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 12px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  z-index: 10;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+}
+
+.fieldDiffBadge[data-change-type="add"] {
+  background-color: #22C55E;
+  color: white;
+}
+
+.fieldDiffBadge[data-change-type="remove"] {
+  background-color: #EF4444;
+  color: white;
+}
+
+.fieldDiffBadge[data-change-type="replace"] {
+  background-color: #EAB308;
+  color: white;
+}
+
+.fieldDiffLabel {
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.fieldDiffAcceptBtn,
+.fieldDiffRejectBtn {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  cursor: pointer;
+  background-color: rgba(255,255,255,0.3);
+  color: white;
+  border: none;
+}
+
+.fieldDiffAcceptBtn:hover {
+  background-color: white;
+  color: #22C55E;
+  transform: scale(1.1);
+}
+
+.fieldDiffRejectBtn:hover {
+  background-color: white;
+  color: #EF4444;
+  transform: scale(1.1);
+}

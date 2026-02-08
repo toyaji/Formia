@@ -14,6 +14,17 @@ interface AppConfig {
   geminiApiKey: string | null;
 }
 
+// Phase 13: Patch item for inline diff review
+export interface PatchItem {
+  id: string;
+  patch: Operation;
+  status: 'pending' | 'accepted' | 'rejected';
+  targetBlockId?: string;
+  changeType: 'add' | 'remove' | 'replace';
+  // Field-level targeting: 'label', 'options/0', 'options/1', 'block' (entire block)
+  targetField?: string;
+}
+
 interface FormState {
   formFactor: FormFactor | null;
   activePageId: string | null;
@@ -45,6 +56,21 @@ interface FormState {
   // Viewport
   viewport: 'desktop' | 'mobile';
   setViewport: (viewport: 'desktop' | 'mobile') => void;
+  
+  // Phase 13: Review Mode
+  isReviewMode: boolean;
+  setReviewMode: (mode: boolean) => void;
+  pendingPatches: PatchItem[];
+  setPendingPatches: (patches: PatchItem[]) => void;
+  acceptPatch: (patchId: string) => void;
+  rejectPatch: (patchId: string) => void;
+  acceptPatchesByBlockId: (blockId: string) => void;
+  rejectPatchesByBlockId: (blockId: string) => void;
+  acceptAllPatches: () => void;
+  rejectAllPatches: () => void;
+  preReviewSnapshot: FormFactor | null;
+  saveSnapshot: () => void;
+  restoreSnapshot: () => void;
 }
 
 export const useFormStore = create<FormState>()(
@@ -174,6 +200,159 @@ export const useFormStore = create<FormState>()(
     // Viewport
     viewport: 'desktop',
     setViewport: (viewport: 'desktop' | 'mobile') => set({ viewport }),
+
+    // Phase 13: Review Mode
+    isReviewMode: false,
+    pendingPatches: [],
+    preReviewSnapshot: null,
+
+    setReviewMode: (mode: boolean) => set({ isReviewMode: mode }),
+    
+    setPendingPatches: (patches: PatchItem[]) => set({ pendingPatches: patches }),
+    
+    acceptPatch: (patchId: string) => {
+      const { pendingPatches, formFactor, preReviewSnapshot } = get();
+      const patch = pendingPatches.find((p: PatchItem) => p.id === patchId);
+      if (!patch || !preReviewSnapshot) return;
+      
+      // Apply this single patch to preReviewSnapshot and update formFactor
+      const updated = JSON.parse(JSON.stringify(preReviewSnapshot));
+      applyPatch(updated, [patch.patch]);
+      
+      // Update pending patches status
+      const newPatches = pendingPatches.map((p: PatchItem) => 
+        p.id === patchId ? { ...p, status: 'accepted' as const } : p
+      );
+      
+      // Check if all patches are processed
+      const allProcessed = newPatches.every((p: PatchItem) => p.status !== 'pending');
+      
+      set({ 
+        formFactor: updated,
+        preReviewSnapshot: updated, // Update snapshot for next patch
+        pendingPatches: newPatches,
+        isReviewMode: !allProcessed
+      });
+    },
+    
+    rejectPatch: (patchId: string) => {
+      const { pendingPatches } = get();
+      
+      const newPatches = pendingPatches.map((p: PatchItem) => 
+        p.id === patchId ? { ...p, status: 'rejected' as const } : p
+      );
+      
+      const allProcessed = newPatches.every((p: PatchItem) => p.status !== 'pending');
+      
+      set({ 
+        pendingPatches: newPatches,
+        isReviewMode: !allProcessed
+      });
+    },
+    
+    // Accept all patches for a specific block at once
+    acceptPatchesByBlockId: (blockId: string) => {
+      const { pendingPatches, preReviewSnapshot } = get();
+      if (!preReviewSnapshot) return;
+      
+      // Get all pending patches for this block
+      const blockPatches = pendingPatches.filter(
+        (p: PatchItem) => p.targetBlockId === blockId && p.status === 'pending'
+      );
+      
+      if (blockPatches.length === 0) return;
+      
+      // Apply all patches for this block
+      const updated = JSON.parse(JSON.stringify(preReviewSnapshot));
+      blockPatches.forEach((p: PatchItem) => {
+        applyPatch(updated, [p.patch]);
+      });
+      
+      // Mark all these patches as accepted
+      const newPatches = pendingPatches.map((p: PatchItem) => 
+        p.targetBlockId === blockId && p.status === 'pending' 
+          ? { ...p, status: 'accepted' as const } 
+          : p
+      );
+      
+      const allProcessed = newPatches.every((p: PatchItem) => p.status !== 'pending');
+      
+      set({ 
+        formFactor: updated,
+        preReviewSnapshot: updated,
+        pendingPatches: newPatches,
+        isReviewMode: !allProcessed
+      });
+    },
+    
+    // Reject all patches for a specific block at once
+    rejectPatchesByBlockId: (blockId: string) => {
+      const { pendingPatches } = get();
+      
+      const newPatches = pendingPatches.map((p: PatchItem) => 
+        p.targetBlockId === blockId && p.status === 'pending' 
+          ? { ...p, status: 'rejected' as const } 
+          : p
+      );
+      
+      const allProcessed = newPatches.every((p: PatchItem) => p.status !== 'pending');
+      
+      set({ 
+        pendingPatches: newPatches,
+        isReviewMode: !allProcessed
+      });
+    },
+    
+    acceptAllPatches: () => {
+      const { pendingPatches, preReviewSnapshot } = get();
+      if (!preReviewSnapshot) return;
+      
+      // Apply all pending patches
+      const pendingOps = pendingPatches
+        .filter((p: PatchItem) => p.status === 'pending')
+        .map((p: PatchItem) => p.patch);
+      
+      const updated = JSON.parse(JSON.stringify(preReviewSnapshot));
+      applyPatch(updated, pendingOps);
+      
+      const newPatches = pendingPatches.map((p: PatchItem) => 
+        p.status === 'pending' ? { ...p, status: 'accepted' as const } : p
+      );
+      
+      set({ 
+        formFactor: updated,
+        pendingPatches: newPatches,
+        isReviewMode: false,
+        preReviewSnapshot: null
+      });
+    },
+    
+    rejectAllPatches: () => {
+      set({ 
+        pendingPatches: [],
+        isReviewMode: false,
+        preReviewSnapshot: null
+      });
+    },
+    
+    saveSnapshot: () => {
+      const { formFactor } = get();
+      if (formFactor) {
+        set({ preReviewSnapshot: JSON.parse(JSON.stringify(formFactor)) });
+      }
+    },
+    
+    restoreSnapshot: () => {
+      const { preReviewSnapshot } = get();
+      if (preReviewSnapshot) {
+        set({ 
+          formFactor: preReviewSnapshot,
+          preReviewSnapshot: null,
+          pendingPatches: [],
+          isReviewMode: false
+        });
+      }
+    },
   }),
   {
     name: 'formia-storage',
