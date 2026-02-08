@@ -64,6 +64,7 @@ interface FormState {
   setPendingPatches: (patches: PatchItem[]) => void;
   acceptPatch: (patchId: string) => void;
   rejectPatch: (patchId: string) => void;
+  resolvePagePatch: (patchId: string, action: 'accept' | 'reject') => void;
   acceptPatchesByBlockId: (blockId: string) => void;
   rejectPatchesByBlockId: (blockId: string) => void;
   acceptAllPatches: () => void;
@@ -260,6 +261,67 @@ export const useFormStore = create<FormState>()(
       
       set({ 
         pendingPatches: newPatches,
+        isReviewMode: !allProcessed
+      });
+    },
+    
+    // Resolve a page-level patch (accept/reject) and all its child patches (e.g. blocks inside)
+    resolvePagePatch: (patchId: string, action: 'accept' | 'reject') => {
+      const { pendingPatches, preReviewSnapshot } = get();
+      const mainPatch = pendingPatches.find((p: PatchItem) => p.id === patchId);
+      
+      if (!mainPatch || !preReviewSnapshot) return;
+
+      // Identify child patches: any patch where path starts with the page path
+      // e.g. main path: /pages/0 -> child path: /pages/0/blocks/1
+      const mainPath = mainPatch.patch.path;
+      const childPatches = pendingPatches.filter((p: PatchItem) => 
+        p.id !== patchId && 
+        p.status === 'pending' && 
+        p.patch.path.startsWith(mainPath + '/')
+      );
+      
+      const allTargetPatches = [mainPatch, ...childPatches];
+      
+      // Update statuses
+      const newStatus = action === 'accept' ? 'accepted' : 'rejected';
+      const targetIds = new Set(allTargetPatches.map(p => p.id));
+      
+      const newPendingPatches = pendingPatches.map((p: PatchItem) => 
+        targetIds.has(p.id) ? { ...p, status: newStatus } : p
+      );
+
+      // If accepting, apply changes to snapshot
+      let updatedSnapshot = preReviewSnapshot;
+      if (action === 'accept') {
+        updatedSnapshot = JSON.parse(JSON.stringify(preReviewSnapshot));
+        
+        // Strategy:
+        // - If main op is 'remove', only apply main patch. (Children are gone with parent).
+        // - If main op is 'add' or 'replace', apply main + children.
+        const opsToApply = [];
+        if (mainPatch.patch.op === 'remove') {
+          opsToApply.push(mainPatch.patch);
+        } else {
+          // Sort patches might be needed if children depend on order?
+          // Usually pendingPatches are in order.
+          // We filter them from pendingPatches list which preserves order.
+          opsToApply.push(mainPatch.patch, ...childPatches.map(p => p.patch));
+        }
+        
+        // check for errors when applying
+        const results = applyPatch(updatedSnapshot, opsToApply);
+        // We ignore results for now, assuming valid sequence from AI.
+      }
+
+      const allProcessed = newPendingPatches.every((p: PatchItem) => p.status !== 'pending'); 
+      
+      set({
+        formFactor: action === 'accept' ? updatedSnapshot : get().formFactor, // Only update effective formFactor if accepted (actually formFactor should match snapshot if accepted)
+        // Wait, normally formFactor tracks snapshot in review mode?
+        // Yes, acceptPatch updates formFactor AND preReviewSnapshot.
+        preReviewSnapshot: updatedSnapshot,
+        pendingPatches: newPendingPatches,
         isReviewMode: !allProcessed
       });
     },

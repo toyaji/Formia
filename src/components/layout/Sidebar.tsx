@@ -14,7 +14,7 @@ export const Sidebar = () => {
   const { 
     formFactor, activePageId, activeBlockId, 
     setActivePageId, setActiveBlockId, applyJsonPatch,
-    isReviewMode, preReviewSnapshot // Get snapshot
+    isReviewMode, preReviewSnapshot, pendingPatches // Get snapshot and pending patches
   } = useFormStore();
   
   // Accordion state: map of pageId -> boolean (true = expanded)
@@ -24,10 +24,10 @@ export const Sidebar = () => {
   // We need to enable `getReviewPages` only when isReviewMode is true AND we have a snapshot
   const allPages = useMemo(() => {
     if (isReviewMode && preReviewSnapshot && formFactor) {
-      return getReviewPages(preReviewSnapshot.pages, formFactor.pages);
+      return getReviewPages(preReviewSnapshot.pages, formFactor.pages, pendingPatches);
     }
     return (formFactor?.pages || []).map(p => ({ ...p, reviewStatus: 'kept' as const }));
-  }, [isReviewMode, preReviewSnapshot, formFactor]);
+  }, [isReviewMode, preReviewSnapshot, formFactor, pendingPatches]);
 
   // Initialize expanded state
   useEffect(() => {

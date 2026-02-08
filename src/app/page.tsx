@@ -2,12 +2,13 @@
 
 import { useEffect, useMemo } from 'react';
 import styles from './page.module.css';
+import diffStyles from '@/components/builder/PageDiff.module.css';
 import { useFormStore } from '@/store/useFormStore';
 import { BlockRenderer } from '@/components/builder/BlockRenderer';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { AiPanel } from '@/components/ai/AiPanel';
 import { Header } from '@/components/layout/Header';
-import { Undo2, Redo2 } from 'lucide-react';
+import { Undo2, Redo2, Check, X } from 'lucide-react';
 import { getNewBlockPreviews, getReviewPages, ReviewFormPage } from '@/lib/utils/patchUtils';
 import { FormPage } from '@/lib/core/schema';
 
@@ -16,17 +17,18 @@ export default function Home() {
     formFactor, setFormFactor, getEffectiveFactor, 
     activePageId, setActivePageId, viewport, undo, redo, history, future, 
     activeBlockId, setActiveBlockId, applyJsonPatch,
-    isReviewMode, pendingPatches, preReviewSnapshot
+    isReviewMode, pendingPatches, preReviewSnapshot,
+    acceptPatch, rejectPatch, resolvePagePatch
   } = useFormStore();
   const effectiveFactor = getEffectiveFactor();
 
   // Compute pages to render (Normal vs Review)
   const pagesToRender = useMemo(() => {
     if (isReviewMode && preReviewSnapshot && effectiveFactor) {
-      return getReviewPages(preReviewSnapshot.pages, effectiveFactor.pages);
+      return getReviewPages(preReviewSnapshot.pages, effectiveFactor.pages, pendingPatches);
     }
     return (effectiveFactor?.pages || []).map(p => ({ ...p, reviewStatus: 'kept' as const }));
-  }, [isReviewMode, preReviewSnapshot, effectiveFactor]);
+  }, [isReviewMode, preReviewSnapshot, effectiveFactor, pendingPatches]);
 
   // Find current active page
   const activePage = pagesToRender.find(p => p.id === activePageId) || pagesToRender[0];
@@ -162,11 +164,38 @@ export default function Home() {
                   marginLeft: '4px',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '6px'
+                  gap: '8px',
+                  position: 'relative' // For absolute positioning if needed, or flex flow
                 }}>
                   {pageLabel}
-                  {isAdded && <span style={{ fontSize: '0.8em', backgroundColor: '#DCFCE7', color: '#166534', padding: '2px 6px', borderRadius: '4px' }}>New</span>}
-                  {isRemoved && <span style={{ fontSize: '0.8em', backgroundColor: '#FEE2E2', color: '#991B1B', padding: '2px 6px', borderRadius: '4px' }}>Deleted</span>}
+                  
+                  {/* Review Actions Chip - Only Buttons */}
+                  {isReviewMode && (isAdded || isRemoved) && page.relatedPatchId && (
+                    <div 
+                      className={diffStyles.reviewChip} 
+                      data-change-type={isAdded ? 'add' : 'remove'}
+                      style={{ marginLeft: '8px' }}
+                    >
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          resolvePagePatch(page.relatedPatchId!, 'accept');
+                        }}
+                        title="변경사항 수락"
+                      >
+                        <Check size={12} />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          resolvePagePatch(page.relatedPatchId!, 'reject');
+                        }}
+                        title="변경사항 거절"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  )}
                 </span>
 
               <div 

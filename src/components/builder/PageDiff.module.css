@@ -1,0 +1,109 @@
+/* Page-level Review Actions Chip */
+.reviewChip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.reviewChip[data-change-type="add"] {
+  background-color: #22C55E;
+  color: white;
+}
+
+.reviewChip[data-change-type="remove"] {
+  background-color: #EF4444;
+  color: white;
+}
+
+.reviewChip button {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background-color: rgba(255, 255, 255, 0.25);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.reviewChip button:hover {
+  background-color: white;
+  transform: scale(1.1);
+}
+
+.reviewChip button:hover svg {
+  stroke-width: 3px;
+}
+
+.reviewChip[data-change-type="add"] button:hover {
+  color: #166534;
+}
+
+.reviewChip[data-change-type="remove"] button:hover {
+  color: #991B1B;
+}
+
+.diffBadge[data-change-type="add"] {
+  border-color: #22c55e;
+  color: #15803d;
+  background-color: #f0fdf4;
+}
+
+.diffBadge[data-change-type="remove"] {
+  border-color: #ef4444;
+  color: #b91c1c;
+  background-color: #fef2f2;
+}
+
+.diffBadge[data-change-type="replace"] {
+  border-color: #eab308;
+  color: #a16207;
+  background-color: #fefce8;
+}
+
+.diffActions {
+  display: flex;
+  gap: 4px;
+  padding-left: 8px;
+  border-left: 1px solid rgba(0,0,0,0.1);
+}
+
+.diffAcceptBtn, .diffRejectBtn {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: white;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.diffAcceptBtn {
+  background-color: #22c55e;
+}
+
+.diffAcceptBtn:hover {
+  background-color: #16a34a;
+  transform: scale(1.1);
+}
+
+.diffRejectBtn {
+  background-color: #ef4444;
+}
+
+.diffRejectBtn:hover {
+  background-color: #dc2626;
+  transform: scale(1.1);
+}

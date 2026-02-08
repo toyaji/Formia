@@ -212,6 +212,9 @@ Return a JSON object with this structure:
 - summary: Brief description of changes in Korean (e.g., "견종 질문에서 '푸들'을 '실버푸들'로 변경하고 '기타' 옵션을 삭제했습니다.")
 - Operations should target the "/pages/n/blocks/m" path.
 - For new blocks, generate a unique random string for "id".
+- **Page Ordering**: If the form has an 'ending' page (type='ending'), insert new generic pages BEFORE it. Do not append after the ending page.
+  - e.g. If ending page is at index 2, insert new page at index 2 (shifting ending page to 3).
+- **Page Numbering**: Title new pages as "N페이지" starting from 1 (e.g. 1페이지, 2페이지). Do not use "0페이지". Ignore Start/Ending pages for numbering count.
 
 ### CURRENT SCHEMA:
 ${JSON.stringify(schema, null, 2)}

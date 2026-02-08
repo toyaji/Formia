@@ -6,8 +6,8 @@ export type ReviewPageStatus = 'added' | 'removed' | 'kept';
 
 export interface ReviewFormPage extends FormPage {
   reviewStatus: ReviewPageStatus;
+  relatedPatchId?: string;
 }
-
 
 /**
  * Field target types for inline diff display
@@ -256,17 +256,30 @@ export function getBlockChangeType(
  */
 export function getReviewPages(
   originalPages: FormPage[] | undefined,
-  effectivePages: FormPage[]
+  effectivePages: FormPage[],
+  pendingPatches: PatchItem[] = []
 ): ReviewFormPage[] {
   const original = originalPages || [];
   
   // 1. Mark effective pages as 'kept' or 'added'
-  // We need to cast them to ReviewFormPage first
   const result: ReviewFormPage[] = effectivePages.map(page => {
     const isNew = !original.find(p => p.id === page.id);
+    let patchId: string | undefined;
+    
+    if (isNew) {
+      // Find the patch that added this page
+      // Look for 'add' operation where value.id matches page.id
+      const patch = pendingPatches.find(p => 
+        p.changeType === 'add' && 
+        (p.patch.value as any)?.id === page.id
+      );
+      patchId = patch?.id;
+    }
+    
     return {
       ...page,
-      reviewStatus: isNew ? 'added' : 'kept'
+      reviewStatus: isNew ? 'added' : 'kept',
+      relatedPatchId: patchId
     };
   });
 
@@ -280,9 +293,41 @@ export function getReviewPages(
 
   // Insert removed pages. 
   removedPages.forEach(({ page, index }) => {
-     const reviewPage: ReviewFormPage = { ...page, reviewStatus: 'removed' };
+     // Find the patch that removed this page
+     // Heuristic: Look for 'remove' operation targeting this path index
+     // Note: This relies on patches strictly matching original indices or being simple
+     const patch = pendingPatches.find(p => 
+       p.changeType === 'remove' && 
+       p.patch.path === `/pages/${index}`
+     );
+     
+     const reviewPage: ReviewFormPage = { 
+       ...page, 
+       reviewStatus: 'removed',
+       relatedPatchId: patch?.id 
+     };
+     
      const insertAt = Math.min(index, result.length);
      result.splice(insertAt, 0, reviewPage);
+  });
+  
+  // 3. Sort pages: Start < Default < Ending
+  // This ensures that even if a new page is appended by AI, it appears before the Ending page.
+  const typePriority = {
+    start: 0,
+    default: 1,
+    ending: 2,
+  };
+
+  result.sort((a, b) => {
+    const priorityA = typePriority[a.type || 'default'] ?? 1;
+    const priorityB = typePriority[b.type || 'default'] ?? 1;
+    
+    if (priorityA !== priorityB) {
+      return priorityA - priorityB;
+    }
+    // Stable sort for same type (preserve relative order)
+    return 0;
   });
   
   return result;
