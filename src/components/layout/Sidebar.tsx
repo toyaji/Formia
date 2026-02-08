@@ -215,7 +215,12 @@ export const Sidebar = () => {
     // Label Logic
     let pageLabel = '제목 없음';
     if (isStart) pageLabel = '시작 페이지';
-    else if (isEnding) pageLabel = '종료 페이지';
+    else if (isEnding) {
+        // If it's the first ending page (index 0 in the rendered list), it's "설문 종료"
+        // Otherwise "조기 종료"
+        // Note: 'index' passed here is from endingPages.map
+        pageLabel = index === 0 ? '설문 종료' : '조기 종료';
+    }
     else pageLabel = `${index + 1}페이지`; // 1-based indexing for question pages
 
     const content = (

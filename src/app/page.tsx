@@ -125,10 +125,14 @@ export default function Home() {
             const isStartPage = page.type === 'start';
             const isEndingPage = page.type === 'ending';
             
-            // Calculate question page number
+            // Calculate page label
             let pageLabel = '페이지';
             if (isStartPage) pageLabel = '시작 페이지';
-            else if (isEndingPage) pageLabel = '종료 페이지';
+            else if (isEndingPage) {
+                 const endingPages = effectiveFactor?.pages.filter(p => p.type === 'ending') || [];
+                 const index = endingPages.findIndex(p => p.id === page.id);
+                 pageLabel = index === 0 ? '설문 종료' : '조기 종료';
+            }
             else {
                 const questionPages = effectiveFactor?.pages.filter(p => !p.type || p.type === 'default') || [];
                 const index = questionPages.findIndex(p => p.id === page.id);
