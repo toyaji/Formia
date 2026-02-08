@@ -1,5 +1,5 @@
 import { AIProvider } from './AIProvider';
-import { FormFactor } from '../core/schema';
+import { FormFactor, BlockType } from '../core/schema';
 import { Operation } from 'rfc6902';
 
 export class GeminiProvider implements AIProvider {
@@ -37,13 +37,24 @@ export class GeminiProvider implements AIProvider {
 
     // Returning a dummy patch for verification in placeholder mode
     if (prompt.includes('추가')) {
+      let content: any = { label: '새로운 필드', placeholder: '내용을 입력하세요.' };
+      let type: BlockType = 'text';
+
+      if (prompt.includes('연령') || prompt.includes('나이')) {
+        type = 'choice';
+        content = { label: '연령대', options: ['10대', '20대', '30대', '40대 이상'] };
+      } else if (prompt.includes('연락처') || prompt.includes('전화')) {
+        type = 'text';
+        content = { label: '연락처', placeholder: '010-0000-0000' };
+      }
+
       return [{
         op: 'add',
         path: '/blocks/-',
         value: {
           id: Math.random().toString(36).substring(7),
-          type: 'text',
-          content: { label: '새로운 필드', placeholder: '내용을 입력하세요.' }
+          type,
+          content
         }
       }];
     }
