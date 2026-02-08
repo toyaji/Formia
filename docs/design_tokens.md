@@ -6,14 +6,14 @@ To achieve a "Premium, Alive, and Effortless" look (inspired by Araform), Formia
 
 Tokens are named by their function, not their literal color.
 
-| Token Name   | Description              | Default Value (Light)      | Default Value (Dark)    |
-| :----------- | :----------------------- | :------------------------- | :---------------------- |
-| `primary`    | Key brand color          | `#4F46E5`                  | `#6366F1`               |
-| `background` | Main app background      | `#FFFFFF`                  | `#0F172A`               |
-| `surface`    | Card/Section background  | `rgba(255, 255, 255, 0.8)` | `rgba(30, 41, 59, 0.7)` |
-| `text-main`  | Primary text color       | `#1E293B`                  | `#F8FAFC`               |
-| `text-muted` | Secondary/Helper text    | `#64748B`                  | `#94A3B8`               |
-| `border`     | Subtle dividers/outlines | `#E2E8F0`                  | `#334155`               |
+| Token Name   | Description          | Default Value (Light) | Default Value (Dark) |
+| :----------- | :------------------- | :-------------------- | :------------------- |
+| `primary`    | Key brand color      | `#3B82F6`             | `#60A5FA`            |
+| `background` | Workspace background | `#F6F9FF`             | `#0F172A`            |
+| `surface`    | Card background      | `#FFFFFF`             | `#1E293B`            |
+| `text-main`  | Primary text         | `#1E293B`             | `#F8FAFC`            |
+| `text-muted` | Helper text          | `#64748B`             | `#94A3B8`            |
+| `border`     | Subtle dividers      | `#E2E8F0`             | `#334155`            |
 
 ## 2. Glassmorphism & Effects
 
