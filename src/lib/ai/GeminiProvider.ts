@@ -36,6 +36,25 @@ export class GeminiProvider implements AIProvider {
     */
 
     // Returning a dummy patch for verification in placeholder mode
+    if (prompt.includes('추가')) {
+      return [{
+        op: 'add',
+        path: '/blocks/-',
+        value: {
+          id: Math.random().toString(36).substring(7),
+          type: 'text',
+          content: { label: '새로운 필드', placeholder: '내용을 입력하세요.' }
+        }
+      }];
+    }
+    
+    if (prompt.includes('삭제') && currentSchema.blocks.length > 0) {
+      return [{
+        op: 'remove',
+        path: '/blocks/0'
+      }];
+    }
+
     return [];
   }
 

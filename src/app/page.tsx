@@ -5,9 +5,11 @@ import styles from './page.module.css';
 import { useFormStore } from '@/store/useFormStore';
 import { BlockRenderer } from '@/components/builder/BlockRenderer';
 import { Sidebar } from '@/components/layout/Sidebar';
+import { AiPanel } from '@/components/ai/AiPanel';
 
 export default function Home() {
-  const { formFactor, setFormFactor } = useFormStore();
+  const { formFactor, setFormFactor, getEffectiveFactor, proposedPatches } = useFormStore();
+  const effectiveFactor = getEffectiveFactor();
 
   // Initialize with a default schema for testing
   useEffect(() => {
@@ -57,8 +59,23 @@ export default function Home() {
       {/* Center Canvas: WYSIWYG Builder */}
       <section className={styles.centerCanvas}>
         <div style={{ maxWidth: '600px', width: '100%' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+            {proposedPatches && (
+              <span style={{ 
+                fontSize: '0.7rem', 
+                background: 'var(--f-primary)', 
+                color: 'white', 
+                padding: '2px 8px', 
+                borderRadius: '10px',
+                fontWeight: 700,
+                textTransform: 'uppercase'
+              }}>
+                Preview Mode
+              </span>
+            )}
+          </div>
           <h1 style={{ marginBottom: '40px', textAlign: 'center' }}>
-            {formFactor?.metadata.title}
+            {effectiveFactor?.metadata.title}
           </h1>
           
           <div style={{ 
@@ -69,13 +86,15 @@ export default function Home() {
             minHeight: '400px',
             display: 'flex',
             flexDirection: 'column',
-            gap: '32px'
+            gap: '32px',
+            border: proposedPatches ? '2px solid var(--f-primary)' : 'none',
+            transition: 'all 0.3s ease'
           }}>
-            {formFactor?.blocks.map((block: import('@/lib/core/schema').FormBlock) => (
+            {effectiveFactor?.blocks.map((block: import('@/lib/core/schema').FormBlock) => (
               <BlockRenderer key={block.id} block={block} />
             ))}
             
-            {formFactor?.blocks.length === 0 && (
+            {effectiveFactor?.blocks.length === 0 && (
               <p style={{ textAlign: 'center', color: 'var(--f-text-muted)' }}>
                 이곳이 폼 빌더 캔버스입니다.
               </p>
@@ -86,43 +105,7 @@ export default function Home() {
 
       {/* Right Sidebar: AI Agent Panel */}
       <aside className={styles.rightPanel}>
-        <div className={styles.header}>
-          <span className={styles.title}>Formia AI</span>
-        </div>
-        <div style={{ flex: 1, padding: '20px', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ flex: 1, overflowY: 'auto', marginBottom: '20px' }}>
-            <div style={{ 
-              background: 'var(--f-background)', 
-              padding: '12px', 
-              borderRadius: 'var(--f-radius-md)',
-              fontSize: '0.9rem',
-              border: '1px solid var(--f-border)'
-            }}>
-              안녕하세요! 어떤 폼을 만들고 싶으신가요?
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <input 
-              type="text" 
-              placeholder="여기에 요청하세요..." 
-              style={{ 
-                flex: 1, 
-                padding: '10px', 
-                borderRadius: 'var(--f-radius-sm)', 
-                border: '1px solid var(--f-border)' 
-              }}
-            />
-            <button style={{ 
-              background: 'var(--f-primary)', 
-              color: 'white', 
-              padding: '10px 16px', 
-              borderRadius: 'var(--f-radius-sm)',
-              fontWeight: 600
-            }}>
-              보내기
-            </button>
-          </div>
-        </div>
+        <AiPanel />
       </aside>
     </main>
   );
