@@ -5,7 +5,7 @@ import { Undo2, Redo2, Save, Play, Settings, Monitor, Smartphone } from 'lucide-
 import { SettingsModal } from './SettingsModal';
 
 export const Header = () => {
-  const { formFactor, viewport, setViewport } = useFormStore();
+  const { formFactor, viewport, setViewport, history, future, undo, redo } = useFormStore();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   return (
@@ -15,6 +15,26 @@ export const Header = () => {
           <span className={styles.logo}>Formia</span>
           <div className={styles.divider} />
           <span className={styles.title}>{formFactor?.metadata.title}</span>
+          <div className={styles.divider} />
+          
+          <div className={styles.historyGroup}>
+            <button 
+              onClick={undo} 
+              disabled={history.length === 0} 
+              className={styles.historyBtn} 
+              title="실행 취소 (Undo)"
+            >
+              <Undo2 size={16} />
+            </button>
+            <button 
+              onClick={redo} 
+              disabled={future.length === 0} 
+              className={styles.historyBtn} 
+              title="다시 실행 (Redo)"
+            >
+              <Redo2 size={16} />
+            </button>
+          </div>
         </div>
 
         <div className={styles.center}>

@@ -35,6 +35,36 @@
   color: var(--f-text-main);
 }
 
+
+
+.historyGroup {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.historyBtn {
+  width: 28px; 
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  color: var(--f-text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.historyBtn:hover:not(:disabled) {
+  background-color: rgba(0,0,0,0.05);
+  color: var(--f-text-main);
+}
+
+.historyBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
 .center {
   display: flex;
   align-items: center;

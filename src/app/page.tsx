@@ -256,15 +256,7 @@ export default function Home() {
             );
           })}
 
-          {/* Floating Action Bar for History */}
-          <div className={styles.floatingActions}>
-            <button onClick={undo} disabled={history.length === 0} className={styles.actionBtn} title="Undo">
-              <Undo2 size={18} />
-            </button>
-            <button onClick={redo} disabled={future.length === 0} className={styles.actionBtn} title="Redo">
-              <Redo2 size={18} />
-            </button>
-          </div>
+
         </div>
       </section>
 
