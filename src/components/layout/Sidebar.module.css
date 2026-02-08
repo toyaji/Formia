@@ -2,15 +2,25 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+  background-color: #FAFAFA; /* Light gray background like Araform */
+  height: 100%;
+}
+
+.scrollArea {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 40px;
+}
+
+.section {
+  margin-bottom: 24px;
 }
 
 .sectionHeader {
-  padding: 12px 20px;
+  padding: 12px 16px;
   font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
+  font-weight: 600;
   color: var(--f-text-muted);
-  letter-spacing: 0.05em;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -23,14 +33,15 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--f-primary);
+  color: var(--f-text-muted);
   background-color: transparent;
   transition: all 0.2s;
+  cursor: pointer;
 }
 
 .addBtn:hover {
-  background-color: rgba(59, 130, 246, 0.1);
-  transform: scale(1.1);
+  background-color: rgba(0, 0, 0, 0.05);
+  color: var(--f-text-main);
 }
 
 .pageList {
@@ -39,85 +50,131 @@
 }
 
 .pageGroup {
-  margin-bottom: 4px;
+  margin-bottom: 0px;
 }
 
 .pageHeader {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 20px;
+  padding: 8px 16px;
   cursor: pointer;
   background-color: transparent;
   transition: all 0.2s;
-  border-left: 3px solid transparent;
+  position: relative;
+  height: 36px;
+  color: var(--f-text-main);
 }
 
 .pageHeader:hover {
-  background-color: var(--f-background);
+  background-color: rgba(0, 0, 0, 0.03);
 }
 
 .pageHeader.active {
-  background-color: var(--f-background);
-  border-left-color: var(--f-primary);
-  font-weight: 600;
+  background-color: #EBF5FF; /* Light blue active state */
+  color: var(--f-primary);
 }
 
-.dragHandle {
+.toggleBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: var(--f-text-muted);
-  opacity: 0.3;
-  cursor: grab;
-  transition: opacity 0.2s;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  margin-right: 2px;
+  transition: transform 0.2s;
 }
 
-.pageHeader:hover .dragHandle {
-  opacity: 0.6;
+.toggleBtn:hover {
+  background-color: rgba(0,0,0,0.05);
+  color: var(--f-text-main);
+}
+
+.toggleBtn.collapsed {
+  transform: rotate(-90deg);
 }
 
 .pageIcon {
   font-size: 1rem;
+  margin-right: 8px;
+  display: flex;
+  align-items: center;
 }
 
 .pageLabel {
   flex: 1;
   font-size: 0.9rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
+/* Page Header Actions (Add Block, Delete Page) */
+.pageActions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.pageHeader:hover .pageActions {
+  opacity: 1;
+}
+
+.actionBtn {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--f-text-muted);
+  cursor: pointer;
+}
+
+.actionBtn:hover {
+  background-color: white;
+  color: var(--f-text-main);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+/* Blocks List (Accordion Content) */
 .blockList {
   display: flex;
   flex-direction: column;
-  padding: 4px 8px 4px 32px; /* Indent blocks under pages */
+  padding: 2px 0 8px 0;
+}
+
+.blockList.collapsed {
+  display: none;
 }
 
 .blockItem {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 12px;
-  border-radius: var(--f-radius-sm);
+  padding: 6px 16px 6px 44px; /* Indented */
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s ease;
   font-size: 0.85rem;
-  color: var(--f-text-muted);
+  color: var(--f-text-main);
+  position: relative;
+  height: 32px;
 }
 
 .blockItem:hover {
-  background-color: var(--f-background);
-  color: var(--f-text-main);
+  background-color: rgba(0, 0, 0, 0.03);
 }
 
 .blockIcon {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--f-background);
-  border: 1px solid var(--f-border);
-  border-radius: 4px;
-  font-size: 0.6rem;
-  font-weight: 700;
-  color: var(--f-primary);
+  margin-right: 8px;
+  color: var(--f-text-muted);
 }
 
 .blockLabel {
@@ -125,6 +182,18 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: var(--f-text-secondary);
+}
+
+.blockActions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.blockItem:hover .blockActions {
+  opacity: 1;
 }
 
 .empty {

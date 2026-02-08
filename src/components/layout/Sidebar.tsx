@@ -1,11 +1,55 @@
+
+import { useState, useMemo, useEffect } from 'react';
 import { useFormStore } from '@/store/useFormStore';
 import styles from './Sidebar.module.css';
-import { FormBlock } from '@/lib/core/schema';
-import { GripVertical, Plus } from 'lucide-react';
+import { FormBlock, FormPage } from '@/lib/core/schema';
+import { 
+  GripVertical, Plus, Trash2, Copy, 
+  ChevronRight, ChevronDown, MoreHorizontal 
+} from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 
 export const Sidebar = () => {
-  const { formFactor, activePageId, setActivePageId, applyJsonPatch } = useFormStore();
+  const { formFactor, activePageId, activeBlockId, setActivePageId, setActiveBlockId, applyJsonPatch } = useFormStore();
+  
+  // Accordion state: map of pageId -> boolean (true = expanded)
+  const [expandedPages, setExpandedPages] = useState<Record<string, boolean>>({});
+
+  // Initialize expanded state for new pages or when pages change
+  // We'll default to expanded for the active page if not set
+  // We'll default to expanded for the active page if not set
+  useEffect(() => {
+    if (activePageId && expandedPages[activePageId] === undefined) {
+      setExpandedPages(prev => ({ ...prev, [activePageId]: true }));
+    }
+  }, [activePageId, expandedPages]);
+
+  const togglePage = (e: React.MouseEvent, pageId: string) => {
+    e.stopPropagation();
+    setExpandedPages(prev => ({
+      ...prev,
+      [pageId]: !prev[pageId]
+    }));
+  };
+
+  const startPage = useMemo(() => 
+    formFactor?.pages.find(p => p.type === 'start'), 
+    [formFactor?.pages]
+  );
+  
+  const questionPages = useMemo(() => 
+    formFactor?.pages.filter(p => !p.type || p.type === 'default') || [], 
+    [formFactor?.pages]
+  );
+
+  const endingPages = useMemo(() => 
+    formFactor?.pages.filter(p => p.type === 'ending') || [], 
+    [formFactor?.pages]
+  );
+  
+  // Helper to find global index
+  const getGlobalPageIndex = (pageId: string) => 
+    formFactor?.pages.findIndex(p => p.id === pageId) ?? -1;
 
   const onDragEnd = (result: DropResult) => {
     const { source, destination, type } = result;
@@ -13,19 +57,37 @@ export const Sidebar = () => {
     if (source.droppableId === destination.droppableId && source.index === destination.index) return;
 
     if (type === 'PAGE') {
+      // Logic for reordering pages within the same section (Question Only for now)
+      // Getting real indices needs care if we split lists. 
+      // Simplified: We drag by index in the *source list*.
+      // We need to map these back to global indices.
+      
+      const sourcePage = questionPages[source.index];
+      const destPage = questionPages[destination.index];
+      
+      if (!sourcePage || !destPage) return; // Should not happen if dropping in same list
+      
+      const fromIndex = getGlobalPageIndex(sourcePage.id);
+      
+      // Calculate toIndex. If moving down, we want to be after the dest page.
+      // But applyJsonPatch 'move' is standard array manipulation.
+      // We can use the destination's global index as reference.
+      let toIndex = getGlobalPageIndex(destPage.id);
+      
       applyJsonPatch([{
         op: 'move',
-        from: `/pages/${source.index}`,
-        path: `/pages/${destination.index}`
+        from: `/pages/${fromIndex}`,
+        path: `/pages/${toIndex}`
       }]);
+
     } else {
-      // Find source and destination page indices
+      // Reordering blocks
       const sourcePageId = source.droppableId.replace('page-blocks-', '');
       const destPageId = destination.droppableId.replace('page-blocks-', '');
-      const sourcePageIndex = formFactor?.pages.findIndex(p => p.id === sourcePageId);
-      const destPageIndex = formFactor?.pages.findIndex(p => p.id === destPageId);
+      const sourcePageIndex = getGlobalPageIndex(sourcePageId);
+      const destPageIndex = getGlobalPageIndex(destPageId);
 
-      if (sourcePageIndex !== undefined && destPageIndex !== undefined) {
+      if (sourcePageIndex !== -1 && destPageIndex !== -1) {
         applyJsonPatch([{
           op: 'move',
           from: `/pages/${sourcePageIndex}/blocks/${source.index}`,
@@ -35,95 +97,399 @@ export const Sidebar = () => {
     }
   };
 
-  const addPage = () => {
+  const addQuestionPage = () => {
+    applyJsonPatch([{
+      op: 'add',
+      path: '/pages/-', // This appends to the end
+      // Ideally we want to append before ending pages, but for now append is safe,
+      // we might need to sort or insert at specific index if we want it strictly before endings.
+      // Let's find the index of the first ending page and insert before it?
+      // Or just append and user drags it. 
+      // Better: Insert after last question page.
+      value: { 
+        id: Math.random().toString(36).substring(7), 
+        type: 'default',
+        title: '새 페이지', 
+        blocks: [] 
+      }
+    }]);
+  };
+  
+  const addEndingPage = () => {
     applyJsonPatch([{
       op: 'add',
       path: '/pages/-',
-      value: { id: Math.random().toString(36).substring(7), title: 'New Page', blocks: [] }
+      value: { 
+        id: Math.random().toString(36).substring(7), 
+        type: 'ending',
+        title: '새 종료 페이지', 
+        blocks: [] 
+      }
     }]);
   };
 
-  return (
-    <div className={styles.sidebarContent}>
-      <div className={styles.sectionHeader}>
-        <span>Pages & Blocks</span>
-        <button className={styles.addBtn} onClick={addPage} title="Add Page">
-          <Plus size={14} />
-        </button>
-      </div>
+  const deletePage = (e: React.MouseEvent, pageId: string) => {
+    e.stopPropagation();
+    
+    // Safety check: Prevent deleting if it's the last ending page or Start Page
+    const page = formFactor?.pages.find(p => p.id === pageId);
+    if (!page) return;
+    
+    if (page.type === 'start') {
+        alert('시작 페이지는 삭제할 수 없습니다.');
+        return;
+    }
+
+    if (page.type === 'ending' && endingPages.length <= 1) {
+        alert('최소 하나의 종료 페이지가 필요합니다.');
+        return; 
+    }
+
+    const index = getGlobalPageIndex(pageId);
+    if (index !== -1) {
+      applyJsonPatch([{ op: 'remove', path: `/pages/${index}` }]);
+    }
+  };
+
+  const addBlock = (e: React.MouseEvent, pageId: string) => {
+    e.stopPropagation();
+    const pageIndex = getGlobalPageIndex(pageId);
+    if (pageIndex !== -1) {
+      const page = formFactor?.pages[pageIndex];
+      // Restrict Ending page to only 'info' (general) blocks or similar. 
+      // For now, if ending, we default to 'info' text block.
+      // If question page, we default to 'text' input.
       
-      <DragDropContext onDragEnd={onDragEnd}>
-        <Droppable droppableId="pages" type="PAGE">
+      const isEnding = page?.type === 'ending';
+      
+      // Expand the page when adding a block
+      setExpandedPages(prev => ({ ...prev, [pageId]: true }));
+      
+      applyJsonPatch([{
+        op: 'add',
+        path: `/pages/${pageIndex}/blocks/-`,
+        value: {
+          id: Math.random().toString(36).substring(7),
+          type: isEnding ? 'info' : 'text', // Ending = General/Info, Question = Input
+          content: { 
+            label: isEnding ? '안내 문구' : '새로운 질문',
+            // Add default body for info block if needed
+            ...(isEnding ? { body: '감사합니다. 제출이 완료되었습니다.' } : {})
+          }
+        }
+      }]);
+    }
+  };
+
+  const deleteBlock = (e: React.MouseEvent, pageId: string, blockIndex: number) => {
+    e.stopPropagation();
+    const pageIndex = getGlobalPageIndex(pageId);
+    if (pageIndex !== -1) {
+      applyJsonPatch([{
+        op: 'remove',
+        path: `/pages/${pageIndex}/blocks/${blockIndex}`
+      }]);
+    }
+  };
+
+  const duplicateBlock = (e: React.MouseEvent, pageId: string, block: FormBlock) => {
+    e.stopPropagation();
+    const pageIndex = getGlobalPageIndex(pageId);
+    if (pageIndex !== -1) {
+      const newBlock = { ...block, id: Math.random().toString(36).substring(7) };
+      applyJsonPatch([{
+        op: 'add',
+        path: `/pages/${pageIndex}/blocks/-`,
+        value: newBlock
+      }]);
+    }
+  };
+
+  // Render a Page Item (Draggable)
+  const renderPageItem = (page: FormPage, index: number, isEnding: boolean, isStart: boolean) => {
+    const isActive = activePageId === page.id;
+    const isExpanded = expandedPages[page.id];
+    // Can delete if it's an ending page AND there's more than 1 OR if it's a question page. Start page NEVER deletable.
+    const canDelete = isStart ? false : (isEnding ? endingPages.length > 1 : true);
+
+    // Label Logic
+    let pageLabel = '제목 없음';
+    if (isStart) pageLabel = '시작 페이지';
+    else if (isEnding) pageLabel = '종료 페이지';
+    else pageLabel = `${index + 1}페이지`; // 1-based indexing for question pages
+
+    const content = (
+      <div 
+        className={`${styles.pageHeader} ${isActive ? styles.active : ''}`}
+        onClick={() => setActivePageId(page.id)}
+      >
+        {/* Accordion Toggle */}
+        <div 
+          className={`${styles.toggleBtn} ${!isExpanded ? styles.collapsed : ''}`}
+          onClick={(e) => togglePage(e, page.id)}
+          role="button"
+        >
+          <ChevronDown size={14} />
+        </div>
+
+        {/* Drag Handle (Questions only) */}
+        {!isEnding && !isStart && (
+          <div className={`${styles.dragHandle} drag-handle`}>
+            <GripVertical size={14} />
+          </div>
+        )}
+        
+        <span className={styles.pageLabel}>{pageLabel}</span>
+        
+        {/* Hover Actions */}
+        <div className={styles.pageActions}>
+          {/* Allow adding blocks to Start Page and Question Pages. NOT Ending Pages (for now, or handled separately) */}
+          {!isEnding && (
+             <button 
+               className={styles.actionBtn} 
+               onClick={(e) => addBlock(e, page.id)}
+               title="질문 추가"
+             >
+               <Plus size={14} />
+             </button>
+          )}
+          {canDelete && (
+            <button 
+              className={styles.actionBtn} 
+              onClick={(e) => deletePage(e, page.id)}
+              title="페이지 삭제"
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
+        </div>
+      </div>
+    );
+
+    const blocksList = (
+      <div className={`${styles.blockList} ${!isExpanded ? styles.collapsed : ''}`}>
+        <Droppable droppableId={`page-blocks-${page.id}`} type="BLOCK">
           {(provided) => (
             <div 
-              className={styles.pageList}
-              {...provided.droppableProps}
               ref={provided.innerRef}
+              {...provided.droppableProps}
+              style={{ minHeight: '10px' }} 
             >
-              {formFactor?.pages.map((page, index) => (
-                <Draggable key={page.id} draggableId={page.id} index={index}>
-                  {(provided) => (
+              {page.blocks.map((block: FormBlock, bIndex: number) => (
+                <Draggable key={block.id} draggableId={block.id} index={bIndex}>
+                  {(provided, snapshot) => (
                     <div 
-                      className={styles.pageGroup}
+                      className={styles.blockItem}
                       ref={provided.innerRef}
                       {...provided.draggableProps}
+                      {...provided.dragHandleProps}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActivePageId(page.id); // Also set page active
+                        setActiveBlockId(block.id);
+                      }}
+                      style={{
+                          ...provided.draggableProps.style,
+                          backgroundColor: activeBlockId === block.id ? 'rgba(59, 130, 246, 0.1)' : undefined
+                      }}
                     >
-                      <div 
-                        className={`${styles.pageHeader} ${activePageId === page.id ? styles.active : ''}`}
-                        onClick={() => setActivePageId(page.id)}
-                      >
-                        <div {...provided.dragHandleProps} className={styles.dragHandle}>
-                          <GripVertical size={14} />
-                        </div>
-                        <span className={styles.pageIcon}>📄</span>
-                        <span className={styles.pageLabel}>{page.title || 'Untitled Page'}</span>
-                      </div>
+                      <span className={styles.blockIcon}>
+                        {block.type === 'text' && 'T'}
+                        {block.type === 'choice' && 'C'}
+                        {block.type === 'info' && 'i'}
+                      </span>
+                      <span className={styles.blockLabel}>
+                        {block.content.label || block.type}
+                      </span>
                       
-                      <Droppable droppableId={`page-blocks-${page.id}`} type="BLOCK">
-                        {(provided) => (
-                          <div 
-                            className={styles.blockList}
-                            {...provided.droppableProps}
-                            ref={provided.innerRef}
-                          >
-                            {page.blocks.map((block: FormBlock, bIndex: number) => (
-                              <Draggable key={block.id} draggableId={block.id} index={bIndex}>
-                                {(provided) => (
-                                  <div 
-                                    className={styles.blockItem}
-                                    ref={provided.innerRef}
-                                    {...provided.draggableProps}
-                                    {...provided.dragHandleProps}
-                                  >
-                                    <span className={styles.blockIcon}>
-                                      {block.type === 'text' && 'T'}
-                                      {block.type === 'choice' && 'C'}
-                                      {block.type === 'info' && 'i'}
-                                    </span>
-                                    <span className={styles.blockLabel}>
-                                      {block.content.label || block.type}
-                                    </span>
-                                  </div>
-                                )}
-                              </Draggable>
-                            ))}
-                            {provided.placeholder}
-                          </div>
-                        )}
-                      </Droppable>
+                      <div className={styles.blockActions}>
+                        <button 
+                          className={styles.actionBtn}
+                          onClick={(e) => duplicateBlock(e, page.id, block)}
+                          title="복제"
+                        >
+                          <Copy size={12} />
+                        </button>
+                        <button 
+                          className={styles.actionBtn}
+                          onClick={(e) => deleteBlock(e, page.id, bIndex)}
+                          title="삭제"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
                     </div>
                   )}
                 </Draggable>
               ))}
               {provided.placeholder}
+              {page.blocks.length === 0 && (
+                <div className={styles.empty} style={{ padding: '8px', fontSize: '0.8rem' }}>
+                  문항 없음
+                </div>
+              )}
             </div>
           )}
         </Droppable>
-      </DragDropContext>
+      </div>
+    );
+
+    if (isStart) {
+       // Start page is NOT draggable
+       return (
+         <div className={styles.pageGroup} key={page.id}>
+            {content}
+            {blocksList}
+         </div>
+       );
+    }
+
+    return (
+      <Draggable key={page.id} draggableId={page.id} index={index} isDragDisabled={isEnding}> 
+        {/* Disable drag for ending pages for now to simplify */}
+        {(provided) => (
+          <div 
+            className={styles.pageGroup}
+            ref={provided.innerRef}
+            {...provided.draggableProps}
+          >
+            {/* We need to pass dragHandleProps to the handle explicitly, but for simplified structure
+                we might need to clone element or restructure.
+                Previous was a direct child.
+                Fix: Apply dragHandleProps to the handle div inside content, 
+                BUT since content is a variable, we can't easily pass it.
+                Let's inline the content logic.
+            */}
+             <div 
+                className={`${styles.pageHeader} ${isActive ? styles.active : ''}`}
+                onClick={() => setActivePageId(page.id)}
+              >
+                {/* Accordion Toggle */}
+                <div 
+                  className={`${styles.toggleBtn} ${!isExpanded ? styles.collapsed : ''}`}
+                  onClick={(e) => togglePage(e, page.id)}
+                  role="button"
+                >
+                  <ChevronDown size={14} />
+                </div>
+
+                {/* Drag Handle (Questions only) */}
+                {!isEnding && (
+                  <div {...provided.dragHandleProps} className={styles.dragHandle}>
+                    <GripVertical size={14} />
+                  </div>
+                )}
+                
+                <span className={styles.pageLabel}>{page.title || (isEnding ? '종료 페이지' : '제목 없음')}</span>
+                
+                {/* Hover Actions */}
+                <div className={styles.pageActions}>
+                  {!isEnding && (
+                    <button 
+                      className={styles.actionBtn} 
+                      onClick={(e) => addBlock(e, page.id)}
+                      title="질문 추가"
+                    >
+                      <Plus size={14} />
+                    </button>
+                  )}
+                  {canDelete && (
+                    <button 
+                      className={styles.actionBtn} 
+                      onClick={(e) => deletePage(e, page.id)}
+                      title="페이지 삭제"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+            {/* Blocks List (Accordion Content) */}
+            {blocksList}
+          </div>
+        )}
+      </Draggable>
+    );
+  };
+
+  return (
+    <div className={styles.sidebarContent}>
       
-      {(!formFactor?.pages || formFactor.pages.length === 0) && (
-        <div className={styles.empty}>No pages yet</div>
-      )}
+      {/* Scrollable Area */}
+      <div className={styles.scrollArea}>
+        <DragDropContext onDragEnd={onDragEnd}>
+          
+          {/* Combined Start and Question Pages Section */}
+          <div className={styles.section}>
+            <div className={styles.sectionHeader}>
+              <span>질문 페이지</span>
+              <button 
+                className={styles.addBtn} 
+                onClick={addQuestionPage} 
+                title="새 페이지 추가"
+              >
+                <Plus size={14} />
+              </button>
+            </div>
+            
+            {/* Start Page (Fixed) */}
+            <div className={styles.pageList}>
+               {startPage && renderPageItem(startPage, 0, false, true)}
+            </div>
+
+            {/* Question Pages (Draggable) */}
+            <Droppable droppableId="questions-list" type="PAGE">
+              {(provided) => (
+                <div 
+                  className={styles.pageList}
+                  {...provided.droppableProps}
+                  ref={provided.innerRef}
+                >
+                  {questionPages.map((page, index) => renderPageItem(page, index, false, false))}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+            
+            {questionPages.length === 0 && (
+               <div className={styles.empty}>페이지가 없습니다</div>
+            )}
+          </div>
+
+          {/* Section: Endings (Separator? Or just listed) */}
+          <div className={styles.section}>
+            <div className={styles.sectionHeader}>
+              <span>종료 페이지</span>
+              {/* Optional: Add button for ending pages if needed, but user didn't explicitly remove it. 
+                  Keeping it for now as "Ending Page" might be separate. 
+                  User said "Page Add button above Ending Page area". 
+                  This implies Ending Page area still exists. */}
+              <button 
+                className={styles.addBtn} 
+                onClick={addEndingPage} 
+                title="종료 페이지 추가"
+              >
+                <Plus size={14} />
+              </button>
+            </div>
+             
+             <Droppable droppableId="endings-list" type="PAGE" isDropDisabled={true}>
+               {(provided) => (
+                 <div 
+                   className={styles.pageList}
+                   ref={provided.innerRef}
+                   {...provided.droppableProps}
+                 >
+                   {endingPages.map((page, index) => renderPageItem(page, index, true, false))}
+                   {provided.placeholder}
+                 </div>
+               )}
+             </Droppable>
+          </div>
+
+        </DragDropContext>
+      </div>
     </div>
   );
 };

@@ -8,7 +8,7 @@
 .header {
   height: 60px;
   min-height: 60px;
-  padding: 0 20px;
+  padding: 0 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -45,30 +45,30 @@
 .messageList {
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 8px;
 }
 
 /* User Message - Full width box */
 .userMessage {
   width: 100%;
-  padding: 16px 20px;
+  padding: 10px 14px;
   background-color: var(--f-background);
   border: 1px solid var(--f-border);
   border-radius: var(--f-radius-lg);
   font-size: 0.95rem;
-  line-height: 1.6;
+  line-height: 1.5;
   color: var(--f-text-main);
   animation: fadeIn 0.3s ease-out;
 }
 
 /* Assistant Message - Clean text style */
 .assistantMessage {
-  padding: 8px 0;
+  padding: 4px 0;
   font-size: 0.95rem;
-  line-height: 1.7;
+  line-height: 1.6;
   color: var(--f-text-main);
   animation: fadeIn 0.3s ease-out;
 }
@@ -239,7 +239,7 @@
 
 /* Input Area - Floating Style */
 .inputArea {
-  padding: 16px;
+  padding: 12px 16px;
   background-color: transparent;
 }
 

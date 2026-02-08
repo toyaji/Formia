@@ -18,7 +18,7 @@ export function convertOperationsToPatchItems(
   formFactor: FormFactor
 ): PatchItem[] {
   return operations.map((op, index) => {
-    const { blockId, targetField, isNewBlock } = extractTargetInfo(op.path, formFactor, index);
+    const { blockId, targetField, isNewBlock } = extractTargetInfo(op, formFactor, index);
     
     const patchItem: PatchItem = {
       id: `patch-${Date.now()}-${index}`,
@@ -64,7 +64,8 @@ interface TargetInfo {
  * - /pages/0/blocks/1 (remove) -> blockId + 'block'
  * - /metadata/title -> 'form-metadata' + 'form-title'
  */
-function extractTargetInfo(path: string, formFactor: FormFactor, patchIndex: number): TargetInfo {
+function extractTargetInfo(op: Operation, formFactor: FormFactor, patchIndex: number): TargetInfo {
+  const path = op.path;
   const parts = path.split('/').filter(Boolean);
   
   // Form metadata changes
@@ -79,8 +80,9 @@ function extractTargetInfo(path: string, formFactor: FormFactor, patchIndex: num
     const pageIndex = parseInt(parts[1], 10);
     const blockIndex = parts[3];
     
-    // Adding a new block (path ends with -)
-    if (blockIndex === '-') {
+    // Adding a new block (either explicit add to array or using '-' index)
+    // If op is 'add' and we are targeting the blocks array item directly (/pages/0/blocks/X)
+    if ((op.op === 'add' && parts.length === 4) || blockIndex === '-') {
       return { 
         blockId: `new-block-${patchIndex}`, 
         targetField: 'block', 
@@ -90,9 +92,9 @@ function extractTargetInfo(path: string, formFactor: FormFactor, patchIndex: num
     
     const blockIdx = parseInt(blockIndex, 10);
     const page = formFactor.pages[pageIndex];
-    const blockId = page?.blocks[blockIdx]?.id;
+    const blockId = page?.blocks?.[blockIdx]?.id;
     
-    // If path is exactly /pages/X/blocks/Y, it's a block-level operation
+    // If path is exactly /pages/X/blocks/Y, it's a block-level operation (remove/replace)
     if (parts.length === 4) {
       return { blockId, targetField: 'block', isNewBlock: false };
     }
