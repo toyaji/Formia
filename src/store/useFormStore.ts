@@ -21,6 +21,13 @@ interface FormState {
   proposedPatches: Operation[] | null;
   setProposedPatches: (patches: Operation[] | null) => void;
   getEffectiveFactor: () => FormFactor | null;
+  
+  // History
+  history: FormFactor[];
+  future: FormFactor[];
+  undo: () => void;
+  redo: () => void;
+  recordAction: () => void;
 }
 
 export const useFormStore = create<FormState>((set: any, get: any) => ({
@@ -38,6 +45,7 @@ export const useFormStore = create<FormState>((set: any, get: any) => ({
   setFormFactor: (factor: FormFactor) => set({ formFactor: factor }),
 
   applyJsonPatch: (patches: Operation[]) => {
+    get().recordAction();
     const current = get().formFactor;
     if (!current) return;
 
@@ -82,5 +90,48 @@ export const useFormStore = create<FormState>((set: any, get: any) => ({
     const preview = JSON.parse(JSON.stringify(formFactor));
     applyPatch(preview, proposedPatches);
     return preview;
+  },
+
+  // History Implementation
+  history: [],
+  future: [],
+
+  recordAction: () => {
+    const { formFactor, history } = get();
+    if (!formFactor) return;
+    
+    // Max history size 50
+    const nextHistory = [JSON.parse(JSON.stringify(formFactor)), ...history].slice(0, 50);
+    set({ history: nextHistory, future: [] });
+  },
+
+  undo: () => {
+    const { history, future, formFactor } = get();
+    if (history.length === 0 || !formFactor) return;
+
+    const previous = history[0];
+    const newHistory = history.slice(1);
+    const newFuture = [JSON.parse(JSON.stringify(formFactor)), ...future];
+
+    set({
+      formFactor: previous,
+      history: newHistory,
+      future: newFuture
+    });
+  },
+
+  redo: () => {
+    const { history, future, formFactor } = get();
+    if (future.length === 0 || !formFactor) return;
+
+    const next = future[0];
+    const newFuture = future.slice(1);
+    const newHistory = [JSON.parse(JSON.stringify(formFactor)), ...history];
+
+    set({
+      formFactor: next,
+      history: newHistory,
+      future: newFuture
+    });
   },
 }));

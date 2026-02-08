@@ -6,6 +6,7 @@ import { useFormStore } from '@/store/useFormStore';
 import { BlockRenderer } from '@/components/builder/BlockRenderer';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { AiPanel } from '@/components/ai/AiPanel';
+import { Header } from '@/components/layout/Header';
 
 export default function Home() {
   const { formFactor, setFormFactor, getEffectiveFactor, proposedPatches } = useFormStore();
@@ -47,14 +48,13 @@ export default function Home() {
   }, [formFactor, setFormFactor]);
 
   return (
-    <main className={styles.container}>
-      {/* Left Sidebar: Structure & Navigation */}
-      <aside className={styles.leftPanel}>
-        <div className={styles.header}>
-          <span className={styles.title}>Structure</span>
-        </div>
-        <Sidebar />
-      </aside>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw' }}>
+      <Header />
+      <main className={styles.container}>
+        {/* Left Sidebar: Structure & Navigation */}
+        <aside className={styles.leftPanel}>
+          <Sidebar />
+        </aside>
 
       {/* Center Canvas: WYSIWYG Builder */}
       <section className={styles.centerCanvas}>
@@ -107,6 +107,7 @@ export default function Home() {
       <aside className={styles.rightPanel}>
         <AiPanel />
       </aside>
-    </main>
+      </main>
+    </div>
   );
 }
