@@ -9,6 +9,7 @@ Before starting any task in this codebase, the AI Agent must review the followin
 - **UI/UX Design**: `docs/ui_ux_design.md` (Araform inspiration, 3-panel layout)
 - **AI Protocol**: `docs/ai_interaction_protocol.md` (Single source of truth, JSON Patching)
 - **Design Tokens**: `docs/design_tokens.md` (Pretendard font, color tokens)
+- **Testing**: `docs/testing_strategy.md` (AI & BYOK testing strategy)
 
 ## 🛠 Working Principles
 

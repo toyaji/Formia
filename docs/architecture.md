@@ -90,3 +90,7 @@ To support "Undo/Redo" and audit trails for both human and AI changes, Formia im
   - `timestamp`: when the change occurred
   - `description`: "Added Age field" or "Changed primary color to Indigo" (AI-generated summary).
 - **Storage**: History is stored alongside the `.formia` file (e.g., as a `.formia-history` JSON structure).
+
+## 7. Testing & Quality Assurance
+
+For a detailed breakdown of how we ensure reliability in an AI-driven environment, see [Testing Strategy](docs/testing_strategy.md).
