@@ -9,7 +9,7 @@ describe('GeminiProvider', () => {
   let provider: GeminiProvider;
   const mockApiKey = 'test-api-key';
   const mockSchema: FormFactor = {
-    version: "1.0",
+    version: "2.0.0",
     metadata: {
       title: "Test Form",
       createdAt: new Date().toISOString(),
@@ -19,7 +19,7 @@ describe('GeminiProvider', () => {
       mode: 'light',
       tokens: {}
     },
-    blocks: []
+    pages: [{ id: 'page-1', title: 'Start', blocks: [] }]
   };
 
   beforeEach(() => {

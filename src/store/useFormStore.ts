@@ -16,6 +16,10 @@ interface AppConfig {
 
 interface FormState {
   formFactor: FormFactor | null;
+  activePageId: string | null;
+  setActivePageId: (id: string | null) => void;
+  activeBlockId: string | null;
+  setActiveBlockId: (id: string | null) => void;
   setFormFactor: (factor: FormFactor) => void;
   applyJsonPatch: (patches: Operation[]) => void;
   isDraft: boolean;
@@ -37,23 +41,36 @@ interface FormState {
   // Settings
   config: AppConfig;
   setConfig: (config: Partial<AppConfig>) => void;
+  
+  // Viewport
+  viewport: 'desktop' | 'mobile';
+  setViewport: (viewport: 'desktop' | 'mobile') => void;
 }
 
 export const useFormStore = create<FormState>()(
   persist(
-    (set: any, get: any) => ({
-  formFactor: null,
-  isDraft: false,
-  messages: [
-    {
-      id: 'welcome',
-      role: 'assistant',
-      content: '안녕하세요! 어떤 폼을 만들고 싶으신가요?',
-      timestamp: new Date().toISOString(),
-    }
-  ],
+    (set: any, get: any): FormState => ({
+      formFactor: null as FormFactor | null,
+      activePageId: null as string | null,
+      activeBlockId: null as string | null,
+      isDraft: false,
+      messages: [
+        {
+          id: 'welcome',
+          role: 'assistant',
+          content: '안녕하세요! 어떤 폼을 만들고 싶으신가요?',
+          timestamp: new Date().toISOString(),
+        }
+      ],
 
-  setFormFactor: (factor: FormFactor) => set({ formFactor: factor }),
+      setActivePageId: (id: string | null) => set({ activePageId: id, activeBlockId: null }),
+      setActiveBlockId: (id: string | null) => set({ activeBlockId: id }),
+      setFormFactor: (factor: FormFactor) => {
+        set({ formFactor: factor });
+        if (factor.pages.length > 0 && !get().activePageId) {
+          set({ activePageId: factor.pages[0].id });
+        }
+      },
 
   applyJsonPatch: (patches: Operation[]) => {
     get().recordAction();
@@ -153,6 +170,10 @@ export const useFormStore = create<FormState>()(
     setConfig: (newConfig: Partial<AppConfig>) => set((state: FormState) => ({
       config: { ...state.config, ...newConfig }
     })),
+
+    // Viewport
+    viewport: 'desktop',
+    setViewport: (viewport: 'desktop' | 'mobile') => set({ viewport }),
   }),
   {
     name: 'formia-storage',

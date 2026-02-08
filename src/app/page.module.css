@@ -49,3 +49,118 @@
   font-weight: 700;
   font-size: 1.2rem;
 }
+
+.metadataContainer {
+  margin-bottom: 24px;
+  text-align: center;
+  padding: 16px;
+  border-radius: var(--f-radius-lg);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 1px solid transparent;
+}
+
+.metadataContainer:hover {
+  background-color: rgba(0,0,0,0.02);
+}
+
+.activeMetadata {
+  background-color: white;
+  border-color: var(--f-primary);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+}
+
+.titleInput {
+  display: block;
+  width: 100%;
+  text-align: center;
+  font-size: 1.8rem;
+  font-weight: 700;
+  border: none;
+  background: transparent;
+  color: var(--f-text-main);
+  margin-bottom: 8px;
+}
+
+.titleInput:focus {
+  outline: none;
+}
+
+.descriptionInput {
+  display: block;
+  width: 100%;
+  text-align: center;
+  font-size: 1rem;
+  color: var(--f-text-muted);
+  border: none;
+  background: transparent;
+  resize: none;
+  font-family: inherit;
+}
+
+.descriptionInput:focus {
+  outline: none;
+}
+
+.floatingActions {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background-color: var(--f-surface);
+  padding: 8px;
+  border-radius: var(--f-radius-full);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+  border: 1px solid var(--f-border);
+  z-index: 100;
+}
+
+.actionBtn {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--f-text-main);
+  transition: all 0.2s;
+}
+
+.actionBtn:not(:disabled):hover {
+  background-color: var(--f-background);
+  transform: scale(1.1);
+}
+
+.actionBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.vDivider {
+  width: 1px;
+  height: 24px;
+  background-color: var(--f-border);
+  margin: 0 8px;
+}
+
+.saveBtn {
+  background-color: var(--f-primary);
+  color: white;
+  padding: 0 20px;
+  height: 40px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.saveBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}

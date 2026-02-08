@@ -11,6 +11,7 @@
     "test": "vitest"
   },
   "dependencies": {
+    "@hello-pangea/dnd": "^18.0.1",
     "@tauri-apps/api": "^2.1.0",
     "clsx": "^2.1.1",
     "lucide-react": "^0.378.0",

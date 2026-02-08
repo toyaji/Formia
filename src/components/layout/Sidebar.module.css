@@ -11,39 +11,111 @@
   text-transform: uppercase;
   color: var(--f-text-muted);
   letter-spacing: 0.05em;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.addBtn {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--f-primary);
+  background-color: transparent;
+  transition: all 0.2s;
+}
+
+.addBtn:hover {
+  background-color: rgba(59, 130, 246, 0.1);
+  transform: scale(1.1);
+}
+
+.pageList {
+  display: flex;
+  flex-direction: column;
+}
+
+.pageGroup {
+  margin-bottom: 4px;
+}
+
+.pageHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  cursor: pointer;
+  background-color: transparent;
+  transition: all 0.2s;
+  border-left: 3px solid transparent;
+}
+
+.pageHeader:hover {
+  background-color: var(--f-background);
+}
+
+.pageHeader.active {
+  background-color: var(--f-background);
+  border-left-color: var(--f-primary);
+  font-weight: 600;
+}
+
+.dragHandle {
+  color: var(--f-text-muted);
+  opacity: 0.3;
+  cursor: grab;
+  transition: opacity 0.2s;
+}
+
+.pageHeader:hover .dragHandle {
+  opacity: 0.6;
+}
+
+.pageIcon {
+  font-size: 1rem;
+}
+
+.pageLabel {
+  flex: 1;
+  font-size: 0.9rem;
 }
 
 .blockList {
   display: flex;
   flex-direction: column;
-  padding: 8px;
+  padding: 4px 8px 4px 32px; /* Indent blocks under pages */
 }
 
 .blockItem {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 12px;
+  padding: 8px 12px;
   border-radius: var(--f-radius-sm);
   cursor: pointer;
   transition: background-color 0.2s;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  color: var(--f-text-muted);
 }
 
 .blockItem:hover {
   background-color: var(--f-background);
+  color: var(--f-text-main);
 }
 
 .blockIcon {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
   background-color: var(--f-background);
   border: 1px solid var(--f-border);
   border-radius: 4px;
-  font-size: 0.7rem;
+  font-size: 0.6rem;
   font-weight: 700;
   color: var(--f-primary);
 }

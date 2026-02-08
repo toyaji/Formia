@@ -53,10 +53,19 @@ export const BlockSchema = z.object({
 });
 
 /**
- * Main Form Factor Schema
+ * Page Schema
+ */
+export const PageSchema = z.object({
+  id: z.string(),
+  title: z.string().optional(),
+  blocks: z.array(BlockSchema),
+});
+
+/**
+ * Main Form Factor Schema (v2)
  */
 export const FormFactorSchema = z.object({
-  version: z.string().default('1.0.0'),
+  version: z.string().default('2.0.0'),
   metadata: z.object({
     title: z.string(),
     description: z.string().optional(),
@@ -67,7 +76,7 @@ export const FormFactorSchema = z.object({
     mode: z.enum(['light', 'dark', 'system']).default('light'),
     tokens: DesignTokensSchema,
   }),
-  blocks: z.array(BlockSchema),
+  pages: z.array(PageSchema),
   settings: z.object({
     submitButtonLabel: z.string().default('제출하기'),
     successMessage: z.string().default('성공적으로 제출되었습니다.'),
@@ -75,6 +84,7 @@ export const FormFactorSchema = z.object({
 });
 
 export type FormFactor = z.infer<typeof FormFactorSchema>;
+export type FormPage = z.infer<typeof PageSchema>;
 export type FormBlock = z.infer<typeof BlockSchema>;
 export type BlockType = z.infer<typeof BlockTypeSchema>;
 export type DesignTokens = z.infer<typeof DesignTokensSchema>;

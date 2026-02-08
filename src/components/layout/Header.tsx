@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useFormStore } from '@/store/useFormStore';
 import styles from './Header.module.css';
-import { Undo2, Redo2, Save, Play, Settings } from 'lucide-react';
+import { Undo2, Redo2, Save, Play, Settings, Monitor, Smartphone } from 'lucide-react';
 import { SettingsModal } from './SettingsModal';
 
 export const Header = () => {
-  const { formFactor, undo, redo, history, future } = useFormStore();
+  const { formFactor, viewport, setViewport } = useFormStore();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   return (
@@ -18,22 +18,22 @@ export const Header = () => {
         </div>
 
         <div className={styles.center}>
-          <button 
-            onClick={undo} 
-            disabled={history.length === 0}
-            className={styles.iconBtn}
-            title="Undo (Ctrl+Z)"
-          >
-            <Undo2 size={18} />
-          </button>
-          <button 
-            onClick={redo} 
-            disabled={future.length === 0}
-            className={styles.iconBtn}
-            title="Redo (Ctrl+Y)"
-          >
-            <Redo2 size={18} />
-          </button>
+          <div className={styles.viewportToggle}>
+            <button 
+              className={`${styles.viewportBtn} ${viewport === 'desktop' ? styles.active : ''}`}
+              onClick={() => setViewport('desktop')}
+              title="Desktop View"
+            >
+              <Monitor size={18} />
+            </button>
+            <button 
+              className={`${styles.viewportBtn} ${viewport === 'mobile' ? styles.active : ''}`}
+              onClick={() => setViewport('mobile')}
+              title="Mobile View"
+            >
+              <Smartphone size={18} />
+            </button>
+          </div>
         </div>
 
         <div className={styles.right}>

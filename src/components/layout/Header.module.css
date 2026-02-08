@@ -38,10 +38,40 @@
 .center {
   display: flex;
   align-items: center;
-  gap: 4px;
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
+}
+
+.viewportToggle {
+  display: flex;
+  background-color: var(--f-background);
+  padding: 4px;
+  border-radius: var(--f-radius-md);
+  gap: 4px;
+  border: 1px solid var(--f-border);
+}
+
+.viewportBtn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--f-radius-sm);
+  color: var(--f-text-muted);
+  transition: all 0.2s;
+}
+
+.viewportBtn:hover {
+  background-color: rgba(0,0,0,0.05);
+  color: var(--f-text-main);
+}
+
+.viewportBtn.active {
+  background-color: white;
+  color: var(--f-primary);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 
 .right {

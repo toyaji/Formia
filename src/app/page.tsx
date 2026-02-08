@@ -7,16 +7,24 @@ import { BlockRenderer } from '@/components/builder/BlockRenderer';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { AiPanel } from '@/components/ai/AiPanel';
 import { Header } from '@/components/layout/Header';
+import { Undo2, Redo2, Save } from 'lucide-react';
 
 export default function Home() {
-  const { formFactor, setFormFactor, getEffectiveFactor, proposedPatches } = useFormStore();
+  const { 
+    formFactor, setFormFactor, getEffectiveFactor, proposedPatches, 
+    activePageId, viewport, undo, redo, history, future, 
+    activeBlockId, setActiveBlockId, applyJsonPatch 
+  } = useFormStore();
   const effectiveFactor = getEffectiveFactor();
 
-  // Initialize with a default schema for testing
+  // Find current active page
+  const activePage = effectiveFactor?.pages.find(p => p.id === activePageId) || effectiveFactor?.pages[0];
+
+  // Initialize with a default schema for testing (v2)
   useEffect(() => {
     if (!formFactor) {
       setFormFactor({
-        version: '1.0.0',
+        version: '2.0.0',
         metadata: {
           title: '젤리 설문조사 이벤트 응모',
           description: '반려견 정보를 입력하고 이벤트에 참여하세요!',
@@ -29,18 +37,24 @@ export default function Home() {
             primary: '#3B82F6',
           },
         },
-        blocks: [
+        pages: [
           {
-            id: '1',
-            type: 'text',
-            content: { label: '이름', placeholder: '반려견의 이름을 입력해주세요.' },
-            validation: { required: true }
-          },
-          {
-            id: '2',
-            type: 'choice',
-            content: { label: '견종', options: ['말티즈', '푸들', '포메라니안', '기타'] },
-            validation: { required: true }
+            id: 'page-1',
+            title: '시작 페이지',
+            blocks: [
+              {
+                id: '1',
+                type: 'text',
+                content: { label: '이름', placeholder: '반려견의 이름을 입력해주세요.' },
+                validation: { required: true }
+              },
+              {
+                id: '2',
+                type: 'choice',
+                content: { label: '견종', options: ['말티즈', '푸들', '포메라니안', '기타'] },
+                validation: { required: true }
+              }
+            ]
           }
         ],
       });
@@ -58,7 +72,13 @@ export default function Home() {
 
       {/* Center Canvas: WYSIWYG Builder */}
       <section className={styles.centerCanvas}>
-        <div style={{ maxWidth: '600px', width: '100%' }}>
+        <div style={{ 
+          maxWidth: viewport === 'mobile' ? '375px' : '800px', 
+          width: '100%',
+          transition: 'max-width 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+          margin: '0 auto',
+          padding: '40px 20px'
+        }}>
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
             {proposedPatches && (
               <span style={{ 
@@ -74,10 +94,6 @@ export default function Home() {
               </span>
             )}
           </div>
-          <h1 style={{ marginBottom: '40px', textAlign: 'center' }}>
-            {effectiveFactor?.metadata.title}
-          </h1>
-          
           <div style={{ 
             background: 'var(--f-surface)', 
             padding: '40px', 
@@ -87,18 +103,82 @@ export default function Home() {
             display: 'flex',
             flexDirection: 'column',
             gap: '32px',
-            border: proposedPatches ? '2px solid var(--f-primary)' : 'none',
-            transition: 'all 0.3s ease'
+            border: proposedPatches ? '3px solid var(--f-primary)' : '1px solid var(--f-border)',
+            transition: 'all 0.3s ease',
+            position: 'relative'
           }}>
-            {effectiveFactor?.blocks.map((block: import('@/lib/core/schema').FormBlock) => (
+            {/* Form Title and Description integrated into container */}
+            <div 
+              className={`${styles.metadataContainer} ${activeBlockId === 'form-metadata' ? styles.activeMetadata : ''}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveBlockId('form-metadata');
+              }}
+            >
+              {activeBlockId === 'form-metadata' ? (
+                <>
+                  <input 
+                    className={styles.titleInput}
+                    value={effectiveFactor?.metadata.title || ''}
+                    onChange={(e) => {
+                      applyJsonPatch([{
+                        op: 'replace',
+                        path: '/metadata/title',
+                        value: e.target.value
+                      }]);
+                    }}
+                    placeholder="폼 제목을 입력하세요"
+                  />
+                  <textarea 
+                    className={styles.descriptionInput}
+                    value={effectiveFactor?.metadata.description || ''}
+                    onChange={(e) => {
+                      applyJsonPatch([{
+                        op: 'replace',
+                        path: '/metadata/description',
+                        value: e.target.value
+                      }]);
+                    }}
+                    placeholder="폼 설명을 입력하세요 (선택 사항)"
+                  />
+                </>
+              ) : (
+                <>
+                  <h1 style={{ fontSize: '1.8rem', fontWeight: 700, marginBottom: '8px' }}>
+                    {effectiveFactor?.metadata.title}
+                  </h1>
+                  {effectiveFactor?.metadata.description && (
+                    <p style={{ color: 'var(--f-text-muted)', fontSize: '1rem' }}>
+                      {effectiveFactor.metadata.description}
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+
+            {activePage?.blocks.map((block: import('@/lib/core/schema').FormBlock) => (
               <BlockRenderer key={block.id} block={block} />
             ))}
             
-            {effectiveFactor?.blocks.length === 0 && (
-              <p style={{ textAlign: 'center', color: 'var(--f-text-muted)' }}>
-                이곳이 폼 빌더 캔버스입니다.
+            {(!activePage || activePage.blocks.length === 0) && (
+              <p style={{ textAlign: 'center', color: 'var(--f-text-muted)', marginTop: '40px' }}>
+                이 페이지에 아직 문항이 없습니다.
               </p>
             )}
+          </div>
+
+          {/* Floating Action Bar for History/Save */}
+          <div className={styles.floatingActions}>
+            <button onClick={undo} disabled={history.length === 0} className={styles.actionBtn} title="Undo">
+              <Undo2 size={18} />
+            </button>
+            <button onClick={redo} disabled={future.length === 0} className={styles.actionBtn} title="Redo">
+              <Redo2 size={18} />
+            </button>
+            <div className={styles.vDivider} />
+            <button className={styles.saveBtn}>
+              <Save size={16} /> 적용하기
+            </button>
           </div>
         </div>
       </section>
