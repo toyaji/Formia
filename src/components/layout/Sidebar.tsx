@@ -3,6 +3,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useFormStore } from '@/store/useFormStore';
 import styles from './Sidebar.module.css';
 import { FormBlock, FormPage } from '@/lib/core/schema';
+import { getReviewPages, ReviewFormPage } from '@/lib/utils/patchUtils';
 import { 
   GripVertical, Plus, Trash2, Copy, 
   ChevronRight, ChevronDown, MoreHorizontal 
@@ -10,14 +11,25 @@ import {
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 
 export const Sidebar = () => {
-  const { formFactor, activePageId, activeBlockId, setActivePageId, setActiveBlockId, applyJsonPatch } = useFormStore();
+  const { 
+    formFactor, activePageId, activeBlockId, 
+    setActivePageId, setActiveBlockId, applyJsonPatch,
+    isReviewMode, preReviewSnapshot // Get snapshot
+  } = useFormStore();
   
   // Accordion state: map of pageId -> boolean (true = expanded)
   const [expandedPages, setExpandedPages] = useState<Record<string, boolean>>({});
 
-  // Initialize expanded state for new pages or when pages change
-  // We'll default to expanded for the active page if not set
-  // We'll default to expanded for the active page if not set
+  // Compute pages to render (Normal vs Review)
+  // We need to enable `getReviewPages` only when isReviewMode is true AND we have a snapshot
+  const allPages = useMemo(() => {
+    if (isReviewMode && preReviewSnapshot && formFactor) {
+      return getReviewPages(preReviewSnapshot.pages, formFactor.pages);
+    }
+    return (formFactor?.pages || []).map(p => ({ ...p, reviewStatus: 'kept' as const }));
+  }, [isReviewMode, preReviewSnapshot, formFactor]);
+
+  // Initialize expanded state
   useEffect(() => {
     if (activePageId && expandedPages[activePageId] === undefined) {
       setExpandedPages(prev => ({ ...prev, [activePageId]: true }));
@@ -28,23 +40,23 @@ export const Sidebar = () => {
     e.stopPropagation();
     setExpandedPages(prev => ({
       ...prev,
-      [pageId]: !prev[pageId]
+      [pageId]: !(prev[pageId] ?? true) // Default to true if undefined
     }));
   };
 
   const startPage = useMemo(() => 
-    formFactor?.pages.find(p => p.type === 'start'), 
-    [formFactor?.pages]
+    allPages.find(p => p.type === 'start'), 
+    [allPages]
   );
   
   const questionPages = useMemo(() => 
-    formFactor?.pages.filter(p => !p.type || p.type === 'default') || [], 
-    [formFactor?.pages]
+    allPages.filter(p => !p.type || p.type === 'default'), 
+    [allPages]
   );
 
   const endingPages = useMemo(() => 
-    formFactor?.pages.filter(p => p.type === 'ending') || [], 
-    [formFactor?.pages]
+    allPages.filter(p => p.type === 'ending'), 
+    [allPages]
   );
   
   // Helper to find global index
@@ -206,12 +218,24 @@ export const Sidebar = () => {
   };
 
   // Render a Page Item (Draggable)
-  const renderPageItem = (page: FormPage, index: number, isEnding: boolean, isStart: boolean) => {
+  const renderPageItem = (pageBase: FormPage | ReviewFormPage, index: number, isEnding: boolean, isStart: boolean) => {
+    const page = pageBase as ReviewFormPage;
     const isActive = activePageId === page.id;
-    const isExpanded = expandedPages[page.id];
+    const isExpanded = expandedPages[page.id] ?? true; // Default to expanded
     // Can delete if it's an ending page AND there's more than 1 OR if it's a question page. Start page NEVER deletable.
     const canDelete = isStart ? false : (isEnding ? endingPages.length > 1 : true);
-
+    
+    const isRemoved = page.reviewStatus === 'removed';
+    const isAdded = page.reviewStatus === 'added';
+    
+    // Style adjustments
+    const containerStyle: React.CSSProperties = {
+        opacity: isRemoved ? 0.5 : 1,
+        pointerEvents: isRemoved ? 'none' : 'auto',
+        position: 'relative',
+        textDecoration: isRemoved ? 'line-through' : 'none',
+    };
+    
     // Label Logic
     let pageLabel = '제목 없음';
     if (isStart) pageLabel = '시작 페이지';
@@ -280,6 +304,45 @@ export const Sidebar = () => {
               {...provided.droppableProps}
               style={{ minHeight: '10px' }} 
             >
+              {/* Metadata Pseudo-Block for Start Page */}
+              {isStart && (
+                <div 
+                  className={styles.blockItem}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActivePageId(page.id);
+                    setActiveBlockId('form-metadata');
+                  }}
+                  style={{
+                      backgroundColor: activeBlockId === 'form-metadata' ? 'rgba(59, 130, 246, 0.1)' : undefined,
+                      cursor: 'pointer',
+                      borderLeft: '3px solid transparent', // visual distinguish?
+                  }}
+                >
+                  <span className={styles.blockIcon}>T</span>
+                  <span className={styles.blockLabel}>설문 제목 및 설명</span>
+                </div>
+              )}
+
+              {/* Metadata Pseudo-Block for Ending Page */}
+              {isEnding && (
+                <div 
+                  className={styles.blockItem}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActivePageId(page.id);
+                    setActiveBlockId(`page-meta-${page.id}`);
+                  }}
+                  style={{
+                      backgroundColor: activeBlockId === `page-meta-${page.id}` ? 'rgba(59, 130, 246, 0.1)' : undefined,
+                      cursor: 'pointer'
+                  }}
+                >
+                  <span className={styles.blockIcon}>i</span>
+                  <span className={styles.blockLabel}>종료 메시지</span>
+                </div>
+              )}
+
               {page.blocks.map((block: FormBlock, bIndex: number) => (
                 <Draggable key={block.id} draggableId={block.id} index={bIndex}>
                   {(provided, snapshot) => (
@@ -328,7 +391,7 @@ export const Sidebar = () => {
                 </Draggable>
               ))}
               {provided.placeholder}
-              {page.blocks.length === 0 && (
+              {page.blocks.length === 0 && !isStart && !isEnding && (
                 <div className={styles.empty} style={{ padding: '8px', fontSize: '0.8rem' }}>
                   문항 없음
                 </div>
@@ -342,7 +405,7 @@ export const Sidebar = () => {
     if (isStart) {
        // Start page is NOT draggable
        return (
-         <div className={styles.pageGroup} key={page.id}>
+         <div className={styles.pageGroup} key={page.id} style={containerStyle}>
             {content}
             {blocksList}
          </div>
@@ -350,13 +413,14 @@ export const Sidebar = () => {
     }
 
     return (
-      <Draggable key={page.id} draggableId={page.id} index={index} isDragDisabled={isEnding}> 
+      <Draggable key={page.id} draggableId={page.id} index={index} isDragDisabled={isEnding || isRemoved}> 
         {/* Disable drag for ending pages for now to simplify */}
         {(provided) => (
           <div 
             className={styles.pageGroup}
             ref={provided.innerRef}
             {...provided.draggableProps}
+            style={{ ...provided.draggableProps.style, ...containerStyle }}
           >
             {/* We need to pass dragHandleProps to the handle explicitly, but for simplified structure
                 we might need to clone element or restructure.
@@ -385,7 +449,11 @@ export const Sidebar = () => {
                   </div>
                 )}
                 
-                <span className={styles.pageLabel}>{page.title || (isEnding ? '종료 페이지' : '제목 없음')}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1 }}>
+                    <span className={styles.pageLabel}>{pageLabel}</span>
+                    {isAdded && <span style={{ fontSize: '0.7em', color: '#22C55E' }}>(New)</span>}
+                    {isRemoved && <span style={{ fontSize: '0.7em', color: '#EF4444' }}>(Deleted)</span>}
+                </div>
                 
                 {/* Hover Actions */}
                 <div className={styles.pageActions}>

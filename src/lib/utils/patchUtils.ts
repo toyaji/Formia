@@ -1,6 +1,13 @@
-import { Operation } from 'rfc6902';
+import { applyPatch, Operation } from 'rfc6902';
 import { PatchItem } from '@/store/useFormStore';
-import { FormFactor } from '@/lib/core/schema';
+import { FormFactor, FormPage } from '@/lib/core/schema';
+
+export type ReviewPageStatus = 'added' | 'removed' | 'kept';
+
+export interface ReviewFormPage extends FormPage {
+  reviewStatus: ReviewPageStatus;
+}
+
 
 /**
  * Field target types for inline diff display
@@ -240,4 +247,43 @@ export function getBlockChangeType(
   const blockPatch = hasBlockLevelChange(blockId, pendingPatches);
   if (blockPatch) return blockPatch.changeType;
   return null;
+}
+
+/**
+ * Create a merged list of pages for Review Mode
+ * - Shows currently active pages (kept + added)
+ * - Injects deleted pages back into the list with 'removed' status
+ */
+export function getReviewPages(
+  originalPages: FormPage[] | undefined,
+  effectivePages: FormPage[]
+): ReviewFormPage[] {
+  const original = originalPages || [];
+  
+  // 1. Mark effective pages as 'kept' or 'added'
+  // We need to cast them to ReviewFormPage first
+  const result: ReviewFormPage[] = effectivePages.map(page => {
+    const isNew = !original.find(p => p.id === page.id);
+    return {
+      ...page,
+      reviewStatus: isNew ? 'added' : 'kept'
+    };
+  });
+
+  // 2. Identify removed pages and inject them
+  const effectiveIdSet = new Set(effectivePages.map(p => p.id));
+  
+  // Find removed pages with their original index
+  const removedPages = original
+    .map((page, index) => ({ page, index }))
+    .filter(item => !effectiveIdSet.has(item.page.id));
+
+  // Insert removed pages. 
+  removedPages.forEach(({ page, index }) => {
+     const reviewPage: ReviewFormPage = { ...page, reviewStatus: 'removed' };
+     const insertAt = Math.min(index, result.length);
+     result.splice(insertAt, 0, reviewPage);
+  });
+  
+  return result;
 }

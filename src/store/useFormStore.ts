@@ -136,13 +136,27 @@ export const useFormStore = create<FormState>()(
   setProposedPatches: (patches: Operation[] | null) => set({ proposedPatches: patches }),
 
   getEffectiveFactor: () => {
-    const { formFactor, proposedPatches } = get();
+    const { formFactor, pendingPatches } = get();
     if (!formFactor) return null;
-    if (!proposedPatches || proposedPatches.length === 0) return formFactor;
+    
+    // Use pending patches instead of proposedPatches
+    // Filter only patches that are still pending
+    const activePatches = pendingPatches.filter((p: PatchItem) => p.status === 'pending');
+    
+    if (activePatches.length === 0) return formFactor;
 
-    // Create a temporary clone and apply proposed patches for preview
+    // Create a temporary clone and apply pending patches for preview
+    // Note: Patches must be applied in order, but we filter out accepted/rejected.
+    // If patches were generated sequentially, applying later patches on top of (accepted + pending) state should work
+    // IF the accepted patches didn't change the path structure in a way that invalidates pending patches.
+    // Given AI usually generates a sequence of operations, this is the best effort preview logic.
     const preview = JSON.parse(JSON.stringify(formFactor));
-    applyPatch(preview, proposedPatches);
+    const ops = activePatches.map((p: PatchItem) => p.patch);
+    
+    // Apply patches safely - if one fails, try to continue or just log
+    // rfc6902 applyPatch modifies in place and returns results.
+    applyPatch(preview, ops);
+    
     return preview;
   },
 
