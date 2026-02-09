@@ -58,7 +58,7 @@ export const BlockSchema = z.object({
 export const PageSchema = z.object({
   id: z.string(),
   type: z.enum(['start', 'default', 'ending']).default('default'),
-  title: z.string().optional(),
+  title: z.string(),
   description: z.string().optional(),
   blocks: z.array(BlockSchema),
 });

@@ -73,7 +73,7 @@ export default function Home() {
           {
             id: 'page-end',
             type: 'ending',
-            title: '제출이 완료되었습니다.',
+            title: '종료 페이지',
             description: '답변해 주셔서 감사합니다.',
             blocks: []
           }
@@ -140,19 +140,7 @@ export default function Home() {
             const isRemoved = page.reviewStatus === 'removed';
             const isAdded = page.reviewStatus === 'added';
             
-            // Calculate page label
-            let pageLabel = '페이지';
-            if (isStartPage) pageLabel = '시작 페이지';
-            else if (isEndingPage) {
-                 const endingPages = pagesToRender.filter(p => p.type === 'ending') || [];
-                 const index = endingPages.findIndex(p => p.id === page.id);
-                 pageLabel = index === 0 ? '설문 종료' : '조기 종료';
-            }
-            else {
-                const questionPages = pagesToRender.filter(p => !p.type || p.type === 'default') || [];
-                const index = questionPages.findIndex(p => p.id === page.id);
-                pageLabel = `${index + 1}페이지`;
-            }
+            const pageLabel = page.title;
 
             return (
               <div key={page.id} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -335,7 +323,7 @@ export default function Home() {
                     ) : (
                       <>
                         <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '8px', color: 'var(--f-text-muted)' }}>
-                          {page.title || '제출이 완료되었습니다.'}
+                          {page.title}
                         </h2>
                         {page.description && (
                           <p style={{ color: 'var(--f-text-muted)', fontSize: '1rem' }}>

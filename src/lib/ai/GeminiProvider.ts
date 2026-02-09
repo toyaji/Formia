@@ -190,7 +190,11 @@ Your task is to generate an RFC 6902 JSON Patch array to transform the provided 
 - version: "2.0.0"
 - pages: An array of page objects.
   - id: Unique string
-  - title: (optional)
+  - title: (required) 
+    - Start Page: "시작 페이지"
+    - Primary Ending Page: "종료 페이지"
+    - New generic pages: "N페이지" (e.g. 1페이지, 2페이지)
+    - New ending pages (for early exit): "N 종료 페이지" (e.g. 2 종료 페이지)
   - blocks: An array of block objects.
     - type: 'text' | 'choice' | 'rating' | 'info' | 'textarea' | 'date' | 'file'
     - id: Unique string (random)
@@ -212,9 +216,12 @@ Return a JSON object with this structure:
 - summary: Brief description of changes in Korean (e.g., "견종 질문에서 '푸들'을 '실버푸들'로 변경하고 '기타' 옵션을 삭제했습니다.")
 - Operations should target the "/pages/n/blocks/m" path.
 - For new blocks, generate a unique random string for "id".
-- **Page Ordering**: If the form has an 'ending' page (type='ending'), insert new generic pages BEFORE it. Do not append after the ending page.
-  - e.g. If ending page is at index 2, insert new page at index 2 (shifting ending page to 3).
-- **Page Numbering**: Title new pages as "N페이지" starting from 1 (e.g. 1페이지, 2페이지). Do not use "0페이지". Ignore Start/Ending pages for numbering count.
+- **Immutability**: DO NOT move or delete the Start Page (title: "시작 페이지") or the Primary Ending Page (the first page of type: "ending" with title: "종료 페이지").
+- **Page Ordering**: If the form has an 'ending' page, insert new generic pages BEFORE it. Do not append after the primary ending page.
+- **Page Naming**: 
+  - Mandatory generic pages: "1페이지", "2페이지", etc.
+  - Mandatory additional ending pages: "2 종료 페이지", "3 종료 페이지", etc.
+  - AI must use these titles unless user explicitly requests a specific title.
 
 ### CURRENT SCHEMA:
 ${JSON.stringify(schema, null, 2)}

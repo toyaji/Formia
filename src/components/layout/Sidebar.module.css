@@ -2,7 +2,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  background-color: #FAFAFA; /* Light gray background like Araform */
+  background-color: #fafafa; /* Light gray background like Araform */
   height: 100%;
 }
 
@@ -70,7 +70,7 @@
 }
 
 .pageHeader.active {
-  background-color: #EBF5FF; /* Light blue active state */
+  background-color: #ebf5ff; /* Light blue active state */
   color: var(--f-primary);
 }
 
@@ -87,7 +87,7 @@
 }
 
 .toggleBtn:hover {
-  background-color: rgba(0,0,0,0.05);
+  background-color: rgba(0, 0, 0, 0.05);
   color: var(--f-text-main);
 }
 
@@ -109,6 +109,18 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.titleInput {
+  flex: 1;
+  font-size: 0.9rem;
+  font-weight: 500;
+  border: 1px solid var(--f-primary);
+  border-radius: 4px;
+  padding: 2px 4px;
+  outline: none;
+  background-color: white;
+  width: 100%;
 }
 
 /* Page Header Actions (Add Block, Delete Page) */
@@ -137,7 +149,7 @@
 .actionBtn:hover {
   background-color: white;
   color: var(--f-text-main);
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 /* Blocks List (Accordion Content) */

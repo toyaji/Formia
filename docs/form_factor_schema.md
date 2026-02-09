@@ -32,20 +32,31 @@ The "Form Factor" is the core JSON object that represents a form's lifecycle.
 
 ## 2. Page & Ordering Rules
 
-The `pages` array must follow a strict order:
+The `pages` array must follow a strict order and naming convention:
 
-1.  **Start Page** (1, Fixed): Type `start`. Title fixed as "시작 페이지".
-2.  **Default Pages** (0..N): Type `default`.
-    - **No User Titles**: Identified purely by their sequential index (e.g., "1페이지", "2페이지").
-    - Contains Question Blocks.
-3.  **Ending Page** (1, Fixed): Type `ending`. Title fixed as "설문 종료".
-    - Contains only Info/General Blocks.
+1.  **Start Page** (Required, 1 Fixed):
+    - Type: `start`.
+    - Title: **"시작 페이지"** (Mandatory, Fixed).
+    - Constraints: Cannot be deleted, moved, or renamed.
+2.  **Default Pages** (0..N):
+    - Type: `default`.
+    - Title: **"N페이지"** (Mandatory sequential naming: 1페이지, 2페이지) unless explicitly user-defined.
+    - Usage: Primary question pages.
+3.  **Ending Pages** (Min 1):
+    - **Primary Ending Page** (Required, 1 Fixed):
+      - Position: Historically at the end of the schema.
+      - Type: `ending`.
+      - Title: **"종료 페이지"** (Mandatory, Fixed).
+      - Constraints: Cannot be deleted, moved, or renamed.
+    - **Additional Ending Pages** (Optional, for early exit):
+      - Type: `ending`.
+      - Title: **"N 종료 페이지"** (Mandatory sequential naming: 2 종료 페이지, 3 종료 페이지).
 
 ```json
 {
   "id": "uuid",
   "type": "start | default | ending",
-  "title": "(optional, restricted for default pages)",
+  "title": "Required string (following convention)",
   "blocks": []
 }
 ```
@@ -73,8 +84,8 @@ The `pages` array must follow a strict order:
 
 Agents emit **RFC 6902 JSON Patches**.
 
-- **Page Addition**: Must check for Ending Page index and insert **before** it.
-- **Page Naming**: AI must NOT assign custom titles to default pages. Use generic identifiers or let UI handle numbering.
+- **Page Addition**: Must check for Ending Page index and insert **before** the primary ending page.
+- **Page Naming**: AI must generate mandatory `title` fields. It should use the default naming convention ("N페이지" or "N 종료 페이지") unless the user explicitly requests a specific title.
 
 ### Example: "Add a Name Question"
 

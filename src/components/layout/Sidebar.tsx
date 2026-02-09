@@ -4,10 +4,8 @@ import { useFormStore } from '@/store/useFormStore';
 import styles from './Sidebar.module.css';
 import { FormBlock, FormPage } from '@/lib/core/schema';
 import { getReviewPages, ReviewFormPage } from '@/lib/utils/patchUtils';
-import { 
-  GripVertical, Plus, Trash2, Copy, 
-  ChevronRight, ChevronDown, MoreHorizontal 
-} from 'lucide-react';
+import { Plus, Trash2, GripVertical, ChevronDown, ChevronRight, Check, X, Copy, MoreHorizontal } from 'lucide-react';
+import { generateQuestionPageTitle, generateEndingPageTitle } from '@/lib/utils/pageUtils';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 
 export const Sidebar = () => {
@@ -19,6 +17,10 @@ export const Sidebar = () => {
   
   // Accordion state: map of pageId -> boolean (true = expanded)
   const [expandedPages, setExpandedPages] = useState<Record<string, boolean>>({});
+  
+  // Inline editing state: editingPageId
+  const [editingPageId, setEditingPageId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState('');
 
   // Compute pages to render (Normal vs Review)
   // We need to enable `getReviewPages` only when isReviewMode is true AND we have a snapshot
@@ -110,31 +112,30 @@ export const Sidebar = () => {
   };
 
   const addQuestionPage = () => {
+    // Sequence naming: e.g., "3페이지" if there are 2 existing default pages
+    const count = questionPages.length;
     applyJsonPatch([{
       op: 'add',
       path: '/pages/-', // This appends to the end
-      // Ideally we want to append before ending pages, but for now append is safe,
-      // we might need to sort or insert at specific index if we want it strictly before endings.
-      // Let's find the index of the first ending page and insert before it?
-      // Or just append and user drags it. 
-      // Better: Insert after last question page.
       value: { 
         id: Math.random().toString(36).substring(7), 
         type: 'default',
-        title: '새 페이지', 
+        title: generateQuestionPageTitle(count), 
         blocks: [] 
       }
     }]);
   };
   
   const addEndingPage = () => {
+    // Sequence naming: e.g., "2 종료 페이지" if there is already 1 ending page
+    const count = endingPages.length;
     applyJsonPatch([{
       op: 'add',
       path: '/pages/-',
       value: { 
         id: Math.random().toString(36).substring(7), 
         type: 'ending',
-        title: '새 종료 페이지', 
+        title: generateEndingPageTitle(count), 
         blocks: [] 
       }
     }]);
@@ -217,6 +218,23 @@ export const Sidebar = () => {
     }
   };
 
+  const handleTitleSubmit = (pageId: string) => {
+    if (!editTitle.trim()) {
+      setEditingPageId(null);
+      return;
+    }
+    
+    const pageIndex = getGlobalPageIndex(pageId);
+    if (pageIndex !== -1) {
+      applyJsonPatch([{
+        op: 'replace',
+        path: `/pages/${pageIndex}/title`,
+        value: editTitle.trim()
+      }]);
+    }
+    setEditingPageId(null);
+  };
+
   // Render a Page Item (Draggable)
   const renderPageItem = (pageBase: FormPage | ReviewFormPage, index: number, isEnding: boolean, isStart: boolean) => {
     const page = pageBase as ReviewFormPage;
@@ -237,15 +255,41 @@ export const Sidebar = () => {
     };
     
     // Label Logic
-    let pageLabel = '제목 없음';
-    if (isStart) pageLabel = '시작 페이지';
-    else if (isEnding) {
-        // If it's the first ending page (index 0 in the rendered list), it's "설문 종료"
-        // Otherwise "조기 종료"
-        // Note: 'index' passed here is from endingPages.map
-        pageLabel = index === 0 ? '설문 종료' : '조기 종료';
-    }
-    else pageLabel = `${index + 1}페이지`; // 1-based indexing for question pages
+    const isPrimaryEnding = isEnding && allPages.findIndex(p => p.type === 'ending') === index;
+    const isImmutable = isStart || isPrimaryEnding;
+    const pageLabel = page.title;
+
+    const renderLabel = () => {
+      if (editingPageId === page.id) {
+        return (
+          <input
+            autoFocus
+            className={styles.titleInput}
+            value={editTitle}
+            onChange={(e) => setEditTitle(e.target.value)}
+            onBlur={() => handleTitleSubmit(page.id)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleTitleSubmit(page.id);
+              if (e.key === 'Escape') setEditingPageId(null);
+            }}
+            onClick={(e) => e.stopPropagation()}
+          />
+        );
+      }
+      return (
+        <span 
+          className={styles.pageLabel}
+          onDoubleClick={(e) => {
+            if (isImmutable) return;
+            e.stopPropagation();
+            setEditingPageId(page.id);
+            setEditTitle(page.title || '');
+          }}
+        >
+          {pageLabel}
+        </span>
+      );
+    };
 
     const content = (
       <div 
@@ -268,7 +312,7 @@ export const Sidebar = () => {
           </div>
         )}
         
-        <span className={styles.pageLabel}>{pageLabel}</span>
+        {renderLabel()}
         
         {/* Hover Actions */}
         <div className={styles.pageActions}>
@@ -413,7 +457,7 @@ export const Sidebar = () => {
     }
 
     return (
-      <Draggable key={page.id} draggableId={page.id} index={index} isDragDisabled={isEnding || isRemoved}> 
+      <Draggable key={page.id} draggableId={page.id} index={index} isDragDisabled={isEnding || isRemoved || isImmutable}> 
         {/* Disable drag for ending pages for now to simplify */}
         {(provided) => (
           <div 
@@ -443,14 +487,14 @@ export const Sidebar = () => {
                 </div>
 
                 {/* Drag Handle (Questions only) */}
-                {!isEnding && (
+                {!isEnding && !isImmutable && (
                   <div {...provided.dragHandleProps} className={styles.dragHandle}>
                     <GripVertical size={14} />
                   </div>
                 )}
                 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1 }}>
-                    <span className={styles.pageLabel}>{pageLabel}</span>
+                    {renderLabel()}
                     {isAdded && <span style={{ fontSize: '0.7em', color: '#22C55E' }}>(New)</span>}
                     {isRemoved && <span style={{ fontSize: '0.7em', color: '#EF4444' }}>(Deleted)</span>}
                 </div>

@@ -13,10 +13,12 @@ Inspired by Araform's builder, the workspace is split into three main regions:
 ### 2.1 Left Panel (Structure & Navigation)
 
 - **Structure**:
-  1.  **Start Page** (Fixed): "시작 페이지".
-  2.  **Question Pages**: Auto-numbered ("1페이지", "2페이지"...). **No custom names.** User cannot likely rename these to avoid confusion with AI generation.
-  3.  **Ending Page** (Fixed): "설문 종료".
-- **Ordering**: Strict order (Start -> Questions -> End). Drag-and-drop only allowed within Question pages.
+  1.  **Start Page** (Fixed): "시작 페이지". Cannot be renamed, moved, or deleted.
+  2.  **Question Pages**: Auto-numbered by default ("1페이지", "2페이지"...). **Customizable.** Users can double-click to rename these.
+  3.  **Ending Pages**:
+      - **Default End Page** (Fixed): "종료 페이지". Cannot be renamed, moved, or deleted.
+      - **Early Exit Pages**: Customizable ("2 종료 페이지", "3 종료 페이지"...).
+- **Ordering**: Strict relative order (Start -> Questions -> End). Drag-and-drop allowed within Question pages.
 - **Collapsible**: To maximize canvas space.
 
 ### 2.2 Center Canvas (The WYSIWYG Builder)

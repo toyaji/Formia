@@ -19,7 +19,7 @@ describe('GeminiProvider', () => {
       mode: 'light',
       tokens: {}
     },
-    pages: [{ id: 'page-1', title: 'Start', blocks: [] }]
+    pages: [{ id: 'page-1', type: 'default', title: 'Start', blocks: [] }]
   };
 
   beforeEach(() => {
@@ -49,7 +49,7 @@ describe('GeminiProvider', () => {
     const patches = await provider.generatePatch('Add a text field', mockSchema);
 
     expect(fetch).toHaveBeenCalledWith(
-      expect.stringContaining('gemini-2.5-flash'),
+      expect.stringContaining('gemini-2.0-flash'),
       expect.objectContaining({
         method: 'POST',
         body: expect.stringContaining('Add a text field')
