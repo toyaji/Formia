@@ -220,11 +220,13 @@ Your task is to generate an RFC 6902 JSON Patch array to transform the provided 
 Return a JSON object with this structure:
 {
   "patches": [ /* RFC 6902 JSON Patch operations */ ],
-  "summary": "한국어로 변경 내용을 간결하게 설명 (1-2문장)"
+  "summary": "한국어로 변경 내용을 간결하게 설명 (1-2문장) 또는 변경 불가 사유"
 }
 
 - patches: Array of JSON Patch operations (op, path, value/from)
-- summary: Brief description of changes in Korean (e.g., "견종 질문에서 '푸들'을 '실버푸들'로 변경하고 '기타' 옵션을 삭제했습니다.")
+- summary: 
+  - If patches are generated: Brief description of changes in Korean (e.g., "견종 질문에서 '푸들'을 '실버푸들'로 변경했습니다.")
+  - If NO patches are generated: Clear explanation of WHY in Korean, acting as a helpful assistant (e.g., "시작 페이지 제목은 설문의 핵심 요소이므로 삭제할 수 없습니다. 대신 내용을 수정해 드릴까요?").
 - Operations should target the "/pages/n/blocks/m" path.
 - For new blocks, generate a unique random string for "id".
 - **Immutability**: 

@@ -38,9 +38,9 @@ export const useAIPatch = () => {
       if (result.patches.length === 0) {
         addMessage({
           role: 'assistant',
-          content: '죄송합니다. 해당 요청에 맞는 변경 사항을 생성하지 못했습니다.',
+          content: result.summary || '죄송합니다. 해당 요청에 맞는 변경 사항을 생성하지 못했습니다.',
         });
-        return null;
+        return result;
       }
 
       return result;
