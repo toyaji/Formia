@@ -3,6 +3,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useFormStore } from '@/store/useFormStore';
 import styles from './Sidebar.module.css';
 import { FormBlock, FormPage } from '@/lib/core/schema';
+import { BLOCK_METADATA } from '@/lib/constants/blocks';
 import { getReviewPages, ReviewFormPage } from '@/lib/utils/patchUtils';
 import { Plus, Trash2, GripVertical, ChevronDown, ChevronRight, Check, X, Copy, MoreHorizontal } from 'lucide-react';
 import { generateQuestionPageTitle, generateEndingPageTitle } from '@/lib/utils/pageUtils';
@@ -378,12 +379,10 @@ export const Sidebar = () => {
                       }}
                     >
                       <span className={styles.blockIcon}>
-                        {block.type === 'text' && 'T'}
-                        {block.type === 'choice' && 'C'}
-                        {block.type === 'info' && 'i'}
+                        {BLOCK_METADATA[block.type]?.icon || block.type[0].toUpperCase()}
                       </span>
                       <span className={styles.blockLabel}>
-                        {block.content.label || block.type}
+                        {block.content.label || BLOCK_METADATA[block.type]?.label || block.type}
                       </span>
                       
                       <div className={styles.blockActions}>
@@ -543,9 +542,6 @@ export const Sidebar = () => {
               )}
             </Droppable>
             
-            {questionPages.length === 0 && (
-               <div className={styles.empty}>페이지가 없습니다</div>
-            )}
           </div>
 
           {/* Section: Endings (Separator? Or just listed) */}

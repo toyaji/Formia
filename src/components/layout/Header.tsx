@@ -5,8 +5,21 @@ import { Undo2, Redo2, Save, Play, Settings, Monitor, Smartphone } from 'lucide-
 import { SettingsModal } from './SettingsModal';
 
 export const Header = () => {
-  const { formFactor, viewport, setViewport, history, future, undo, redo } = useFormStore();
+  const { formFactor, viewport, setViewport, history, future, undo, redo, applyJsonPatch } = useFormStore();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editTitle, setEditTitle] = useState(formFactor?.metadata.title || '');
+
+  const handleTitleSubmit = () => {
+    const newTitle = editTitle.trim() || '제목 없는 설문지';
+    applyJsonPatch([{
+      op: 'replace',
+      path: '/metadata/title',
+      value: newTitle
+    }]);
+    setEditTitle(newTitle);
+    setIsEditingTitle(false);
+  };
 
   return (
     <>
@@ -14,7 +27,33 @@ export const Header = () => {
         <div className={styles.left}>
           <span className={styles.logo}>Formia</span>
           <div className={styles.divider} />
-          <span className={styles.title}>{formFactor?.metadata.title}</span>
+          {isEditingTitle ? (
+            <input 
+              className={styles.titleInput}
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              onBlur={handleTitleSubmit}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleTitleSubmit();
+                if (e.key === 'Escape') {
+                  setEditTitle(formFactor?.metadata.title || '');
+                  setIsEditingTitle(false);
+                }
+              }}
+              autoFocus
+            />
+          ) : (
+            <span 
+              className={styles.title} 
+              onDoubleClick={() => {
+                setEditTitle(formFactor?.metadata.title || '');
+                setIsEditingTitle(true);
+              }}
+              title="더블 클릭하여 제목 수정"
+            >
+              {formFactor?.metadata.title}
+            </span>
+          )}
           <div className={styles.divider} />
           
           <div className={styles.historyGroup}>

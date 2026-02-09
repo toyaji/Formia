@@ -17,18 +17,20 @@
 }
 
 .sectionHeader {
-  padding: 12px 16px;
-  font-size: 0.75rem;
-  font-weight: 600;
+  padding: 16px 12px 8px 15px;
+  font-size: 0.72rem;
+  font-weight: 700;
   color: var(--f-text-muted);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
 .addBtn {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   border-radius: 4px;
   display: flex;
   align-items: center;
@@ -56,12 +58,12 @@
 .pageHeader {
   display: flex;
   align-items: center;
-  padding: 8px 16px;
+  padding: 0 8px;
   cursor: pointer;
   background-color: transparent;
   transition: all 0.2s;
   position: relative;
-  height: 36px;
+  height: 32px;
   color: var(--f-text-main);
 }
 
@@ -82,7 +84,6 @@
   width: 20px;
   height: 20px;
   border-radius: 4px;
-  margin-right: 2px;
   transition: transform 0.2s;
 }
 
@@ -95,25 +96,33 @@
   transform: rotate(-90deg);
 }
 
-.pageIcon {
-  font-size: 1rem;
-  margin-right: 8px;
+.dragHandle {
+  width: 20px;
+  height: 20px;
   display: flex;
   align-items: center;
+  justify-content: center;
+  color: #ccc;
+  cursor: grab;
+}
+
+.dragHandle:active {
+  cursor: grabbing;
 }
 
 .pageLabel {
   flex: 1;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  margin-left: 4px;
 }
 
 .titleInput {
   flex: 1;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   font-weight: 500;
   border: 1px solid var(--f-primary);
   border-radius: 4px;
@@ -126,7 +135,7 @@
 /* Page Header Actions (Add Block, Delete Page) */
 .pageActions {
   display: flex;
-  gap: 4px;
+  gap: 2px;
   opacity: 0;
   transition: opacity 0.2s;
 }
@@ -156,7 +165,7 @@
 .blockList {
   display: flex;
   flex-direction: column;
-  padding: 2px 0 8px 0;
+  padding: 0;
 }
 
 .blockList.collapsed {
@@ -166,13 +175,13 @@
 .blockItem {
   display: flex;
   align-items: center;
-  padding: 6px 16px 6px 44px; /* Indented */
+  padding: 0 12px 0 26px;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: var(--f-text-main);
   position: relative;
-  height: 32px;
+  height: 28px;
 }
 
 .blockItem:hover {
@@ -180,13 +189,14 @@
 }
 
 .blockIcon {
-  width: 18px;
-  height: 18px;
+  width: 15px;
+  height: 15px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: 8px;
+  margin-right: 4px;
   color: var(--f-text-muted);
+  opacity: 0.7;
 }
 
 .blockLabel {
@@ -209,8 +219,8 @@
 }
 
 .empty {
-  padding: 20px;
-  text-align: center;
+  padding: 12px 12px 12px 36px;
   color: var(--f-text-muted);
-  font-size: 0.85rem;
+  font-size: 0.75rem;
+  font-style: italic;
 }
