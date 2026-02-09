@@ -37,7 +37,10 @@ export const BlockContentSchema = z.object({
   options: z.array(z.string()).optional(), // For choice
   maxRating: z.number().optional(), // For rating
   body: z.string().optional(), // For info
+  multiSelect: z.boolean().optional(), // For choice - allow multiple selections
+  allowOther: z.boolean().optional(), // For choice - allow "other" input
 });
+
 
 /**
  * Form Block Schema

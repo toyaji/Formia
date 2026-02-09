@@ -1,7 +1,6 @@
 .container {
   display: flex;
-  height: 100vh;
-  width: 100vw;
+  flex: 1;
   overflow: hidden;
   background-color: var(--f-background);
 }
@@ -17,10 +16,10 @@
 .centerCanvas {
   flex: 1;
   overflow-y: auto;
+  overflow-x: auto;
   padding: 80px 40px;
   display: flex;
   flex-direction: column;
-  align-items: center;
   background-color: var(--f-background);
   background-image: 
     linear-gradient(var(--f-border) 1px, transparent 1px),
@@ -34,6 +33,41 @@
   background-color: var(--f-surface);
   display: flex;
   flex-direction: column;
+}
+
+@media (max-width: 620px) {
+  .container {
+    position: relative;
+    overflow: hidden;
+    height: calc(100vh - 60px); 
+  }
+
+  .leftPanel {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 280px;
+    height: 100%;
+    z-index: 10;
+    box-shadow: 8px 0 15px rgba(0,0,0,0.08);
+    background-color: var(--f-surface);
+    border-right: 1px solid var(--f-border);
+  }
+
+  .rightPanel {
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 340px;
+    height: 100%;
+    z-index: 5;
+    background-color: var(--f-surface);
+    border-left: 1px solid var(--f-border);
+  }
+
+  .centerCanvas {
+    display: none;
+  }
 }
 
 .header {

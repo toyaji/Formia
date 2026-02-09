@@ -131,9 +131,9 @@ export default function Home() {
         }}
       >
         <div style={{ 
-          maxWidth: viewport === 'mobile' ? '375px' : '800px', 
-          width: '100%',
-          transition: 'max-width 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+          width: viewport === 'mobile' ? '375px' : '800px', 
+          flexShrink: 0,
+          transition: 'width 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
           margin: '0 auto',
           display: 'flex',
           flexDirection: 'column',
