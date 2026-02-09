@@ -32,6 +32,11 @@
   color: var(--f-text-main);
 }
 
+:global([data-viewport="mobile"]) .label {
+  font-size: 16px;
+  font-weight: 700;
+}
+
 .labelInput {
   font-weight: 600;
   font-size: 1rem;
@@ -84,6 +89,10 @@
   gap: 12px;
 }
 
+:global([data-viewport="mobile"]) .options {
+  gap: 8px;
+}
+
 .optionLabel {
   display: flex;
   align-items: center;
@@ -109,6 +118,11 @@
   background-color: var(--f-surface);
 }
 
+:global([data-viewport="mobile"]) .optionItem {
+  padding: 10px 12px;
+  border-radius: 6px;
+}
+
 .optionEditWrapper {
   flex: 1;
   display: flex;
@@ -124,6 +138,12 @@
   color: var(--f-text-main);
   padding: 2px 0;
   border-bottom: 1px solid transparent;
+}
+
+:global([data-viewport="mobile"]) .optionInput,
+:global([data-viewport="mobile"]) .optionText {
+  font-size: 16px;
+  font-weight: 500;
 }
 
 .optionInput:focus {
@@ -375,6 +395,12 @@
   line-height: 1.2;
 }
 
+:global([data-viewport="mobile"]) .statementLabel,
+:global([data-viewport="mobile"]) .statementLabelInput {
+  font-size: 22px;
+  font-weight: 900;
+}
+
 .statementLabelInput {
   display: block;
   font-size: 1.8rem;
@@ -399,6 +425,12 @@
   line-height: 1.6;
   max-width: 600px;
   margin: 0 auto;
+}
+
+:global([data-viewport="mobile"]) .statementBody,
+:global([data-viewport="mobile"]) .statementBodyInput {
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .statementBodyInput {

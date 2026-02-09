@@ -123,16 +123,21 @@ export default function Home() {
         </aside>
 
       {/* Center Canvas: WYSIWYG Builder */}
-      <section className={styles.centerCanvas}>
+      <section 
+        className={styles.centerCanvas}
+        data-viewport={viewport}
+        style={{
+          padding: viewport === 'mobile' ? '40px 16px' : '80px 40px',
+        }}
+      >
         <div style={{ 
           maxWidth: viewport === 'mobile' ? '375px' : '800px', 
           width: '100%',
           transition: 'max-width 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
           margin: '0 auto',
-          padding: '40px 20px',
           display: 'flex',
           flexDirection: 'column',
-          gap: '24px'
+          gap: viewport === 'mobile' ? '16px' : '24px'
         }}>
           {isReviewMode && (
              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
@@ -218,13 +223,13 @@ export default function Home() {
                 }}
                 style={{ 
                   background: 'var(--f-surface)', 
-                  padding: '40px', 
+                  padding: viewport === 'mobile' ? '24px 16px' : '40px', 
                   borderRadius: 'var(--f-radius-xl)',
                   boxShadow: 'var(--f-shadow-premium)',
                   minHeight: isStartPage ? 'auto' : '200px',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '32px',
+                  gap: viewport === 'mobile' ? '24px' : '32px',
                   border: isRemoved ? '2px dashed #EF4444' : (isAdded ? '2px solid #22C55E' : (isReviewMode ? '2px solid #e2e8f0' : '1px solid var(--f-border)')),
                   transition: 'all 0.3s ease',
                   position: 'relative',
