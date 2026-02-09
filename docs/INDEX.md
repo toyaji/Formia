@@ -5,18 +5,19 @@
 
 ## 📋 문서 목록 및 요약
 
-| 문서                           | 크기  | 핵심 내용                                     | 언제 읽어야 하나?          |
-| ------------------------------ | ----- | --------------------------------------------- | -------------------------- |
-| **architecture.md**            | ~6KB  | Editor/Service 레이어 분리, 시스템 다이어그램 | 전체 구조 이해 필요 시     |
-| **cloud_architecture.md**      | ~17KB | 클라우드/인증/배포 설계                       | 백엔드, 인증, 배포 작업 시 |
-| **infrastructure.md**          | ~26KB | 인프라, DB, 서버 배포                         | 인프라, DevOps 작업 시     |
-| **form_factor_schema.md**      | ~3KB  | Form Factor JSON 스키마                       | 폼 구조/블록 수정 시       |
-| **ai_interaction_protocol.md** | ~2KB  | AI 응답 포맷, JSON Patch                      | AI 기능 수정 시            |
-| **code_design_patterns.md**    | ~3KB  | 레이어 아키텍처, 패턴                         | 새 기능 설계 시            |
-| **design_tokens.md**           | ~2KB  | 폰트, 색상, 스타일                            | UI 스타일 수정 시          |
-| **ui_ux_design.md**            | ~2KB  | 3-패널 레이아웃, UX                           | UI 컴포넌트 수정 시        |
-| **testing_strategy.md**        | ~2KB  | 테스트 전략                                   | 테스트 작성 시             |
-| **product_requirements.md**    | ~1KB  | 제품 요구사항                                 | 기능 기획 시               |
+| 문서                           | 크기  | 핵심 내용                                              | 언제 읽어야 하나?              |
+| ------------------------------ | ----- | ------------------------------------------------------ | ------------------------------ |
+| **architecture.md**            | ~10KB | Editor/Service 레이어 분리, AI Port, 시스템 다이어그램 | 전체 구조 이해 필요 시         |
+| **cloud_architecture.md**      | ~17KB | 클라우드/인증/배포 설계                                | 백엔드, 인증, 배포 작업 시     |
+| **infrastructure.md**          | ~26KB | 인프라, DB, 서버 배포                                  | 인프라, DevOps 작업 시         |
+| **form_factor_schema.md**      | ~3KB  | Form Factor JSON 스키마                                | 폼 구조/블록 수정 시           |
+| **ai_interaction_protocol.md** | ~2KB  | AI 응답 포맷, JSON Patch                               | AI 기능 수정 시                |
+| **code_design_patterns.md**    | ~5KB  | 레이어 아키텍처, Port/Adapter 패턴, AI Port            | 새 기능 설계 시                |
+| **design_tokens.md**           | ~2KB  | 폰트, 색상, 스타일                                     | UI 스타일 수정 시              |
+| **ui_ux_design.md**            | ~2KB  | 3-패널 레이아웃, UX                                    | UI 컴포넌트 수정 시            |
+| **testing_strategy.md**        | ~2KB  | 테스트 전략                                            | 테스트 작성 시                 |
+| **security.md**                | ~24KB | BYOK 키 보안, 크로스플랫폼 동기화, Analytics 키        | AI 키, 보안, Analytics 연동 시 |
+| **product_requirements.md**    | ~1KB  | 제품 요구사항                                          | 기능 기획 시                   |
 
 ---
 
@@ -40,14 +41,14 @@
 
 ```
 필수: ai_interaction_protocol.md, form_factor_schema.md
-선택: architecture.md
+선택: security.md (API 키 관리), architecture.md (AI Port 설계)
 ```
 
 ### 4. 백엔드/API 작업
 
 ```
 필수: cloud_architecture.md (Section 4-6)
-선택: infrastructure.md (DB/백엔드 전환 시)
+선택: infrastructure.md (DB/백엔드 전환 시), security.md (보안 정책)
 ```
 
 ### 5. 인프라/배포
@@ -60,7 +61,7 @@
 ### 6. 인증/로그인
 
 ```
-필수: cloud_architecture.md (Section 4)
+필수: cloud_architecture.md (Section 4), security.md
 ```
 
 ### 7. 테스트 작성

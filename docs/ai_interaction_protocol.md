@@ -50,3 +50,23 @@ sequenceDiagram
 - **Gemini**: excels at multimodal context (if we support image-to-form).
 - **OpenAI/Claude**: excels at precise JSON adherence and code-like logic.
 - **Unified Adapter**: All models must output the same JSON Patch format.
+
+## 5. BYOK (Bring Your Own Key) — API 키 관리
+
+Formia는 **사용자가 자신의 AI API 키를 사용**합니다 (서비스 비용 부담 제로).
+
+### 5.1 환경별 키 처리
+
+| 환경                |     AI API 호출 방식      | 키 저장                      |
+| ------------------- | :-----------------------: | ---------------------------- |
+| **Desktop (Tauri)** | Rust 사이드에서 직접 호출 | OS Secure Storage (Keychain) |
+| **Web (기본)**      |    Backend Proxy 경유     | 세션 메모리만 (Session-Only) |
+| **Web (편의)**      |    Backend Proxy 경유     | Envelope Encryption → DB     |
+
+### 5.2 핵심 규칙
+
+- AI Adapter는 키를 메모리에서 받아 사용 후 즉시 클리어
+- 키를 로그, 응답, 에러 리포트에 절대 포함하지 않음
+- Desktop에서는 키가 Formia 서버를 경유하지 않음
+
+> 상세 보안 설계: [Security Architecture](./security.md)

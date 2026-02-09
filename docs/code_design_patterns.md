@@ -6,23 +6,28 @@ To ensure high readability and maintainability, Formia follows a strict **Layere
 
 ```
 ┌─────────────────────────────────────────────────┐
-│    Editor Tier (오프라인 독립 동작)               │
+│    Editor Tier (코어는 오프라인 독립)             │
 │                                                  │
-│    UI Layer → Domain Layer → File I/O Port       │
+│    UI Layer → Domain Layer                        │
+│                  │                                 │
+│       ┌─────────┼──────────┐                     │
+│       ▼                    ▼                     │
+│    File I/O Port      AI Port (선택적)          │
+│    save()/load()      generatePatch()            │
 │                                                  │
-│    DB 없음. 인증 없음. 네트워크 불필요.           │
-└───────────────────────┬─────────────────────────┘
-                        │  save/load (FormFactor JSON)
-                        │
-              ┌─────────▼──────────┐
-              │  Adapter (교체 가능) │
-              │  Local | Cloud | Hybrid │
-              └─────────┬──────────┘
-                        │
-┌───────────────────────▼─────────────────────────┐
+│    DB 없음. 인증 없음. 코어 편집은 네트워크 불필요. │
+└──────────┬───────────────┬─────────────────────┘
+           │               │
+ ┌─────────▼────────┐  ┌─▼──────────────────┐
+ │  Adapter (교체 가능) │  │  AI Adapter (교체 가능)  │
+ │  Local | Cloud     │  │  Tauri(Rust) | Web(프록시)│
+ └─────────┬─────────┘  └────────┬───────────┘
+           │                        │
+┌──────────▼────────────────▼───────────────────┐
 │    Service Tier (온라인 전용)                     │
 │                                                  │
 │    API Routes → Service Logic → Prisma → DB      │
+│    AI Proxy Endpoint (/api/ai/generate)          │
 │                                                  │
 │    사용자/배포/응답 관리. Editor를 모름.           │
 └─────────────────────────────────────────────────┘
@@ -42,15 +47,16 @@ To ensure high readability and maintainability, Formia follows a strict **Layere
 
 - **Form Factor Store**: Zustand로 관리하는 Single Source of Truth (메모리 내).
 - **Schema Engine**: Form Factor JSON의 유효성 검사 및 조작 로직.
-- **Commands**: Undo/Redo를 위한 캡슐화된 액션 (메모리 내).
-- **AI Interaction**: LLM 어댑터와의 통신, JSON Patch 생성/적용.
+- **Commands**: Undo/Redo를 위한 캑슐화된 액션 (메모리 내).
 
-### 2.3 File I/O Port (경계 인터페이스)
+### 2.3 외부 통신 Port (경계 인터페이스)
 
-에디터가 외부 세계와 통신하는 **유일한 접점**. 에디터는 이 인터페이스의 `save()`/`load()`만 호출하며, 구현체가 로컬 파일인지 REST API인지 모름.
+에디터가 외부 세계와 통신하는 **두 개의 Port**. Port는 인터페이스만 정의하고, 구현체(Adapter)는 환경에 따라 교체됩니다.
+
+#### ① File I/O Port (필수)
 
 ```typescript
-// 에디터가 아는 유일한 인터페이스
+// 에디터가 아는 저장 인터페이스
 interface FormRepository {
   save(content: FormFactor): Promise<void>;
   load(id: string): Promise<FormFactor>;
@@ -59,13 +65,40 @@ interface FormRepository {
 }
 ```
 
-### 2.4 Adapters (File I/O 구현체)
+#### ② AI Port (선택적, 온라인 전용)
+
+```typescript
+// 에디터가 아는 AI 인터페이스. AI 없이도 수동 편집은 동작.
+interface AIPort {
+  generatePatch(prompt: string, schema: FormFactor): Promise<Operation[]>;
+  isAvailable(): boolean; // 키 설정 여부 + 네트워크 상태
+}
+```
+
+| Port              | 필수 여부 |       오프라인 동작        | 성격               |
+| ----------------- | :-------: | :------------------------: | ------------------ |
+| **File I/O Port** |  ✅ 필수  |       ✅ 가능 (로컬)       | 에디터의 존재 이유 |
+| **AI Port**       | ❌ 선택적 | ❌ 불가 (AI가 외부 서비스) | 에디터의 편의 기능 |
+
+### 2.4 Adapters (구현체)
+
+#### File I/O Adapters
 
 | Adapter               | 환경             | 동작                                   |
 | --------------------- | ---------------- | -------------------------------------- |
 | `LocalFileRepository` | Desktop (Tauri)  | `.formia` 파일 읽기/쓰기               |
 | `CloudAPIRepository`  | Web              | REST API 호출 (`/api/forms`)           |
 | `HybridRepository`    | Desktop + 로그인 | 로컬 저장 + 백그라운드 클라우드 동기화 |
+
+#### AI Adapters
+
+| Adapter          | 환경            | AI API 호출 방식                      | 키 위치          |
+| ---------------- | --------------- | ------------------------------------- | ---------------- |
+| `TauriAIAdapter` | Desktop (Tauri) | Rust sidecar에서 Gemini **직접** 호출 | OS Keychain      |
+| `WebAIAdapter`   | Web (브라우저)  | `/api/ai/generate` → 서버 **프록시**  | 서버 DB (암호화) |
+
+> ⚠️ Desktop은 서버 없이 AI를 쓸 수 있지만, Web은 보안상 백엔드 프록시가 필수입니다.
+> 상세: [Security Architecture](./security.md)
 
 ## 3. Service Tier Layers (에디터와 분리됨)
 
@@ -76,6 +109,7 @@ interface FormRepository {
 
 - Next.js API Routes (Phase 1-2) → NestJS (Phase 3+)
 - RESTful endpoints: `/api/forms`, `/api/responses`, `/api/auth`
+- **AI Proxy endpoint**: `/api/ai/generate` (Web 클라이언트 전용)
 
 ### 3.2 Service Logic
 
@@ -108,18 +142,21 @@ interface Command {
 }
 ```
 
-### 4.2 Adapter Pattern (Multi-LLM Support — Editor Tier)
+### 4.2 Adapter Pattern (Multi-LLM Support — AI Port Adapter)
 
-Standardize different LLM responses into a unified Formia format.
+Standardize different LLM responses into a unified Formia format. Editor에서는 `AIPort` 인터페이스만 사용.
 
 ```typescript
-interface AIProvider {
+interface AIPort {
   generatePatch(
     prompt: string,
     currentSchema: FormFactor,
-  ): Promise<JsonPatch[]>;
+  ): Promise<Operation[]>;
+  isAvailable(): boolean;
 }
 ```
+
+환경별로 `TauriAIAdapter` (직접 호출) 또는 `WebAIAdapter` (서버 프록시)를 주입.
 
 ### 4.3 Strategy Pattern (Block Rendering — Editor Tier)
 
@@ -129,16 +166,22 @@ Different block types (text, choice, rating) are rendered using a strategy-based
 
 Ensures that when the Form Factor changes (from Agent or UI), all relevant components re-render immediately.
 
-### 4.5 Repository Pattern (Editor ↔ Service 경계)
+### 4.5 Repository Pattern + Port Pattern (Editor ↔ Service 경계)
 
-Editor의 Domain Layer가 저장 방식에 의존하지 않도록 하는 핵심 패턴 (Section 2.3 참조).
+Editor의 Domain Layer가 저장 방식 및 AI 구현에 의존하지 않도록 하는 핵심 패턴 (Section 2.3 참조).
+
+- **File I/O Port** (`FormRepository`): 필수. 저장/로드.
+- **AI Port** (`AIPort`): 선택적. AI 패치 생성.
+
+두 Port 모두 인터페이스만 정의하고, 구현체(Adapter)는 환경별로 교체됩니다.
 
 ## 5. Communication Rules
 
 - **One-Way Data Flow**: Data flows from the Form Factor Store to the UI.
 - **Explicit Patches**: The UI and Agent never "mutate" state directly; they emit Patches/Commands that the Store applies.
-- **Dependency Inversion**: High-level modules (Builder) should not depend on low-level SDKs directly; use interfaces (`AIProvider`, `FormRepository`).
+- **Dependency Inversion**: High-level modules (Builder) should not depend on low-level SDKs directly; use interfaces (`AIPort`, `FormRepository`).
 - **Layer Boundary**: Editor Tier 코드는 절대 Prisma, DB, API Route handler를 직접 import하지 않음.
+- **AI Port Principle**: AI는 선택적 플러그인. 코어 편집은 AI 없이 동작해야 함.
 
 ## 6. Folder Structure Convention
 
@@ -147,19 +190,23 @@ src/
   ├── app/               # Next.js App Router
   │    ├── (editor)/     # 에디터 페이지 (Editor Tier 진입점)
   │    └── api/          # Service Tier API Routes
+  │         └── ai/       # [Service] AI Proxy endpoint (/api/ai/generate)
   │
   ├── components/        # [Editor] Atomic UI Components
   ├── features/          # [Editor] Feature modules (builder, ai-panel)
   │
   ├── lib/
   │    ├── core/         # [Editor] Domain Layer (Form Factor, Commands)
-  │    ├── ai/           # [Editor] LLM Adapters
-  │    ├── adapters/     # [경계] Repository adapters (Local, Cloud, Hybrid)
+  │    ├── ai/           # [Editor] AI Port 인터페이스 + Adapters
+  │    │    ├── AIPort.ts         # 인터페이스 정의
+  │    │    ├── WebAIAdapter.ts   # Web: 서버 프록시 경유
+  │    │    └── TauriAIAdapter.ts # Desktop: Rust 직접 호출
+  │    ├── adapters/     # [경계] File I/O Repository adapters (Local, Cloud, Hybrid)
   │    └── utils/        # Shared helpers
   │
   ├── store/             # [Editor] Zustand Store
   │
-  ├── server/            # [Service] Backend logic (auth, forms, responses)
+  ├── server/            # [Service] Backend logic (auth, forms, responses, AI proxy)
   │    ├── services/     # Service Layer business logic
   │    └── middleware/    # Auth middleware, rate limiting
   │
@@ -167,3 +214,4 @@ src/
 ```
 
 > **규칙**: `components/`, `features/`, `lib/core/`, `store/` 디렉토리의 코드는 `server/`, `prisma/`를 import할 수 없습니다.
+> `lib/ai/` 디렉토리의 Adapter는 환경에 따라 서버 API를 호출할 수 있지만, Editor 코어(블록 렌더링, Undo/Redo 등)는 AI Adapter의 구현을 알지 못합니다.

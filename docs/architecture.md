@@ -10,96 +10,163 @@ Formia의 아키텍처는 **두 개의 독립적인 레이어**로 구성됩니�
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                         │
 │   ┌───────────────────────────────────────────────────────────────┐     │
-│   │           🎨 Editor Layer (오프라인 독립 동작)                 │     │
+│   │           🎨 Editor Layer (코어는 오프라인 독립)               │     │
 │   │                                                               │     │
 │   │   ┌──────────┐   ┌──────────┐   ┌──────────┐                │     │
 │   │   │ Canvas   │   │ AI Agent │   │ Block    │                │     │
-│   │   │ Editor   │◀─▶│ Panel    │   │ Renderer │                │     │
+│   │   │ Editor   │   │ Panel    │   │ Renderer │                │     │
 │   │   └────┬─────┘   └────┬─────┘   └────┬─────┘                │     │
 │   │        │              │              │                       │     │
-│   │        └──────────────┼──────────────┘                       │     │
-│   │                       │                                       │     │
-│   │              ┌────────▼────────┐                              │     │
-│   │              │  Form Factor    │  ← JSON (메모리 내 상태)     │     │
-│   │              │  Store (Zustand)│  ← 오프라인에서도 동작       │     │
-│   │              └────────┬────────┘                              │     │
-│   │                       │                                       │     │
-│   │              ┌────────▼────────┐                              │     │
-│   │              │  History/Undo   │  ← Command Pattern          │     │
-│   │              │  (In-Memory)    │  ← DB 불필요               │     │
-│   │              └─────────────────┘                              │     │
+│   │        └──────┬───────┘──────────────┘                       │     │
+│   │               │                                               │     │
+│   │      ┌────────▼────────┐                                      │     │
+│   │      │  Form Factor    │  ← JSON (메모리 내 상태)             │     │
+│   │      │  Store (Zustand)│  ← 오프라인에서도 동작               │     │
+│   │      └────────┬────────┘                                      │     │
+│   │               │                                               │     │
+│   │      ┌────────▼────────┐                                      │     │
+│   │      │  History/Undo   │  ← Command Pattern                  │     │
+│   │      │  (In-Memory)    │  ← DB 불필요                       │     │
+│   │      └─────────────────┘                                      │     │
 │   │                                                               │     │
-│   │   ⚡ 이 영역은 네트워크, DB, 인증 없이 완전히 독립 동작       │     │
-│   └───────────────────────────────────────────────────────────────┘     │
-│                          │                                              │
-│                  ┌───────▼───────┐                                      │
-│                  │ File I/O Port │  ← save/load 인터페이스만 노출       │
-│                  └───────┬───────┘                                      │
-│           ┌──────────────┼──────────────┐                               │
-│           │              │              │                               │
-│   ┌───────▼──────┐ ┌────▼─────┐ ┌──────▼──────┐                       │
-│   │ Local FS     │ │ Cloud    │ │ Hybrid      │  ← Adapter 교체만으로 │
-│   │ (.formia)    │ │ API      │ │ (Sync)      │     저장 방식 변경     │
-│   └──────────────┘ └────┬─────┘ └─────────────┘                       │
-│                          │                                              │
-│   ┌──────────────────────▼────────────────────────────────────────┐     │
-│   │           ☁️ Service Layer (온라인 전용)                       │     │
-│   │                                                               │     │
-│   │   ┌──────────┐   ┌──────────┐   ┌──────────┐                │     │
-│   │   │   Auth   │   │  Forms   │   │ Response │                │     │
-│   │   │  OAuth   │   │  CRUD    │   │ Storage  │                │     │
-│   │   └──────────┘   └──────────┘   └──────────┘                │     │
-│   │                       │                                       │     │
-│   │              ┌────────▼────────┐                              │     │
-│   │              │    Database     │                              │     │
-│   │              │  SQLite / PG    │                              │     │
-│   │              └─────────────────┘                              │     │
-│   │                                                               │     │
-│   │   Form Factor는 DB에 불투명 JSON blob으로만 저장              │     │
-│   │   DB는 사용자/배포/응답 등 서비스 메타데이터만 관리            │     │
-│   └───────────────────────────────────────────────────────────────┘     │
-│                                                                         │
-└─────────────────────────────────────────────────────────────────────────┘
+│   │   ⚡ 코어 편집 (캔버스, 블록, Undo/Redo)은 오프라인 독립      │     │
+│   └───────────────────┬───────────────────┬───────────────────┘     │
+│                       │                   │                          │
+│              ┌────────▼───────┐  ┌────────▼────────┐                │
+│              │ File I/O Port  │  │   AI Port       │                │
+│              │ save() / load()│  │ generatePatch() │                │
+│              └────────┬───────┘  └────────┬────────┘                │
+│                       │                   │                          │
+│    ┌──────────────────┼────────┐  ┌───────┼──────────────┐          │
+│    │           │              │  │       │              │          │
+│  ┌─▼──────┐ ┌─▼──────┐ ┌─────▼┐ ┌──▼───────┐ ┌──▼──────────┐     │
+│  │Local FS│ │Cloud   │ │Hybrid│ │Tauri     │ │Web Proxy   │     │
+│  │.formia │ │API     │ │Sync  │ │Rust→직접 │ │서버 경유   │     │
+│  └────────┘ └───┬────┘ └──────┘ │Gemini호출│ │/api/ai     │     │
+│                  │               └──────────┘ └──────┬──────┘     │
+│                  │                                    │            │
+│   ┌──────────────▼────────────────────────────────────▼──────┐     │
+│   │           ☁️ Service Layer (온라인 전용)                   │     │
+│   │                                                           │     │
+│   │   ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐  │     │
+│   │   │   Auth   │ │  Forms   │ │ Response │ │ AI Proxy │  │     │
+│   │   │  OAuth   │ │  CRUD    │ │ Storage  │ │ Endpoint │  │     │
+│   │   └──────────┘ └──────────┘ └──────────┘ └──────────┘  │     │
+│   │                       │                                   │     │
+│   │              ┌────────▼────────┐                          │     │
+│   │              │    Database     │                          │     │
+│   │              │  SQLite / PG    │                          │     │
+│   │              └─────────────────┘                          │     │
+│   │                                                           │     │
+│   │   Form Factor는 DB에 불투명 JSON blob으로만 저장          │     │
+│   │   AI Proxy는 사용자 키를 DB에서 꺼내 Gemini에 전달       │     │
+│   └───────────────────────────────────────────────────────────┘     │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
 ### 1.1 레이어 분리 규칙
 
-| 규칙                 |                 Editor Layer                 |               Service Layer                |
-| -------------------- | :------------------------------------------: | :----------------------------------------: |
-| **오프라인 동작**    |                ✅ 반드시 가능                |               ❌ 온라인 필요               |
-| **DB 의존**          |                 ❌ 절대 없음                 |                ✅ Prisma/DB                |
-| **인증 의존**        |                  ❌ 불필요                   |               ✅ OAuth 필수                |
-| **Form Factor 조작** |                 ✅ 직접 수정                 |         ❌ 불투명 JSON으로만 저장          |
-| **상태 관리**        |               Zustand (메모리)               |                  DB + API                  |
-| **핵심 관심사**      | 폼 편집, AI 에이전트, 블록 렌더링, Undo/Redo | 사용자 관리, 폼 파일 관리, 배포, 응답 수집 |
+| 규칙                 |                              Editor Layer                              |                     Service Layer                     |
+| -------------------- | :--------------------------------------------------------------------: | :---------------------------------------------------: |
+| **오프라인 동작**    |             ✅ 코어 편집은 반드시 가능. AI는 온라인 전용.              |                    ❌ 온라인 필요                     |
+| **DB 의존**          |                              ❌ 절대 없음                              |                     ✅ Prisma/DB                      |
+| **인증 의존**        |                               ❌ 불필요                                |                     ✅ OAuth 필수                     |
+| **Form Factor 조작** |                              ✅ 직접 수정                              |               ❌ 불투명 JSON으로만 저장               |
+| **상태 관리**        |                            Zustand (메모리)                            |                       DB + API                        |
+| **핵심 관심사**      | 폼 편집, 블록 렌더링, Undo/Redo (코어)<br>AI 에이전트 (선택적, 온라인) | 사용자 관리, 폼 파일 관리, 배포, 응답 수집, AI 프록시 |
 
-### 1.2 레이어 간 통신
+### 1.2 레이어 간 통신: 두 개의 Port
+
+에디터와 외부 세계 사이에는 정확히 **두 개의 Port**만 존재합니다:
 
 ```
-Editor Layer                     Service Layer
-     │                                │
-     │  save(formFactor: JSON)         │
-     │ ──────────────────────────────▶ │  ← File I/O Port를 통해서만 통신
-     │                                │
-     │  load(): JSON                   │
-     │ ◀────────────────────────────── │  ← Editor는 DB 구조를 전혀 모름
-     │                                │
+Editor Layer                                   Service Layer / 외부
+     │                                              │
+     │ ① File I/O Port                              │
+     │   save(formFactor: JSON)                      │
+     │ ────────────────────────────────────────────▶ │  저장소 (로컬 파일 or 클라우드 DB)
+     │   load(): JSON                                │
+     │ ◀──────────────────────────────────────────── │
+     │                                              │
+     │ ② AI Port                                     │
+     │   generatePatch(prompt, schema): Patch[]      │
+     │ ────────────────────────────────────────────▶ │  AI 서비스 (Gemini, OpenAI 등)
+     │   patches + summary                           │
+     │ ◀──────────────────────────────────────────── │
+     │                                              │
 ```
 
-**에디터는 `FormRepository` 인터페이스의 `save()`/`load()`만 알 뿐, 그 뒤에 로컬 파일인지, REST API인지, DB인지 전혀 모릅니다.**
+**에디터는 두 인터페이스(`FormRepository`, `AIPort`)만 알 뿐, 구현체가 로컬/네트워크/프록시인지 전혀 모릅니다.**
+
+> ⚡ 핵심: File I/O Port는 에디터의 **필수** 의존성이지만, AI Port는 **선택적** 의존성입니다.
+> AI가 없어도 수동 편집(블록 추가/삭제, 인라인 편집, 드래그 등)은 완전히 동작합니다.
 
 ---
 
 ## 2. Editor Layer 상세
 
-### 2.1 The Agent-State Protocol
+### 2.1 AI Port — 선택적 부가 기능
+
+> ⚠️ **AI는 에디터의 코어가 아니라 선택적 플러그인입니다.**
+>
+> 에디터의 코어 기능(캔버스 편집, 블록 조작, Undo/Redo)은 AI 없이 완전히 동작합니다.
+> AI는 사용자 편의를 위한 부가 기능이며, 네트워크 연결이 필요합니다.
+
+#### AI Port 인터페이스
+
+```typescript
+// Editor가 아는 유일한 AI 인터페이스
+interface AIPort {
+  generatePatch(prompt: string, schema: FormFactor): Promise<Operation[]>;
+  isAvailable(): boolean; // 키가 설정되어 있고 연결 가능한지
+}
+```
+
+#### 환경별 AI Adapter
+
+| Adapter          | 환경            |             AI API 호출 방식              | 키 위치          |
+| ---------------- | --------------- | :---------------------------------------: | ---------------- |
+| `TauriAIAdapter` | Desktop (Tauri) |    Rust sidecar → Gemini **직접** 호출    | OS Keychain      |
+| `WebAIAdapter`   | Web (브라우저)  | `/api/ai/generate` → 서버 **프록시** 경유 | 서버 DB (암호화) |
+
+```
+Desktop:                              Web:
+
+Editor → AIPort                       Editor → AIPort
+           │                                      │
+    TauriAIAdapter                         WebAIAdapter
+           │                                      │
+  Rust (OS Keychain에서                  /api/ai/generate
+   키를 꺼내서 직접 호출)                (서버가 DB에서 키를
+           │                              꺼내서 대신 호출)
+           ▼                                      ▼
+     Gemini API                             Gemini API
+
+→ 에디터 코드는 동일. Adapter만 교체.
+→ 어떤 경우에도 에디터가 직접 DB, 인증을 import하지 않음.
+```
+
+#### 왜 File I/O Port와 분리하는가?
+
+|                   |           File I/O Port           |           AI Port            |
+| ----------------- | :-------------------------------: | :--------------------------: |
+| **필수 여부**     | ✅ 필수 (저장 없이 에디터 무의미) |  ❌ 선택적 (수동 편집 가능)  |
+| **오프라인 동작** |        ✅ 가능 (로컬 파일)        | ❌ 불가능 (AI가 외부 서비스) |
+| **성격**          |      에디터의 **존재 이유**       |    에디터의 **편의 기능**    |
+
+> AI는 외부 서비스(Google, OpenAI)를 호출하므로 **어차피 네트워크 없이 동작할 수 없습니다**.
+> 이것은 레이어 분리 원칙의 위반이 아니라, AI의 본질적 특성입니다.
+
+> 상세 보안: [Security Architecture](./security.md) — BYOK 키 관리, 프록시 설계
+> 상세 프로토콜: [AI Interaction Protocol](./ai_interaction_protocol.md)
+
+#### The Agent-State Protocol
 
 The AI agent doesn't just "talk"; it produces structured updates (JSON patches) to the form state.
 
 - **Input**: User prompt + current Form Factor (JSON).
 - **Output**: Proposed JSON patches + explanatory natural language.
-
-> 상세: [AI Interaction Protocol](./ai_interaction_protocol.md)
 
 ### 2.2 Form Factor (에디터의 데이터 모델)
 
@@ -208,7 +275,7 @@ Formia는 **Web 우선 + Desktop 보조** 하이브리드 모델을 채택합니
 - **Database**: SQLite (개발) → PostgreSQL (프로덕션)
 - **Auth**: NextAuth.js (OAuth 2.0)
 - **Editor State**: Zustand (Form Factor — 메모리 내)
-- **AI Integration**: Multi-provider SDKs (Gemini, OpenAI, Anthropic)
+- **AI Integration**: Multi-provider SDKs (Gemini, OpenAI, Anthropic) — BYOK 모델
 - **Data Format**: `.formia` (JSON)
 
 > 상세: [Infrastructure](./infrastructure.md), [Cloud Architecture](./cloud_architecture.md)
@@ -221,7 +288,9 @@ For a detailed breakdown, see [Testing Strategy](./testing_strategy.md).
 
 ## 관련 문서
 
+- [Security Architecture](./security.md) - BYOK API 키 보안, 암호화, 위협 모델
 - [Cloud Architecture](./cloud_architecture.md) - 클라우드/인증/배포 설계 (Service Layer 상세)
 - [Infrastructure](./infrastructure.md) - 인프라/DB/서버 배포 전략 (Service Layer 인프라)
 - [Form Factor Schema](./form_factor_schema.md) - Form Factor JSON 스키마 (Editor Layer 데이터 모델)
 - [Code Design Patterns](./code_design_patterns.md) - 코드 패턴 및 아키텍처 레이어
+- [AI Interaction Protocol](./ai_interaction_protocol.md) - AI Agent 통신 및 BYOK 키 관리
