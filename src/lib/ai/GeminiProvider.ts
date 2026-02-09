@@ -1,6 +1,7 @@
 import { AIProvider } from './AIProvider';
 import { FormFactor, BlockType } from '../core/schema';
 import { Operation } from 'rfc6902';
+import { validatePatches } from '../utils/patchValidator';
 
 export interface AIResponse {
   patches: Operation[];
@@ -70,19 +71,27 @@ export class GeminiProvider implements AIProvider {
       const cleanJson = textResponse.replace(/```json\n?|```/g, '').trim();
       const result = JSON.parse(cleanJson);
 
+      let patches: Operation[] = [];
+      let summary = '';
+
       // Handle both old format (array) and new format (object with patches and summary)
       if (Array.isArray(result)) {
-        return { patches: result, summary: this.generateDefaultSummary(result) };
+        patches = result;
+        summary = this.generateDefaultSummary(result);
+      } else if (result.patches && Array.isArray(result.patches)) {
+        patches = result.patches;
+        summary = result.summary || this.generateDefaultSummary(result.patches);
+      } else {
+        throw new Error('AI returned invalid format');
       }
 
-      if (result.patches && Array.isArray(result.patches)) {
-        return { 
-          patches: result.patches, 
-          summary: result.summary || this.generateDefaultSummary(result.patches) 
-        };
-      }
-
-      throw new Error('AI returned invalid format');
+      // Validate patches against removable constraint
+      const validatedPatches = validatePatches(patches, currentSchema);
+      
+      return { 
+        patches: validatedPatches, 
+        summary: summary 
+      };
     } catch (error: any) {
       console.error('[Gemini] Integration Error:', error);
       throw error;
@@ -204,6 +213,8 @@ Your task is to generate an RFC 6902 JSON Patch array to transform the provided 
       - options: (required for choice, array of strings)
       - maxRating: (required for rating, number 1-10)
       - body: (required for info, markdown string)
+    - removable: (optional boolean, defaults to true)
+      - CRITICAL: Headers for Start/Ending pages MUST have removable: false.
 
 ### OUTPUT SPECIFICATION:
 Return a JSON object with this structure:
@@ -216,7 +227,10 @@ Return a JSON object with this structure:
 - summary: Brief description of changes in Korean (e.g., "견종 질문에서 '푸들'을 '실버푸들'로 변경하고 '기타' 옵션을 삭제했습니다.")
 - Operations should target the "/pages/n/blocks/m" path.
 - For new blocks, generate a unique random string for "id".
-- **Immutability**: DO NOT move or delete the Start Page (title: "시작 페이지") or the Primary Ending Page (the first page of type: "ending" with title: "종료 페이지").
+- **Immutability**: 
+  - DO NOT move or delete the Start Page (title: "시작 페이지") or the Primary Ending Page (title: "종료 페이지").
+  - DO NOT delete any block that has "removable": false.
+  - New blocks should generally have "removable": true (default).
 - **Page Ordering**: If the form has an 'ending' page, insert new generic pages BEFORE it. Do not append after the primary ending page.
 - **Page Naming**: 
   - Mandatory generic pages: "1페이지", "2페이지", etc.

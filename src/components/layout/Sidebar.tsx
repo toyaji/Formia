@@ -250,7 +250,7 @@ export const Sidebar = () => {
     const isActive = activePageId === page.id;
     const isExpanded = expandedPages[page.id] ?? true; // Default to expanded
     // Can delete if it's an ending page AND there's more than 1 OR if it's a question page. Start page NEVER deletable.
-    const canDelete = isStart ? false : (isEnding ? endingPages.length > 1 : true);
+    const canDelete = page.removable !== false && (isStart ? false : (isEnding ? endingPages.length > 1 : true));
     
     const isRemoved = page.reviewStatus === 'removed';
     const isAdded = page.reviewStatus === 'added';
@@ -357,25 +357,6 @@ export const Sidebar = () => {
               {...provided.droppableProps}
               style={{ minHeight: '10px' }} 
             >
-              {/* Metadata Pseudo-Block for Start Page */}
-              {isStart && (
-                <div 
-                  className={styles.blockItem}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setActivePageId(page.id);
-                    setActiveBlockId('form-metadata');
-                  }}
-                  style={{
-                      backgroundColor: activeBlockId === 'form-metadata' ? 'rgba(59, 130, 246, 0.1)' : undefined,
-                      cursor: 'pointer',
-                      borderLeft: '3px solid transparent', // visual distinguish?
-                  }}
-                >
-                  <span className={styles.blockIcon}>T</span>
-                  <span className={styles.blockLabel}>설문 제목 및 설명</span>
-                </div>
-              )}
 
 
               {page.blocks.map((block: FormBlock, bIndex: number) => (
@@ -413,13 +394,15 @@ export const Sidebar = () => {
                         >
                           <Copy size={12} />
                         </button>
-                        <button 
-                          className={styles.actionBtn}
-                          onClick={(e) => deleteBlock(e, page.id, bIndex)}
-                          title="삭제"
-                        >
-                          <Trash2 size={12} />
-                        </button>
+                        {block.removable !== false && (
+                          <button 
+                            className={styles.actionBtn}
+                            onClick={(e) => deleteBlock(e, page.id, bIndex)}
+                            title="삭제"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        )}
                       </div>
                     </div>
                   )}

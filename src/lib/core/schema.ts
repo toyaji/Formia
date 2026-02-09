@@ -51,6 +51,7 @@ export const BlockSchema = z.object({
     pattern: z.string().optional(),
   }).optional(),
   style: z.record(z.any()).optional(),
+  removable: z.boolean().default(true),
 });
 
 /**
@@ -62,6 +63,7 @@ export const PageSchema = z.object({
   title: z.string(),
   description: z.string().optional(),
   blocks: z.array(BlockSchema),
+  removable: z.boolean().default(true),
 });
 
 /**

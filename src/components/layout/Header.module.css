@@ -29,10 +29,27 @@
   background-color: var(--f-border);
 }
 
-.title {
+.titleInput {
   font-weight: 600;
   font-size: 0.95rem;
   color: var(--f-text-main);
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  margin: 0 -8px;
+  width: 200px;
+  transition: background-color 0.2s;
+}
+
+.titleInput:hover {
+  background-color: rgba(0,0,0,0.05);
+}
+
+.titleInput:focus {
+  outline: none;
+  background-color: white;
+  box-shadow: 0 0 0 2px var(--f-primary);
 }
 
 

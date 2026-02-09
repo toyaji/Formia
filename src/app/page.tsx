@@ -58,10 +58,21 @@ export default function Home() {
             id: 'page-start',
             type: 'start',
             title: '시작 페이지',
+            removable: false,
             blocks: [
+              {
+                id: 'start-header',
+                type: 'statement',
+                removable: false,
+                content: {
+                  label: '젤리 설문조사 이벤트 응모',
+                  body: '반려견 정보를 입력하고 이벤트에 참여하세요!'
+                }
+              },
               {
                 id: '1',
                 type: 'choice',
+                removable: true,
                 content: { 
                     label: '현재 반려동물을 키우고 계신가요?', 
                     options: ['예', '아니오']
@@ -74,10 +85,12 @@ export default function Home() {
             id: 'page-end',
             type: 'ending',
             title: '종료 페이지',
+            removable: false,
             blocks: [
               {
                 id: 'end-header',
                 type: 'statement',
+                removable: false,
                 content: {
                   label: '제출이 완료되었습니다.',
                   body: '답변해 주셔서 감사합니다.'
@@ -222,70 +235,12 @@ export default function Home() {
               >
                 {/* Removed internal label */}
 
-                {/* Start Page: Metadata Inputs */}
-                {isStartPage && (
-                  <div 
-                    className={`${styles.metadataContainer} ${activeBlockId === 'form-metadata' && !isReviewMode ? styles.activeMetadata : ''}`}
-                    onClick={(e) => {
-                      if (isReviewMode) return;
-                      e.stopPropagation();
-                      setActiveBlockId('form-metadata');
-                    }}
-                  >
-                    {activeBlockId === 'form-metadata' && !isReviewMode ? (
-                      <>
-                        <input 
-                          className={styles.titleInput}
-                          value={effectiveFactor?.metadata.title || ''}
-                          onChange={(e) => {
-                            applyJsonPatch([{
-                              op: 'replace',
-                              path: '/metadata/title',
-                              value: e.target.value
-                            }]);
-                          }}
-                          placeholder="폼 제목을 입력하세요"
-                        />
-                        <textarea 
-                          className={styles.descriptionInput}
-                          value={effectiveFactor?.metadata.description || ''}
-                          onChange={(e) => {
-                            applyJsonPatch([{
-                              op: 'replace',
-                              path: '/metadata/description',
-                              value: e.target.value
-                            }]);
-                          }}
-                          placeholder="폼 설명을 입력하세요 (선택 사항)"
-                        />
-                      </>
-                    ) : (
-                      <>
-                        <h1 style={{ fontSize: '1.8rem', fontWeight: 700, marginBottom: '8px' }}>
-                          {effectiveFactor?.metadata.title}
-                        </h1>
-                        {effectiveFactor?.metadata.description && (
-                          <p style={{ color: 'var(--f-text-muted)', fontSize: '1rem' }}>
-                            {effectiveFactor.metadata.description}
-                          </p>
-                        )}
-                      </>
-                    )}
-                  </div>
-                )}
-
-                {/* Ending Page: Editable Title/Description */}
-
                 {/* Render Blocks */}
                 {page.blocks.map((block: import('@/lib/core/schema').FormBlock) => (
                   <BlockRenderer key={block.id} block={block} />
                 ))}
 
                 {/* New Block Previews (only for this page) */}
-                {/* To correctly map previews to pages, we might need logic. 
-                    For now, assuming previews are mostly relevant to active page or we map them.
-                    Simplified: Only show previews if this is the ACTIVE page. 
-                */}
                 {isActive && newBlockPreviews.map((preview) => (
                   <BlockRenderer 
                     key={preview.targetBlockId} 

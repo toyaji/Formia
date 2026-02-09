@@ -75,9 +75,12 @@ The `pages` array must follow a strict order and naming convention:
     "maxRating": 5,
     "body": "Markdown content"
   },
-  "validation": {
-    "required": true
-  }
+  validation?: {
+    required: boolean;
+    pattern?: string;
+  };
+  style?: Record<string, any>;
+  removable?: boolean; // Defaults to true. Set to false for core headers.
 }
 ```
 
@@ -85,7 +88,8 @@ The `pages` array must follow a strict order and naming convention:
 
 Agents emit **RFC 6902 JSON Patches**.
 
-- **Page Addition**: Must check for Ending Page index and insert **before** the primary ending page.
+- **Start/Ending Page Headers**: The primary header blocks for start and ending pages are now unified using the `statement` block type and are non-removable (`removable: false`) to ensure a consistent user experience.
+- **Editable Form Name**: The form's global name (metadata.title) is editable directly in the top header.
 - **Page Naming**: AI must generate mandatory `title` fields. It should use the default naming convention ("N페이지" or "N 종료 페이지") unless the user explicitly requests a specific title.
 
 ### Example: "Add a Name Question"

@@ -182,12 +182,12 @@ export const BlockRenderer = ({ block, previewBlockId }: BlockRendererProps) => 
                   <input type="radio" disabled />
                   {isActive ? (
                     <div className={styles.optionEditWrapper}>
-                      <input 
+                      <input
                         className={styles.optionInput}
                         value={opt}
                         onChange={(e) => handleOptionChange(i, e.target.value)}
                       />
-                      <button 
+                      <button
                         className={styles.removeOptionBtn}
                         onClick={() => removeOption(i)}
                       >
@@ -197,10 +197,10 @@ export const BlockRenderer = ({ block, previewBlockId }: BlockRendererProps) => 
                   ) : (
                     <span className={styles.optionText}>{opt}</span>
                   )}
-                  
+
                   {/* Field-level diff badge for this option */}
                   {hasOptionChange && (
-                    <FieldDiffBadge 
+                    <FieldDiffBadge
                       patch={optPatch}
                       onAccept={() => acceptPatch(optPatch.id)}
                       onReject={() => rejectPatch(optPatch.id)}
@@ -369,7 +369,7 @@ export const BlockRenderer = ({ block, previewBlockId }: BlockRendererProps) => 
         {renderInput()}
       </div>
 
-      {isActive && (
+      {isActive && block.removable !== false && (
         <button className={styles.deleteBtn} onClick={deleteBlock} title="Delete Block">
           <Trash2 size={16} />
         </button>
