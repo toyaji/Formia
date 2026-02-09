@@ -1,6 +1,6 @@
 # Testing Strategy: Formia
 
-Formia requires a unique testing approach because it involves both a local desktop environment (Tauri) and a 3rd-party AI Agent integration (BYOK).
+Formia requires a unique testing approach because it involves a **web client**, a local desktop environment (**Tauri**), a backend API, and a 3rd-party AI Agent integration (**BYOK**).
 
 ## 1. Multi-Tier Testing Architecture
 
@@ -21,6 +21,20 @@ To test AI interactions without spending the user's actual API credits constantl
 
 - **Tool**: Playwright with Tauri driver.
 - **Goal**: Verify file system access (saving `.formia` files) and native window behavior.
+
+### 1.4 Backend API Testing
+
+- **Tool**: Vitest (or Jest) + Supertest.
+- **Goal**: Verify API endpoints (`/api/forms`, `/api/responses`, `/api/auth`).
+- **Strategy**:
+  - **Unit Tests**: Service/Controller logic with mocked Prisma client.
+  - **Integration Tests**: Full request-response cycle against test SQLite database.
+  - **Auth Testing**: OAuth flow mocking via NextAuth.js test utilities.
+
+### 1.5 Database Testing
+
+- **Tool**: Prisma + SQLite (in-memory or file-based for tests).
+- **Strategy**: Use Prisma migrations on a fresh test DB before each test suite. Seed with test fixtures from `tests/fixtures/`.
 
 ## 2. Agent Collaboration & Account Setup
 
@@ -47,3 +61,4 @@ A set of reference `.formia` files in `tests/fixtures/` that represent various s
 
 - **Security**: Test keys must NEVER be committed to the repository.
 - **Guide**: `docs/testing_setup.md` will be created to guide new contributors on how to set up their own local test environment with their own keys.
+- **Database**: Test database uses a separate SQLite file (`test.db`) that is gitignored and recreated on each test run.

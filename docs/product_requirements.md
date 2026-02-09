@@ -23,6 +23,18 @@ Formia is an AI-first form builder that prioritizes speed of creation and high-q
 - **Premium Themes**: Out-of-the-box "Wow" designs (Dark mode, Neomorphism, Apple-style).
 - **Smooth Transitions**: Micro-animations for every field interaction.
 
+### 2.4 Form Deployment & Response Collection
+
+- **One-Click Publish**: Deploy forms to a public URL (`forms.formia.io/<id>`).
+- **Response Dashboard**: View and export collected responses.
+- **Analytics**: Basic response analytics (completion rate, drop-off points).
+
+### 2.5 Authentication & Collaboration
+
+- **OAuth Login**: Google & GitHub sign-in for web users.
+- **Cloud Sync**: Forms saved to the cloud, accessible from any device.
+- **Collaboration** _(Future)_: Real-time multi-user editing.
+
 ## 3. User Personas
 
 - **Marketers**: Need high-conversion landing page forms.

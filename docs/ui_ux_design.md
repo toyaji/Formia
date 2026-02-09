@@ -29,9 +29,10 @@ Inspired by Araform's builder, the workspace is split into three main regions:
 
 ### 2.3 Right Panel (Contextual AI & Style)
 
-- **Agent Chat Panel- **Non-removable Headers\*\*: Core header blocks and system pages (Start/Ending) cannot be deleted by the user or AI, ensuring the form structure remains valid.
+- **Agent Chat Panel**: The AI sidebar for natural language interactions.
+- **Style Editor**: Theme tokens, global styles (syncs to Form Factor).
+- **Non-removable Headers**: Core header blocks and system pages (Start/Ending) cannot be deleted by the user or AI, ensuring the form structure remains valid.
 - **Unified Header Editing**: Form titles are managed in the global header for constant availability during design.
-  lobal styles (syncs to Form Factor).
 
 ## 3. Color Palette & Typography
 

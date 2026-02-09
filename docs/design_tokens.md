@@ -27,9 +27,9 @@ Tokens are named by their function, not their literal color.
 - **`radius-md`**: `8px` (buttons, inputs)
 - **`spacing-unit`**: `4px` (all gaps should be multiples of this)
 
-## 4. Typography (Inter)
+## 4. Typography (Pretendard)
 
-- **`font-sans`**: `'Inter', sans-serif`
+- **`font-sans`**: `'Pretendard', sans-serif`
 - **`font-base`**: `16px`
 - **`font-lg`**: `18px` (Labels)
 - **`font-sm`**: `14px` (Helper text)
