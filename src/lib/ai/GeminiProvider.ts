@@ -196,7 +196,7 @@ Your task is to generate an RFC 6902 JSON Patch array to transform the provided 
     - New generic pages: "N페이지" (e.g. 1페이지, 2페이지)
     - New ending pages (for early exit): "N 종료 페이지" (e.g. 2 종료 페이지)
   - blocks: An array of block objects.
-    - type: 'text' | 'choice' | 'rating' | 'info' | 'textarea' | 'date' | 'file'
+    - type: 'text' | 'choice' | 'rating' | 'info' | 'textarea' | 'date' | 'file' | 'statement'
     - id: Unique string (random)
     - content:
       - label: (required for input types)
@@ -222,6 +222,8 @@ Return a JSON object with this structure:
   - Mandatory generic pages: "1페이지", "2페이지", etc.
   - Mandatory additional ending pages: "2 종료 페이지", "3 종료 페이지", etc.
   - AI must use these titles unless user explicitly requests a specific title.
+- **Statement Blocks**: Use 'statement' block type for important headings or messages that need to be centered (like thank-you messages on ending pages). It supports 'label' (title) and 'body' (description/content) fields.
+- **Ending Content**: Content for ending pages MUST be placed inside a 'statement' block (or other relevant blocks) within the page's 'blocks' array.
 
 ### CURRENT SCHEMA:
 ${JSON.stringify(schema, null, 2)}

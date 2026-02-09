@@ -51,6 +51,7 @@ The `pages` array must follow a strict order and naming convention:
     - **Additional Ending Pages** (Optional, for early exit):
       - Type: `ending`.
       - Title: **"N 종료 페이지"** (Mandatory sequential naming: 2 종료 페이지, 3 종료 페이지).
+    - **Content Rule**: All ending page content (messages, images, etc.) MUST be implemented using blocks (typically `info` blocks). The `page.title` and `page.description` are for structural identification only.
 
 ```json
 {

@@ -74,8 +74,16 @@ export default function Home() {
             id: 'page-end',
             type: 'ending',
             title: '종료 페이지',
-            description: '답변해 주셔서 감사합니다.',
-            blocks: []
+            blocks: [
+              {
+                id: 'end-header',
+                type: 'statement',
+                content: {
+                  label: '제출이 완료되었습니다.',
+                  body: '답변해 주셔서 감사합니다.'
+                }
+              }
+            ]
           }
         ],
       });
@@ -267,73 +275,6 @@ export default function Home() {
                 )}
 
                 {/* Ending Page: Editable Title/Description */}
-                {isEndingPage && (
-                   <div 
-                    className={`${styles.metadataContainer} ${activeBlockId === `page-meta-${page.id}` && !isReviewMode ? styles.activeMetadata : ''}`}
-                    style={{ textAlign: 'center' }}
-                    onClick={(e) => {
-                      if (isReviewMode) return;
-                      e.stopPropagation();
-                      setActiveBlockId(`page-meta-${page.id}`);
-                    }}
-                  >
-                    {activeBlockId === `page-meta-${page.id}` && !isReviewMode ? (
-                      <>
-                        <input 
-                          className={styles.titleInput}
-                          style={{ textAlign: 'center' }}
-                          value={page.title || ''}
-                          onChange={(e) => {
-                            // Find page index
-                            const pageIndex = effectiveFactor?.pages.findIndex(p => p.id === page.id);
-                            if (pageIndex !== -1) {
-                                applyJsonPatch([{
-                                    op: 'replace',
-                                    path: `/pages/${pageIndex}/title`,
-                                    value: e.target.value
-                                }]);
-                            }
-                          }}
-                          placeholder="종료 메시지 제목"
-                        />
-                        <textarea 
-                          className={styles.descriptionInput}
-                          style={{ textAlign: 'center' }}
-                          value={page.description || ''}
-                          onChange={(e) => {
-                             const pageIndex = effectiveFactor?.pages.findIndex(p => p.id === page.id);
-                             if (pageIndex !== -1) {
-                                 // Check if description exists before replacing, OR simple replace if we assume schema supports it.
-                                 // Since we added it to schema, we can replace or add.
-                                 // RFC6902 'add' or 'replace'. If undefined, 'add' is safer?
-                                 // 'replace' on undefined path might fail depending on implementation.
-                                 // Let's rely on 'add' or just 'replace' if we ensure default init.
-                                 // But for safety let's use 'add' if it might be missing?
-                                 // Actually 'replace' usually works if property is part of object.
-                                 applyJsonPatch([{
-                                     op: 'add', // 'add' works for replacing existing or adding new property in object
-                                     path: `/pages/${pageIndex}/description`,
-                                     value: e.target.value
-                                 }]);
-                             }
-                          }}
-                          placeholder="종료 메시지 설명"
-                        />
-                      </>
-                    ) : (
-                      <>
-                        <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '8px', color: 'var(--f-text-muted)' }}>
-                          {page.title}
-                        </h2>
-                        {page.description && (
-                          <p style={{ color: 'var(--f-text-muted)', fontSize: '1rem' }}>
-                            {page.description}
-                          </p>
-                        )}
-                      </>
-                    )}
-                  </div>
-                )}
 
                 {/* Render Blocks */}
                 {page.blocks.map((block: import('@/lib/core/schema').FormBlock) => (

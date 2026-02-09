@@ -355,3 +355,65 @@
   color: #EF4444;
   transform: scale(1.1);
 }
+
+/* Statement Block Styles (Centered, matching Start Page) */
+.statementWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 0; /* Padding is handled by blockContainer or parent card */
+  width: 100%;
+}
+
+.statementLabel {
+  display: block;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--f-text-main);
+  margin-bottom: 8px;
+  line-height: 1.2;
+}
+
+.statementLabelInput {
+  display: block;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--f-text-main);
+  text-align: center;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid var(--f-primary);
+  margin-bottom: 8px;
+  width: 100%;
+  padding: 4px 0;
+}
+
+.statementLabelInput:focus {
+  outline: none;
+}
+
+.statementBody {
+  font-size: 1rem;
+  color: var(--f-text-muted);
+  line-height: 1.6;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.statementBodyInput {
+  font-size: 1rem;
+  color: var(--f-text-muted);
+  line-height: 1.6;
+  max-width: 600px;
+  margin: 0 auto;
+  text-align: center;
+  min-height: 80px;
+  resize: none;
+  background: transparent;
+  border: none;
+}
+
+.statementBodyInput:focus {
+  outline: none;
+}

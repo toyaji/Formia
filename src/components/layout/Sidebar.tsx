@@ -136,7 +136,16 @@ export const Sidebar = () => {
         id: Math.random().toString(36).substring(7), 
         type: 'ending',
         title: generateEndingPageTitle(count), 
-        blocks: [] 
+        blocks: [
+          {
+            id: Math.random().toString(36).substring(7),
+            type: 'statement',
+            content: {
+              label: '제출이 완료되었습니다.',
+              body: '답변해 주셔서 감사합니다.'
+            }
+          }
+        ] 
       }
     }]);
   };
@@ -368,24 +377,6 @@ export const Sidebar = () => {
                 </div>
               )}
 
-              {/* Metadata Pseudo-Block for Ending Page */}
-              {isEnding && (
-                <div 
-                  className={styles.blockItem}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setActivePageId(page.id);
-                    setActiveBlockId(`page-meta-${page.id}`);
-                  }}
-                  style={{
-                      backgroundColor: activeBlockId === `page-meta-${page.id}` ? 'rgba(59, 130, 246, 0.1)' : undefined,
-                      cursor: 'pointer'
-                  }}
-                >
-                  <span className={styles.blockIcon}>i</span>
-                  <span className={styles.blockLabel}>종료 메시지</span>
-                </div>
-              )}
 
               {page.blocks.map((block: FormBlock, bIndex: number) => (
                 <Draggable key={block.id} draggableId={block.id} index={bIndex}>

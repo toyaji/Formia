@@ -24,6 +24,7 @@ export const BlockTypeSchema = z.enum([
   'date',
   'file',
   'info', // For markdown/text blocks
+  'statement', // For centered text/headings (e.g. start/end pages)
 ]);
 
 /**

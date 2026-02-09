@@ -222,6 +222,49 @@ export const BlockRenderer = ({ block, previewBlockId }: BlockRendererProps) => 
             {content.body}
           </div>
         );
+      case 'statement':
+        return (
+          <div className={styles.statementWrapper}>
+            {isActive ? (
+              <>
+                <input 
+                  className={styles.statementLabelInput}
+                  value={content.label || ''}
+                  onChange={handleLabelChange}
+                  placeholder="제목을 입력하세요"
+                  autoFocus
+                />
+                <textarea 
+                  className={styles.statementBodyInput}
+                  value={content.body || ''}
+                  onChange={(e) => {
+                    const pageIndex = formFactor?.pages.findIndex(p => p.id === activePageId) ?? 0;
+                    const blockIndex = formFactor?.pages[pageIndex]?.blocks.findIndex(b => b.id === id) ?? 0;
+                    applyJsonPatch([{
+                      op: 'replace',
+                      path: `/pages/${pageIndex}/blocks/${blockIndex}/content/body`,
+                      value: e.target.value
+                    }]);
+                  }}
+                  placeholder="본문을 입력하세요"
+                />
+              </>
+            ) : (
+              <>
+                {content.label && (
+                  <h1 className={styles.statementLabel}>
+                    {content.label}
+                  </h1>
+                )}
+                {content.body && (
+                  <p className={styles.statementBody}>
+                    {content.body}
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+        );
       default:
         return <div>Unknown block type: {type}</div>;
     }
@@ -241,7 +284,10 @@ export const BlockRenderer = ({ block, previewBlockId }: BlockRendererProps) => 
   return (
     <div 
       className={`${styles.blockContainer} ${isActive ? styles.active : ''} ${isBlockLevelChange ? styles.hasDiff : ''}`}
-      style={getBlockDiffStyle()}
+      style={{
+        ...getBlockDiffStyle(),
+        ...(type === 'statement' ? { alignItems: 'center', textAlign: 'center' } : {})
+      }}
       onClick={(e) => {
         if (isReviewMode) return;
         e.stopPropagation();
@@ -280,40 +326,42 @@ export const BlockRenderer = ({ block, previewBlockId }: BlockRendererProps) => 
         </div>
       )}
 
-      {/* Label with inline diff */}
-      <div 
-        className={`${styles.labelWrapper} ${labelPatch ? styles.labelHasDiff : ''}`}
-        style={labelPatch ? {
-          backgroundColor: labelPatch.changeType === 'replace' 
-            ? 'rgba(234, 179, 8, 0.15)' 
-            : 'transparent',
-          borderRadius: '8px',
-          padding: '4px 8px',
-          margin: '-4px -8px',
-          position: 'relative'
-        } : {}}
-      >
-        {isActive ? (
-          <input 
-            className={styles.labelInput}
-            value={content.label || ''}
-            onChange={handleLabelChange}
-            placeholder="문항 제목을 입력하세요"
-            autoFocus
-          />
-        ) : (
-          content.label && <label className={styles.label}>{content.label}</label>
-        )}
-        
-        {/* Field-level diff badge for label */}
-        {labelPatch && (
-          <FieldDiffBadge 
-            patch={labelPatch}
-            onAccept={() => acceptPatch(labelPatch.id)}
-            onReject={() => rejectPatch(labelPatch.id)}
-          />
-        )}
-      </div>
+      {/* Label with inline diff - Skip for statement block as it handles it internally */}
+      {type !== 'statement' && (
+        <div 
+          className={`${styles.labelWrapper} ${labelPatch ? styles.labelHasDiff : ''}`}
+          style={labelPatch ? {
+            backgroundColor: labelPatch.changeType === 'replace' 
+              ? 'rgba(234, 179, 8, 0.15)' 
+              : 'transparent',
+            borderRadius: '8px',
+            padding: '4px 8px',
+            margin: '-4px -8px',
+            position: 'relative'
+          } : {}}
+        >
+          {isActive ? (
+            <input 
+              className={styles.labelInput}
+              value={content.label || ''}
+              onChange={handleLabelChange}
+              placeholder="문항 제목을 입력하세요"
+              autoFocus
+            />
+          ) : (
+            content.label && <label className={styles.label}>{content.label}</label>
+          )}
+          
+          {/* Field-level diff badge for label */}
+          {labelPatch && (
+            <FieldDiffBadge 
+              patch={labelPatch}
+              onAccept={() => acceptPatch(labelPatch.id)}
+              onReject={() => rejectPatch(labelPatch.id)}
+            />
+          )}
+        </div>
+      )}
       
       {content.helpText && <p className={styles.helpText}>{content.helpText}</p>}
       
