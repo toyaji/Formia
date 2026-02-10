@@ -57,7 +57,7 @@ export const Sidebar = () => {
   );
   
   const questionPages = useMemo(() => 
-    allPages.filter((p: ReviewFormPage) => !p.type || p.type === 'default'), 
+    allPages.filter((p: ReviewFormPage) => p.type !== 'start' && p.type !== 'ending'), 
     [allPages]
   );
 

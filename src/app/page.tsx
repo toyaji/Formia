@@ -9,7 +9,7 @@ import { Sidebar } from '@/components/layout/Sidebar';
 import { AiPanel } from '@/components/ai/AiPanel';
 import { Header } from '@/components/layout/Header';
 import { Undo2, Redo2, Check, X } from 'lucide-react';
-import { ReviewFormPage } from '@/lib/utils/patchUtils';
+import { ReviewFormPage, sortPages } from '@/lib/utils/patchUtils';
 import { FormPage } from '@/lib/core/schema';
 
 export default function Home() {
@@ -29,11 +29,12 @@ export default function Home() {
       return getReviewViewModel();
     }
     // Fallback for non-review mode
-    return (effectiveFactor?.pages || []).map(p => ({ 
+    const baseline = (effectiveFactor?.pages || []).map(p => ({ 
       ...p, 
-      reviewMetadata: { status: 'kept' as const },
-      blocks: p.blocks.map(b => ({ ...b, reviewMetadata: { status: 'kept' as const } }))
+      reviewMetadata: { status: 'kept' as const, patchId: undefined, fieldPatches: {} },
+      blocks: p.blocks.map(b => ({ ...b, reviewMetadata: { status: 'kept' as const, patchId: undefined, fieldPatches: {} } }))
     }));
+    return sortPages(baseline) as ReviewFormPage[];
   }, [isReviewMode, effectiveFactor, getReviewViewModel]);
 
   // Find current active page
@@ -162,20 +163,46 @@ export default function Home() {
              </div>
           )}
 
-          {pagesToRender.map((pageBase) => {
-            const page = pageBase as ReviewFormPage;
+          {/* 1. Start Page */}
+          {pagesToRender.filter(p => p.type === 'start').map((page) => (
+            <div key={page.id} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <span style={{
+                fontSize: '0.9rem',
+                fontWeight: 600,
+                color: 'var(--f-text-muted)',
+                marginLeft: '4px'
+              }}>
+                {page.title}
+              </span>
+              <div 
+                id={`page-${page.id}`}
+                style={{ 
+                  background: 'var(--f-surface)', 
+                  padding: viewport === 'mobile' ? '24px 16px' : '40px', 
+                  borderRadius: 'var(--f-radius-xl)',
+                  boxShadow: 'var(--f-shadow-premium)',
+                  border: '1px solid var(--f-border)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: viewport === 'mobile' ? '24px' : '32px'
+                }}
+              >
+                {page.blocks.map((block: any) => (
+                  <BlockRenderer key={block.id} block={block} />
+                ))}
+              </div>
+            </div>
+          ))}
+
+          {/* 2. Question Pages (Draggable-equivalent order) */}
+          {pagesToRender.filter(p => p.type !== 'start' && p.type !== 'ending').map((page) => {
             const isActive = activePageId === page.id;
-            const isStartPage = page.type === 'start';
-            const isEndingPage = page.type === 'ending';
             const isRemoved = page.reviewMetadata.status === 'removed';
             const isAdded = page.reviewMetadata.status === 'added';
             const patchId = page.reviewMetadata.patchId;
-            
-            const pageLabel = page.title;
 
             return (
               <div key={page.id} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {/* Page Label moved outside */}
                 <span style={{
                   fontSize: '0.9rem',
                   fontWeight: 600,
@@ -183,79 +210,103 @@ export default function Home() {
                   marginLeft: '4px',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
-                  position: 'relative' // For absolute positioning if needed, or flex flow
+                  gap: '8px'
                 }}>
-                  {pageLabel}
+                  {page.title}
                   
-                  {/* Review Actions Chip - Only Buttons */}
                   {isReviewMode && (isAdded || isRemoved) && patchId && (
-                    <div 
-                      className={diffStyles.reviewChip} 
-                      data-change-type={isAdded ? 'add' : 'remove'}
-                      style={{ marginLeft: '8px' }}
-                    >
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          resolvePagePatch(patchId!, 'accept');
-                        }}
-                        title="변경사항 수락"
-                      >
+                    <div className={diffStyles.reviewChip} data-change-type={isAdded ? 'add' : 'remove'}>
+                      <button onClick={(e) => { e.stopPropagation(); resolvePagePatch(patchId!, 'accept'); }}>
                         <Check size={12} />
                       </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          resolvePagePatch(patchId!, 'reject');
-                        }}
-                        title="변경사항 거절"
-                      >
+                      <button onClick={(e) => { e.stopPropagation(); resolvePagePatch(patchId!, 'reject'); }}>
                         <X size={12} />
                       </button>
                     </div>
                   )}
                 </span>
 
-              <div 
-                id={`page-${page.id}`}
-                onClick={() => {
-                   if (isRemoved) return;
-                   // Set active page when clicking on the card
-                   if (activePageId !== page.id) {
-                     setActivePageId(page.id);
-                   }
-                }}
-                style={{ 
-                  background: 'var(--f-surface)', 
-                  padding: viewport === 'mobile' ? '24px 16px' : '40px', 
-                  borderRadius: 'var(--f-radius-xl)',
-                  boxShadow: 'var(--f-shadow-premium)',
-                  minHeight: isStartPage ? 'auto' : '200px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: viewport === 'mobile' ? '24px' : '32px',
-                  border: isRemoved ? '2px dashed #EF4444' : (isAdded ? '2px solid #22C55E' : (isReviewMode ? '2px solid #e2e8f0' : '1px solid var(--f-border)')),
-                  transition: 'all 0.3s ease',
-                  position: 'relative',
-                  opacity: isRemoved ? 0.6 : (isActive ? 1 : 0.7),
-                  pointerEvents: isRemoved ? 'none' : 'auto',
-                  filter: isRemoved ? 'grayscale(0.5)' : 'none',
-                }}
-              >
-                {/* Removed internal label */}
-
-                {/* Render Blocks */}
-                {page.blocks.map((block: import('@/lib/core/schema').FormBlock) => (
-                  <BlockRenderer key={block.id} block={block} />
-                ))}
-
-                {page.blocks.length === 0 && !isStartPage && !isEndingPage && (
-                  <p style={{ textAlign: 'center', color: 'var(--f-text-muted)', marginTop: '20px' }}>
-                    문항이 없습니다.
-                  </p>
-                )}
+                <div 
+                  id={`page-${page.id}`}
+                  onClick={() => { if (!isRemoved && activePageId !== page.id) setActivePageId(page.id); }}
+                  style={{ 
+                    background: 'var(--f-surface)', 
+                    padding: viewport === 'mobile' ? '24px 16px' : '40px', 
+                    borderRadius: 'var(--f-radius-xl)',
+                    boxShadow: 'var(--f-shadow-premium)',
+                    minHeight: '200px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: viewport === 'mobile' ? '24px' : '32px',
+                    border: isRemoved ? '2px dashed #EF4444' : (isAdded ? '2px solid #22C55E' : (isReviewMode ? '2px solid #e2e8f0' : '1px solid var(--f-border)')),
+                    opacity: isRemoved ? 0.6 : (isActive ? 1 : 0.7),
+                    pointerEvents: isRemoved ? 'none' : 'auto'
+                  }}
+                >
+                  {page.blocks.map((block: any) => (
+                    <BlockRenderer 
+                      key={block.id} 
+                      block={block} 
+                      isParentChange={isAdded || isRemoved} 
+                    />
+                  ))}
+                  {page.blocks.length === 0 && <p style={{ textAlign: 'center', color: 'var(--f-text-muted)', marginTop: '20px' }}>문항이 없습니다.</p>}
+                </div>
               </div>
+            );
+          })}
+
+          {/* 3. Ending Pages */}
+          {pagesToRender.filter(p => p.type === 'ending').map((page) => {
+            const isRemoved = page.reviewMetadata.status === 'removed';
+            const isAdded = page.reviewMetadata.status === 'added';
+            const patchId = page.reviewMetadata.patchId;
+
+            return (
+              <div key={page.id} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <span style={{
+                  fontSize: '0.9rem',
+                  fontWeight: 600,
+                  color: isRemoved ? '#EF4444' : (isAdded ? '#22C55E' : 'var(--f-text-muted)'),
+                  marginLeft: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  {page.title}
+                  {isReviewMode && (isAdded || isRemoved) && patchId && (
+                    <div className={diffStyles.reviewChip} data-change-type={isAdded ? 'add' : 'remove'}>
+                      <button onClick={(e) => { e.stopPropagation(); resolvePagePatch(patchId!, 'accept'); }}>
+                        <Check size={12} />
+                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); resolvePagePatch(patchId!, 'reject'); }}>
+                        <X size={12} />
+                      </button>
+                    </div>
+                  )}
+                </span>
+                <div 
+                  id={`page-${page.id}`}
+                  style={{ 
+                    background: 'var(--f-surface)', 
+                    padding: viewport === 'mobile' ? '24px 16px' : '40px', 
+                    borderRadius: 'var(--f-radius-xl)',
+                    boxShadow: 'var(--f-shadow-premium)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: viewport === 'mobile' ? '24px' : '32px',
+                    border: isRemoved ? '2px dashed #EF4444' : (isAdded ? '2px solid #22C55E' : (isReviewMode ? '2px solid #e2e8f0' : '1px solid var(--f-border)')),
+                    opacity: isRemoved ? 0.6 : 0.7
+                  }}
+                >
+                  {page.blocks.map((block: any) => (
+                    <BlockRenderer 
+                      key={block.id} 
+                      block={block} 
+                      isParentChange={isAdded || isRemoved}
+                    />
+                  ))}
+                </div>
               </div>
             );
           })}

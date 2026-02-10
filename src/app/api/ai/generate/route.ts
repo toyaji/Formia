@@ -176,8 +176,16 @@ Your task is to generate an RFC 6902 JSON Patch array to transform the provided 
 6. "file": File upload. { "label": "string", "helpText": "string?" }
 7. "info": Informational markdown. { "label": "string?", "body": "string" }
 8. "statement": Centered heading/text (start/end pages). { "label": "string?", "body": "string" }
-
-### JSON PATCH RULES:
+ 
+ ### VALID PAGE STRUCTURE:
+ {
+   "id": "string",
+   "type": "start" | "default" | "ending",
+   "title": "string",
+   "blocks": []
+ }
+ 
+ ### JSON PATCH RULES:
 - Use RFC 6902 operations (add, remove, replace, move, copy, test).
 - To add a block to a page: {"op": "add", "path": "/pages/{pageIndex}/blocks/-", "value": { "id": "random_id", "type": "BLOCK_TYPE", "content": { ... }, "validation": { "required": false } }}
 - To update a field: {"op": "replace", "path": "/pages/{pageIndex}/blocks/{blockIndex}/content/label", "value": "New Label"}

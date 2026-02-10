@@ -8,6 +8,7 @@ import { BLOCK_METADATA } from '@/lib/constants/blocks';
 interface BlockRendererProps {
   block: FormBlock | ReviewFormBlock;
   previewBlockId?: string;
+  isParentChange?: boolean;
 }
 
 // Mini component for field-level diff overlay
@@ -47,7 +48,7 @@ const FieldDiffBadge = ({
   </div>
 );
 
-export const BlockRenderer = ({ block, previewBlockId }: BlockRendererProps) => {
+export const BlockRenderer = ({ block, previewBlockId, isParentChange }: BlockRendererProps) => {
   const { type, content, id: blockId } = block;
   const id = previewBlockId || blockId;
   
@@ -495,7 +496,7 @@ export const BlockRenderer = ({ block, previewBlockId }: BlockRendererProps) => 
       )}
 
       {/* Block-level diff badge (only for entire block add/remove) */}
-      {isBlockLevelChange && (
+      {isBlockLevelChange && !isParentChange && (
         <div className={styles.diffBadge} data-change-type={reviewMetadata.status}>
           <span className={styles.diffLabel}>
             {isAdded && '문항 추가'}
@@ -550,7 +551,7 @@ export const BlockRenderer = ({ block, previewBlockId }: BlockRendererProps) => 
           )}
           
           {/* Field-level diff badge for label */}
-          {labelPatch && (
+          {labelPatch && !isParentChange && (
             <FieldDiffBadge 
               patch={labelPatch}
               onAccept={() => acceptPatch(labelPatch.id)}

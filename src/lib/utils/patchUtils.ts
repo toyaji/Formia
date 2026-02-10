@@ -141,6 +141,17 @@ function extractTargetInfo(op: Operation, formFactor: FormFactor, patchIndex: nu
     return { blockId, targetField: 'block', isNewBlock: false };
   }
   
+  // Page-level changes: /pages/0 or /pages/-
+  if (parts[0] === 'pages' && parts.length === 2) {
+    const pageIndex = parts[1];
+    if (op.op === 'add' || pageIndex === '-') {
+      return { blockId: (op as any).value?.id || `new-page-${patchIndex}`, targetField: 'page', isNewBlock: true };
+    }
+    const idx = parseInt(pageIndex, 10);
+    const pageId = formFactor.pages[idx]?.id;
+    return { blockId: pageId, targetField: 'page', isNewBlock: false };
+  }
+  
   return { blockId: undefined, targetField: 'unknown', isNewBlock: false };
 }
 
@@ -337,15 +348,20 @@ export function buildReviewModel(
   });
 
   // 3. Re-sort by structural priority (Start -> Default -> Ending)
-  const typePriority = { start: 0, default: 1, ending: 2 };
+  return sortPages(result);
+}
 
-  result.sort((a, b) => {
+/**
+ * Ensures pages follow the strict order: Start -> Default -> Ending
+ */
+export function sortPages<T extends { type?: string }>(pages: T[]): T[] {
+  const typePriority: Record<string, number> = { start: 0, default: 1, ending: 2 };
+
+  return [...pages].sort((a, b) => {
     const priorityA = typePriority[a.type || 'default'] ?? 1;
     const priorityB = typePriority[b.type || 'default'] ?? 1;
     return priorityA - priorityB;
   });
-  
-  return result;
 }
 
 /**

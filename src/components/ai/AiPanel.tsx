@@ -118,6 +118,7 @@ export const AiPanel = () => {
     const result = await generatePatchWithSummary(userQuery, false);
 
     if (result && result.patches.length > 0 && formFactor) {
+      console.log('[AiPanel] AI Proposed Patches:', result.patches);
       saveSnapshot();
       setActiveBlockId(null);
       

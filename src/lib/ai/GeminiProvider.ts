@@ -1,7 +1,7 @@
 import { AIProvider } from './AIProvider';
 import { FormFactor } from '../core/schema';
 import { Operation } from 'rfc6902';
-import { validatePatches } from '../utils/patchValidator';
+import { validatePatchesDetailed } from '../utils/patchValidator';
 
 export interface AIResponse {
   patches: Operation[];
@@ -25,7 +25,8 @@ export class GeminiProvider implements AIProvider {
   async generatePatchWithSummary(
     prompt: string, 
     currentSchema: FormFactor,
-    onSummaryChunk?: (chunk: string) => void
+    onSummaryChunk?: (chunk: string) => void,
+    retryCount = 0
   ): Promise<AIResponse> {
     try {
       const response = await fetch('/api/ai/generate', {
@@ -43,21 +44,26 @@ export class GeminiProvider implements AIProvider {
         throw new Error(errorData.error || 'AI Proxy request failed');
       }
 
-      // Handle streaming if onSummaryChunk is provided
-      // Note: Current AI Proxy simple implementation doesn't stream yet, 
-      // but the UI expects this pattern. In a future iteration, the proxy
-      // should support readable streams.
       const data = await response.json();
+      const patches = data.patches || [];
       
-      const validatedPatches = validatePatches(data.patches || [], currentSchema);
+      // Detailed validation
+      const { validPatches, errors } = validatePatchesDetailed(patches, currentSchema);
       
+      // If there are validation errors and we haven't retried yet, try again with feedback
+      if (errors.length > 0 && retryCount === 0) {
+        console.warn('[Gemini] Validation failed, retrying with feedback:', errors);
+        const feedbackPrompt = `${prompt}\n\nIMPORTANT: Your previous response had some issues. Please fix them:\n- ${errors.join('\n- ')}\n\nPlease try again and ensure all required fields (id, type, content, title, blocks, etc.) are included for new elements.`;
+        return this.generatePatchWithSummary(feedbackPrompt, currentSchema, onSummaryChunk, 1);
+      }
+
       if (onSummaryChunk && data.summary) {
         onSummaryChunk(data.summary);
       }
 
       return { 
-        patches: validatedPatches, 
-        summary: data.summary || ''
+        patches: validPatches, 
+        summary: data.summary || (validPatches.length === 0 ? '변경 사항을 생성하지 못했습니다.' : '')
       };
     } catch (error: any) {
       console.error('[Gemini] Proxy Connection Error:', error);

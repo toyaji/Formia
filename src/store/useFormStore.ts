@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { FormFactor } from '@/lib/core/schema';
 import { applyPatch, Operation } from 'rfc6902';
-import { buildReviewModel, ReviewFormPage } from '@/lib/utils/patchUtils';
+import { buildReviewModel, ReviewFormPage, sortPages } from '@/lib/utils/patchUtils';
 
 export interface Message {
   id: string;
@@ -90,9 +90,10 @@ export const useFormStore = create<FormState>()(
       setActivePageId: (id: string | null) => set({ activePageId: id, activeBlockId: null }),
       setActiveBlockId: (id: string | null) => set({ activeBlockId: id }),
       setFormFactor: (factor: FormFactor) => {
-        set({ formFactor: factor });
-        if (factor.pages.length > 0 && !get().activePageId) {
-          set({ activePageId: factor.pages[0].id });
+        const sortedFactor = { ...factor, pages: sortPages(factor.pages) };
+        set({ formFactor: sortedFactor });
+        if (sortedFactor.pages.length > 0 && !get().activePageId) {
+          set({ activePageId: sortedFactor.pages[0].id });
         }
       },
 
@@ -109,6 +110,7 @@ export const useFormStore = create<FormState>()(
     const allSuccessful = results.every((r: any) => r === null);
 
     if (allSuccessful) {
+      next.pages = sortPages(next.pages);
       set({ formFactor: next });
     } else {
       console.error('Failed to apply some patches:', results);
@@ -316,8 +318,7 @@ export const useFormStore = create<FormState>()(
         }
         
         // check for errors when applying
-        const results = applyPatch(updatedSnapshot, opsToApply);
-        // We ignore results for now, assuming valid sequence from AI.
+        applyPatch(updatedSnapshot, opsToApply);
       }
 
       const allProcessed = newPendingPatches.every((p: PatchItem) => p.status !== 'pending'); 
@@ -396,6 +397,7 @@ export const useFormStore = create<FormState>()(
       
       const updated = JSON.parse(JSON.stringify(preReviewSnapshot));
       applyPatch(updated, pendingOps);
+      updated.pages = sortPages(updated.pages);
       
       const newPatches = pendingPatches.map((p: PatchItem) => 
         p.status === 'pending' ? { ...p, status: 'accepted' as const } : p
