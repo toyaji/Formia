@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { FormFactor } from '@/lib/core/schema';
 import { applyPatch, Operation } from 'rfc6902';
+import { buildReviewModel, ReviewFormPage } from '@/lib/utils/patchUtils';
 
 export interface Message {
   id: string;
@@ -41,6 +42,7 @@ interface FormState {
   proposedPatches: Operation[] | null;
   setProposedPatches: (patches: Operation[] | null) => void;
   getEffectiveFactor: () => FormFactor | null;
+  getReviewViewModel: () => ReviewFormPage[];
   
   // History
   history: FormFactor[];
@@ -154,6 +156,12 @@ export const useFormStore = create<FormState>()(
     applyPatch(preview, ops);
     
     return preview;
+  },
+
+  getReviewViewModel: () => {
+    const { preReviewSnapshot, pendingPatches } = get();
+    const effective = get().getEffectiveFactor();
+    return buildReviewModel(preReviewSnapshot, effective, pendingPatches);
   },
 
   // History Implementation

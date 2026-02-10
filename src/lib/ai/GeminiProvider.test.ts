@@ -7,7 +7,6 @@ global.fetch = vi.fn();
 
 describe('GeminiProvider', () => {
   let provider: GeminiProvider;
-  const mockApiKey = 'test-api-key';
   const mockSchema: FormFactor = {
     version: "2.0.0",
     metadata: {
@@ -19,37 +18,27 @@ describe('GeminiProvider', () => {
       mode: 'light',
       tokens: {}
     },
-    pages: [{ id: 'page-1', type: 'default', title: 'Start', blocks: [] }]
+    pages: [{ id: 'page-1', type: 'default', title: 'Start', removable: true, blocks: [] }]
   };
 
   beforeEach(() => {
-    provider = new GeminiProvider(mockApiKey);
+    provider = new GeminiProvider();
     vi.clearAllMocks();
   });
 
-  it('should throw error if API key is missing', async () => {
-    const noKeyProvider = new GeminiProvider('');
-    await expect(noKeyProvider.generatePatch('test', mockSchema)).rejects.toThrow('Gemini API Key is missing');
-  });
-
-  it('should call Gemini API with correct URL and body', async () => {
+  it('should call AI Proxy with correct URL and body', async () => {
     (fetch as any).mockResolvedValue({
       ok: true,
       json: async () => ({
-        candidates: [{
-          content: {
-            parts: [{
-              text: JSON.stringify([{ op: 'add', path: '/blocks/-', value: { id: '1', type: 'text', content: { label: 'New' } } }])
-            }]
-          }
-        }]
+        patches: [{ op: 'add', path: '/pages/0/blocks/-', value: { id: '1', type: 'text', content: { label: 'New' }, removable: true } }],
+        summary: 'Added a text field'
       })
     });
 
     const patches = await provider.generatePatch('Add a text field', mockSchema);
 
     expect(fetch).toHaveBeenCalledWith(
-      expect.stringContaining('gemini-2.0-flash'),
+      '/api/ai/generate',
       expect.objectContaining({
         method: 'POST',
         body: expect.stringContaining('Add a text field')
@@ -59,33 +48,14 @@ describe('GeminiProvider', () => {
     expect(patches[0].op).toBe('add');
   });
 
-  it('should handle markdown wrapped JSON response', async () => {
-    (fetch as any).mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        candidates: [{
-          content: {
-            parts: [{
-              text: '```json\n[{"op": "remove", "path": "/blocks/0"}]\n```'
-            }]
-          }
-        }]
-      })
-    });
-
-    const patches = await provider.generatePatch('Delete first block', mockSchema);
-    expect(patches).toHaveLength(1);
-    expect(patches[0].op).toBe('remove');
-  });
-
   it('should throw error on API failure', async () => {
     (fetch as any).mockResolvedValue({
       ok: false,
       json: async () => ({
-        error: { message: 'Invalild API Key' }
+        error: 'Invalid API Key'
       })
     });
 
-    await expect(provider.generatePatch('test', mockSchema)).rejects.toThrow('Invalild API Key');
+    await expect(provider.generatePatch('test', mockSchema)).rejects.toThrow('Invalid API Key');
   });
 });

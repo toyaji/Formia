@@ -1,12 +1,22 @@
 import { applyPatch, Operation } from 'rfc6902';
 import { PatchItem } from '@/store/useFormStore';
-import { FormFactor, FormPage } from '@/lib/core/schema';
+import { FormFactor, FormPage, FormBlock } from '@/lib/core/schema';
 
-export type ReviewPageStatus = 'added' | 'removed' | 'kept';
+export type ReviewStatus = 'added' | 'removed' | 'modified' | 'kept';
 
-export interface ReviewFormPage extends FormPage {
-  reviewStatus: ReviewPageStatus;
-  relatedPatchId?: string;
+export interface ReviewMetadata {
+  status: ReviewStatus;
+  patchId?: string; // Block-level or Page-level patch
+  fieldPatches?: Record<string, PatchItem>;
+}
+
+export interface ReviewFormBlock extends FormBlock {
+  reviewMetadata: ReviewMetadata;
+}
+
+export interface ReviewFormPage extends Omit<FormPage, 'blocks'> {
+  blocks: ReviewFormBlock[];
+  reviewMetadata: ReviewMetadata;
 }
 
 /**
@@ -90,8 +100,9 @@ function extractTargetInfo(op: Operation, formFactor: FormFactor, patchIndex: nu
     // Adding a new block (either explicit add to array or using '-' index)
     // If op is 'add' and we are targeting the blocks array item directly (/pages/0/blocks/X)
     if ((op.op === 'add' && parts.length === 4) || blockIndex === '-') {
+      const valueBlockId = (op as any).value?.id;
       return { 
-        blockId: `new-block-${patchIndex}`, 
+        blockId: valueBlockId || `new-block-${patchIndex}`, 
         targetField: 'block', 
         isNewBlock: true 
       };
@@ -251,84 +262,155 @@ export function getBlockChangeType(
 
 /**
  * Create a merged list of pages for Review Mode
- * - Shows currently active pages (kept + added)
- * - Injects deleted pages back into the list with 'removed' status
+ * - Uses stable IDs to match Snapshot and Target state.
+ * - Injects 'removed' items.
+ * - Marks 'added' and 'modified' statuses.
  */
-export function getReviewPages(
-  originalPages: FormPage[] | undefined,
-  effectivePages: FormPage[],
-  pendingPatches: PatchItem[] = []
+export function buildReviewModel(
+  snapshot: FormFactor | null,
+  effective: FormFactor | null,
+  pendingPatches: PatchItem[]
 ): ReviewFormPage[] {
-  const original = originalPages || [];
-  
-  // 1. Mark effective pages as 'kept' or 'added'
-  const result: ReviewFormPage[] = effectivePages.map(page => {
-    const isNew = !original.find(p => p.id === page.id);
-    let patchId: string | undefined;
-    
-    if (isNew) {
-      // Find the patch that added this page
-      // Look for 'add' operation where value.id matches page.id
-      const patch = pendingPatches.find(p => 
-        p.changeType === 'add' && 
-        (p.patch as any).value?.id === page.id
-      );
-      patchId = patch?.id;
+  if (!snapshot || !effective) return [];
+
+  const originalPages = snapshot.pages || [];
+  const targetPages = effective.pages || [];
+  const pending = pendingPatches.filter(p => p.status === 'pending');
+
+  // 1. Map target pages to ReviewFormPage
+  const result: ReviewFormPage[] = targetPages.map((page, pageIdx) => {
+    const originalPage = originalPages.find(p => p.id === page.id);
+    const isNew = !originalPage;
+
+    // Resolve ReviewMetadata for page
+    const reviewMetadata: ReviewMetadata = {
+      status: isNew ? 'added' : 'kept',
+      patchId: isNew ? pending.find(p => p.changeType === 'add' && (p.patch as any).value?.id === page.id)?.id : undefined
+    };
+
+    // Merge blocks within this page
+    const blocks = mergeReviewBlocks(
+      originalPage?.blocks || [],
+      page.blocks,
+      pending,
+      isNew
+    );
+
+    // If not new, check if label or other page fields changed
+    if (!isNew && originalPage) {
+      if (originalPage.title !== page.title) {
+        reviewMetadata.status = 'modified';
+        // Field-level metadata could be added here if needed for page title
+      }
     }
-    
+
     return {
       ...page,
-      reviewStatus: isNew ? 'added' : 'kept',
-      relatedPatchId: patchId
+      blocks,
+      reviewMetadata
     };
   });
 
-  // 2. Identify removed pages and inject them
-  const effectiveIdSet = new Set(effectivePages.map(p => p.id));
-  
-  // Find removed pages with their original index
-  const removedPages = original
-    .map((page, index) => ({ page, index }))
-    .filter(item => !effectiveIdSet.has(item.page.id));
+  // 2. Identify and inject removed pages from snapshot
+  const targetPageIds = new Set(targetPages.map(p => p.id));
+  originalPages.forEach((originalPage, index) => {
+    if (!targetPageIds.has(originalPage.id)) {
+      // Find the removal patch
+      const patch = pending.find(p => p.changeType === 'remove' && p.patch.path === `/pages/${index}`);
+      
+      const reviewPage: ReviewFormPage = {
+        ...originalPage,
+        blocks: originalPage.blocks.map(b => ({
+          ...b,
+          reviewMetadata: { status: 'removed' }
+        })),
+        reviewMetadata: {
+          status: 'removed',
+          patchId: patch?.id
+        }
+      };
 
-  // Insert removed pages. 
-  removedPages.forEach(({ page, index }) => {
-     // Find the patch that removed this page
-     // Heuristic: Look for 'remove' operation targeting this path index
-     // Note: This relies on patches strictly matching original indices or being simple
-     const patch = pendingPatches.find(p => 
-       p.changeType === 'remove' && 
-       p.patch.path === `/pages/${index}`
-     );
-     
-     const reviewPage: ReviewFormPage = { 
-       ...page, 
-       reviewStatus: 'removed',
-       relatedPatchId: patch?.id 
-     };
-     
-     const insertAt = Math.min(index, result.length);
-     result.splice(insertAt, 0, reviewPage);
+      // Heuristic: Insert at original index
+      const insertAt = Math.min(index, result.length);
+      result.splice(insertAt, 0, reviewPage);
+    }
   });
-  
-  // 3. Sort pages: Start < Default < Ending
-  // This ensures that even if a new page is appended by AI, it appears before the Ending page.
-  const typePriority = {
-    start: 0,
-    default: 1,
-    ending: 2,
-  };
+
+  // 3. Re-sort by structural priority (Start -> Default -> Ending)
+  const typePriority = { start: 0, default: 1, ending: 2 };
 
   result.sort((a, b) => {
     const priorityA = typePriority[a.type || 'default'] ?? 1;
     const priorityB = typePriority[b.type || 'default'] ?? 1;
-    
-    if (priorityA !== priorityB) {
-      return priorityA - priorityB;
-    }
-    // Stable sort for same type (preserve relative order)
-    return 0;
+    return priorityA - priorityB;
   });
   
+  return result;
+}
+
+/**
+ * Merges original and target blocks using stable IDs
+ */
+function mergeReviewBlocks(
+  originalBlocks: any[],
+  targetBlocks: any[],
+  pending: PatchItem[],
+  isNewPage: boolean
+): ReviewFormBlock[] {
+  const result: ReviewFormBlock[] = targetBlocks.map(block => {
+    const originalBlock = originalBlocks.find(b => b.id === block.id);
+    const isNew = !originalBlock;
+
+    // Resolve field-level patches for this block
+    const fieldPatches: Record<string, PatchItem> = {};
+    pending
+      .filter(p => p.targetBlockId === block.id && p.targetField !== 'block')
+      .forEach(p => {
+        if (p.targetField) fieldPatches[p.targetField] = p;
+      });
+
+    let status: ReviewStatus = isNew ? 'added' : 'kept';
+    if (!isNew && Object.keys(fieldPatches).length > 0) {
+      status = 'modified';
+    }
+
+    // Find block-level patch (for added blocks)
+    const blockPatch = isNew 
+      ? pending.find(p => p.targetBlockId === block.id && p.targetField === 'block' && p.changeType === 'add')
+      : undefined;
+
+    return {
+      ...block,
+      reviewMetadata: {
+        status,
+        patchId: blockPatch?.id,
+        fieldPatches
+      }
+    };
+  });
+
+  // Only inject removed blocks if parent page wasn't new
+  if (!isNewPage) {
+    const targetBlockIds = new Set(targetBlocks.map(b => b.id));
+    originalBlocks.forEach((originalBlock, index) => {
+      if (!targetBlockIds.has(originalBlock.id)) {
+        // Find removal patch for this specific block
+        const patch = pending.find(p => p.targetBlockId === originalBlock.id && p.changeType === 'remove');
+        
+        const reviewBlock: ReviewFormBlock = {
+          ...originalBlock,
+          reviewMetadata: {
+            status: 'removed',
+            patchId: patch?.id
+          }
+        };
+        
+        // Insertion heuristic
+        const insertAt = Math.min(index, result.length);
+        result.splice(insertAt, 0, reviewBlock);
+      }
+    });
+  }
+
   return result;
 }

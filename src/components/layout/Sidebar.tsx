@@ -4,7 +4,7 @@ import { useFormStore } from '@/store/useFormStore';
 import styles from './Sidebar.module.css';
 import { FormBlock, FormPage } from '@/lib/core/schema';
 import { BLOCK_METADATA } from '@/lib/constants/blocks';
-import { getReviewPages, ReviewFormPage } from '@/lib/utils/patchUtils';
+import { ReviewFormPage } from '@/lib/utils/patchUtils';
 import { Plus, Trash2, GripVertical, ChevronDown, ChevronRight, Check, X, Copy, MoreHorizontal } from 'lucide-react';
 import { generateQuestionPageTitle, generateEndingPageTitle } from '@/lib/utils/pageUtils';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
@@ -13,7 +13,8 @@ export const Sidebar = () => {
   const { 
     formFactor, activePageId, activeBlockId, 
     setActivePageId, setActiveBlockId, applyJsonPatch,
-    isReviewMode, preReviewSnapshot, pendingPatches // Get snapshot and pending patches
+    isReviewMode, preReviewSnapshot, pendingPatches,
+    getReviewViewModel
   } = useFormStore();
   
   // Accordion state: map of pageId -> boolean (true = expanded)
@@ -26,11 +27,14 @@ export const Sidebar = () => {
   // Compute pages to render (Normal vs Review)
   // We need to enable `getReviewPages` only when isReviewMode is true AND we have a snapshot
   const allPages = useMemo(() => {
-    if (isReviewMode && preReviewSnapshot && formFactor) {
-      return getReviewPages(preReviewSnapshot.pages, formFactor.pages, pendingPatches);
+    if (isReviewMode) {
+      return getReviewViewModel();
     }
-    return (formFactor?.pages || []).map(p => ({ ...p, reviewStatus: 'kept' as const }));
-  }, [isReviewMode, preReviewSnapshot, formFactor, pendingPatches]);
+    return (formFactor?.pages || []).map(p => ({ 
+      ...p, 
+      reviewMetadata: { status: 'kept' as const } 
+    })) as ReviewFormPage[];
+  }, [isReviewMode, getReviewViewModel, formFactor]);
 
   // Initialize expanded state
   useEffect(() => {
@@ -48,17 +52,17 @@ export const Sidebar = () => {
   };
 
   const startPage = useMemo(() => 
-    allPages.find(p => p.type === 'start'), 
+    allPages.find((p: ReviewFormPage) => p.type === 'start'), 
     [allPages]
   );
   
   const questionPages = useMemo(() => 
-    allPages.filter(p => !p.type || p.type === 'default'), 
+    allPages.filter((p: ReviewFormPage) => !p.type || p.type === 'default'), 
     [allPages]
   );
 
   const endingPages = useMemo(() => 
-    allPages.filter(p => p.type === 'ending'), 
+    allPages.filter((p: ReviewFormPage) => p.type === 'ending'), 
     [allPages]
   );
   
@@ -253,8 +257,8 @@ export const Sidebar = () => {
     // Can delete if it's an ending page AND there's more than 1 OR if it's a question page. Start page NEVER deletable.
     const canDelete = page.removable !== false && (isStart ? false : (isEnding ? endingPages.length > 1 : true));
     
-    const isRemoved = page.reviewStatus === 'removed';
-    const isAdded = page.reviewStatus === 'added';
+    const isRemoved = page.reviewMetadata.status === 'removed';
+    const isAdded = page.reviewMetadata.status === 'added';
     
     // Style adjustments
     const containerStyle: React.CSSProperties = {
@@ -265,7 +269,7 @@ export const Sidebar = () => {
     };
     
     // Label Logic
-    const isPrimaryEnding = isEnding && allPages.findIndex(p => p.type === 'ending') === index;
+    const isPrimaryEnding = isEnding && allPages.findIndex((p: ReviewFormPage) => p.type === 'ending') === index;
     const isImmutable = isStart || isPrimaryEnding;
     const pageLabel = page.title;
 
@@ -536,7 +540,7 @@ export const Sidebar = () => {
                   {...provided.droppableProps}
                   ref={provided.innerRef}
                 >
-                  {questionPages.map((page, index) => renderPageItem(page, index, false, false))}
+                  {questionPages.map((page: ReviewFormPage, index: number) => renderPageItem(page, index, false, false))}
                   {provided.placeholder}
                 </div>
               )}

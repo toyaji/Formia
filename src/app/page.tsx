@@ -9,7 +9,7 @@ import { Sidebar } from '@/components/layout/Sidebar';
 import { AiPanel } from '@/components/ai/AiPanel';
 import { Header } from '@/components/layout/Header';
 import { Undo2, Redo2, Check, X } from 'lucide-react';
-import { getNewBlockPreviews, getReviewPages, ReviewFormPage } from '@/lib/utils/patchUtils';
+import { ReviewFormPage } from '@/lib/utils/patchUtils';
 import { FormPage } from '@/lib/core/schema';
 
 export default function Home() {
@@ -18,23 +18,27 @@ export default function Home() {
     activePageId, setActivePageId, viewport, undo, redo, history, future, 
     activeBlockId, setActiveBlockId, applyJsonPatch,
     isReviewMode, pendingPatches, preReviewSnapshot,
-    acceptPatch, rejectPatch, resolvePagePatch
+    acceptPatch, rejectPatch, resolvePagePatch,
+    getReviewViewModel
   } = useFormStore();
   const effectiveFactor = getEffectiveFactor();
 
   // Compute pages to render (Normal vs Review)
   const pagesToRender = useMemo(() => {
-    if (isReviewMode && preReviewSnapshot && effectiveFactor) {
-      return getReviewPages(preReviewSnapshot.pages, effectiveFactor.pages, pendingPatches);
+    if (isReviewMode) {
+      return getReviewViewModel();
     }
-    return (effectiveFactor?.pages || []).map(p => ({ ...p, reviewStatus: 'kept' as const }));
-  }, [isReviewMode, preReviewSnapshot, effectiveFactor, pendingPatches]);
+    // Fallback for non-review mode
+    return (effectiveFactor?.pages || []).map(p => ({ 
+      ...p, 
+      reviewMetadata: { status: 'kept' as const },
+      blocks: p.blocks.map(b => ({ ...b, reviewMetadata: { status: 'kept' as const } }))
+    }));
+  }, [isReviewMode, effectiveFactor, getReviewViewModel]);
 
   // Find current active page
   const activePage = pagesToRender.find(p => p.id === activePageId) || pagesToRender[0];
   
-  // Get new blocks that need to be previewed
-  const newBlockPreviews = getNewBlockPreviews(pendingPatches);
 
   // Initialize with a default schema for testing (v2)
   useEffect(() => {
@@ -163,8 +167,9 @@ export default function Home() {
             const isActive = activePageId === page.id;
             const isStartPage = page.type === 'start';
             const isEndingPage = page.type === 'ending';
-            const isRemoved = page.reviewStatus === 'removed';
-            const isAdded = page.reviewStatus === 'added';
+            const isRemoved = page.reviewMetadata.status === 'removed';
+            const isAdded = page.reviewMetadata.status === 'added';
+            const patchId = page.reviewMetadata.patchId;
             
             const pageLabel = page.title;
 
@@ -184,7 +189,7 @@ export default function Home() {
                   {pageLabel}
                   
                   {/* Review Actions Chip - Only Buttons */}
-                  {isReviewMode && (isAdded || isRemoved) && page.relatedPatchId && (
+                  {isReviewMode && (isAdded || isRemoved) && patchId && (
                     <div 
                       className={diffStyles.reviewChip} 
                       data-change-type={isAdded ? 'add' : 'remove'}
@@ -193,7 +198,7 @@ export default function Home() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          resolvePagePatch(page.relatedPatchId!, 'accept');
+                          resolvePagePatch(patchId!, 'accept');
                         }}
                         title="변경사항 수락"
                       >
@@ -202,7 +207,7 @@ export default function Home() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          resolvePagePatch(page.relatedPatchId!, 'reject');
+                          resolvePagePatch(patchId!, 'reject');
                         }}
                         title="변경사항 거절"
                       >
@@ -243,15 +248,6 @@ export default function Home() {
                 {/* Render Blocks */}
                 {page.blocks.map((block: import('@/lib/core/schema').FormBlock) => (
                   <BlockRenderer key={block.id} block={block} />
-                ))}
-
-                {/* New Block Previews (only for this page) */}
-                {isActive && newBlockPreviews.map((preview) => (
-                  <BlockRenderer 
-                    key={preview.targetBlockId} 
-                    block={preview.block} 
-                    previewBlockId={preview.targetBlockId}
-                  />
                 ))}
 
                 {page.blocks.length === 0 && !isStartPage && !isEndingPage && (
