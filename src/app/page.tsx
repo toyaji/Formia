@@ -80,8 +80,8 @@ export default function Home() {
       setFormFactor({
         version: '2.0.0',
         metadata: {
-          title: '젤리 설문조사 이벤트 응모',
-          description: '반려견 정보를 입력하고 이벤트에 참여하세요!',
+          title: '새로운 설문조사',
+          description: '설문에 대한 설명을 입력해주세요.',
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         },
@@ -103,8 +103,8 @@ export default function Home() {
                 type: 'statement',
                 removable: false,
                 content: {
-                  label: '젤리 설문조사 이벤트 응모',
-                  body: '반려견 정보를 입력하고 이벤트에 참여하세요!'
+                  label: '새로운 Formia 설문조사',
+                  body: '설문에 대한 설명을 입력해주세요.'
                 }
               },
               {
@@ -112,7 +112,7 @@ export default function Home() {
                 type: 'choice',
                 removable: true,
                 content: { 
-                    label: '현재 반려동물을 키우고 계신가요?', 
+                    label: 'Formia를 사용해보신 적이 있나요?', 
                     options: ['예', '아니오']
                 },
                 validation: { required: true }
