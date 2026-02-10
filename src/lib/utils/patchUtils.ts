@@ -271,7 +271,7 @@ export function getReviewPages(
       // Look for 'add' operation where value.id matches page.id
       const patch = pendingPatches.find(p => 
         p.changeType === 'add' && 
-        (p.patch.value as any)?.id === page.id
+        (p.patch as any).value?.id === page.id
       );
       patchId = patch?.id;
     }

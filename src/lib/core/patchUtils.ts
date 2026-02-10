@@ -10,6 +10,7 @@ export const createAddBlockPatch = (block: Partial<FormBlock>): Operation => {
     id: uuidv4(),
     type: block.type || 'text',
     content: block.content || { label: 'New Field' },
+    removable: true,
     validation: block.validation || { required: false },
     ...block,
   };

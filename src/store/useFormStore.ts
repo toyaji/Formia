@@ -306,7 +306,7 @@ export const useFormStore = create<FormState>()(
           // Sort patches might be needed if children depend on order?
           // Usually pendingPatches are in order.
           // We filter them from pendingPatches list which preserves order.
-          opsToApply.push(mainPatch.patch, ...childPatches.map(p => p.patch));
+          opsToApply.push(mainPatch.patch, ...childPatches.map((p: PatchItem) => p.patch));
         }
         
         // check for errors when applying

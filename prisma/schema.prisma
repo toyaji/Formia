@@ -1,0 +1,113 @@
+// Formia Prisma Schema
+// Dev: SQLite | Prod: PostgreSQL (DATABASE_URL 변경만으로 전환)
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ─── NextAuth.js 필수 모델 ─────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+
+  accounts Account[]
+  sessions Session[]
+  forms    Form[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─── Formia 비즈니스 모델 ────────────────────────────────
+
+model Form {
+  id      String @id @default(cuid())
+  title   String
+  factor  String // Form Factor 전체 JSON (SQLite는 Json 타입 미지원 → String)
+  version Int    @default(1)
+
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId String
+
+  deployment Deployment?
+  responses  Response[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Deployment {
+  id           String    @id @default(cuid())
+  status       String    @default("draft") // draft | published | archived
+  publishedUrl String?
+  publishedAt  DateTime?
+  settings     String? // JSON string
+
+  form   Form   @relation(fields: [formId], references: [id], onDelete: Cascade)
+  formId String @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Response {
+  id          String   @id @default(cuid())
+  data        String // JSON string
+  metadata    String? // JSON string
+  submittedAt DateTime @default(now())
+
+  form   Form   @relation(fields: [formId], references: [id], onDelete: Cascade)
+  formId String
+
+  @@index([formId, submittedAt])
+}

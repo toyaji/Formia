@@ -36,3 +36,8 @@ next-env.d.ts
 # Tauri
 /src-tauri/target/
 /src-tauri/binaries/
+
+# Prisma
+/src/generated/prisma/
+*.db
+*.db-journal
