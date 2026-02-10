@@ -61,10 +61,13 @@
   padding: 0 8px;
   cursor: pointer;
   background-color: transparent;
-  transition: all 0.2s;
-  position: relative;
   height: 32px;
   color: var(--f-text-main);
+  /* transition: all 0.2s; - Removed to fix DnD jumping */
+}
+
+.pageGroup.dragging {
+  z-index: 1000;
 }
 
 .pageHeader:hover {
@@ -74,6 +77,14 @@
 .pageHeader.active {
   background-color: #ebf5ff; /* Light blue active state */
   color: var(--f-primary);
+}
+
+.pageHeader.draggable {
+  cursor: grab;
+}
+
+.pageHeader.draggable:active {
+  cursor: grabbing;
 }
 
 .toggleBtn {
@@ -177,11 +188,11 @@
   align-items: center;
   padding: 0 12px 0 26px;
   cursor: pointer;
-  transition: all 0.2s ease;
   font-size: 0.8rem;
   color: var(--f-text-main);
   position: relative;
   height: 28px;
+  /* transition: all 0.2s ease; - Removed to fix DnD jumping */
 }
 
 .blockItem:hover {

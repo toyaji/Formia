@@ -2,7 +2,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useFormStore } from '@/store/useFormStore';
 import styles from './Sidebar.module.css';
-import { FormBlock, FormPage } from '@/lib/core/schema';
+import { FormBlock, FormPage, BlockType } from '@/lib/core/schema';
 import { BLOCK_METADATA } from '@/lib/constants/blocks';
 import { ReviewFormPage } from '@/lib/utils/patchUtils';
 import { Plus, Trash2, GripVertical, ChevronDown, ChevronRight, Check, X, Copy, MoreHorizontal } from 'lucide-react';
@@ -102,6 +102,9 @@ export const Sidebar = () => {
   };
 
   const onDragEnd = (result: DropResult) => {
+    // Disable reordering in review mode to avoid complex index mapping
+    if (isReviewMode) return;
+
     const { source, destination, type } = result;
     if (!destination) return;
     if (source.droppableId === destination.droppableId && source.index === destination.index) return;
@@ -254,7 +257,6 @@ export const Sidebar = () => {
     const containerStyle: React.CSSProperties = {
         opacity: isRemoved ? 0.5 : 1,
         pointerEvents: isRemoved ? 'none' : 'auto',
-        position: 'relative',
         textDecoration: isRemoved ? 'line-through' : 'none',
     };
     
@@ -345,151 +347,186 @@ export const Sidebar = () => {
 
     const blocksList = (
       <div className={`${styles.blockList} ${!isExpanded ? styles.collapsed : ''}`}>
-        <Droppable droppableId={`page-blocks-${page.id}`} type="BLOCK">
-          {(provided) => (
-            <div 
-              ref={provided.innerRef}
-              {...provided.droppableProps}
-              style={{ minHeight: '10px' }} 
-            >
-
-
-              {page.blocks.map((block: FormBlock, bIndex: number) => (
-                <Draggable key={block.id} draggableId={block.id} index={bIndex}>
-                  {(provided, snapshot) => (
-                    <div 
-                      className={styles.blockItem}
-                      ref={provided.innerRef}
-                      {...provided.draggableProps}
-                      {...provided.dragHandleProps}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActivePageId(page.id); // Also set page active
-                        setActiveBlockId(block.id);
-                      }}
-                      style={{
-                          ...provided.draggableProps.style,
-                          backgroundColor: activeBlockId === block.id ? 'rgba(59, 130, 246, 0.1)' : undefined
-                      }}
-                    >
-                      <span className={styles.blockIcon}>
-                        {BLOCK_METADATA[block.type]?.icon || block.type[0].toUpperCase()}
-                      </span>
-                      <span className={styles.blockLabel}>
-                        {block.content.label || BLOCK_METADATA[block.type]?.label || block.type}
-                      </span>
-                      
-                      <div className={styles.blockActions}>
-                        <button 
-                          className={styles.actionBtn}
-                          onClick={(e) => duplicateBlock(e, page.id, block)}
-                          title="복제"
-                        >
-                          <Copy size={12} />
-                        </button>
-                        {block.removable !== false && (
+        {isReviewMode ? (
+          <div style={{ minHeight: '10px' }}>
+            {page.blocks.map((block: any, bIndex: number) => {
+              const bIsRemoved = block.reviewMetadata?.status === 'removed';
+              return (
+                <div 
+                  key={block.id}
+                  className={styles.blockItem}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (!bIsRemoved) {
+                      setActivePageId(page.id);
+                      setActiveBlockId(block.id);
+                    }
+                  }}
+                  style={{
+                      backgroundColor: activeBlockId === block.id ? 'rgba(59, 130, 246, 0.1)' : undefined,
+                      opacity: bIsRemoved ? 0.5 : 1,
+                      textDecoration: bIsRemoved ? 'line-through' : 'none',
+                      pointerEvents: bIsRemoved ? 'none' : 'auto'
+                  }}
+                >
+                  <span className={styles.blockIcon}>
+                    {BLOCK_METADATA[block.type as BlockType]?.icon || block.type[0].toUpperCase()}
+                  </span>
+                  <span className={styles.blockLabel}>
+                    {block.content.label || BLOCK_METADATA[block.type as BlockType]?.label || block.type}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <Droppable droppableId={`page-blocks-${page.id}`} type="BLOCK">
+            {(provided) => (
+              <div 
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+                style={{ minHeight: '10px' }} 
+              >
+                {page.blocks.map((block: FormBlock, bIndex: number) => (
+                  <Draggable key={block.id} draggableId={block.id} index={bIndex}>
+                    {(provided, snapshot) => (
+                      <div 
+                        className={styles.blockItem}
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        {...provided.dragHandleProps}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActivePageId(page.id);
+                          setActiveBlockId(block.id);
+                        }}
+                        style={{
+                            ...provided.draggableProps.style,
+                            backgroundColor: activeBlockId === block.id ? 'rgba(59, 130, 246, 0.1)' : undefined
+                        }}
+                      >
+                        <span className={styles.blockIcon}>
+                          {BLOCK_METADATA[block.type]?.icon || block.type[0].toUpperCase()}
+                        </span>
+                        <span className={styles.blockLabel}>
+                          {block.content.label || BLOCK_METADATA[block.type]?.label || block.type}
+                        </span>
+                        
+                        <div className={styles.blockActions}>
                           <button 
                             className={styles.actionBtn}
-                            onClick={(e) => deleteBlock(e, page.id, bIndex)}
-                            title="삭제"
+                            onClick={(e) => duplicateBlock(e, page.id, block)}
+                            title="복제"
                           >
-                            <Trash2 size={12} />
+                            <Copy size={12} />
                           </button>
-                        )}
+                          {block.removable !== false && (
+                            <button 
+                              className={styles.actionBtn}
+                              onClick={(e) => deleteBlock(e, page.id, bIndex)}
+                              title="삭제"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </Draggable>
-              ))}
-              {provided.placeholder}
-              {page.blocks.length === 0 && !isStart && !isEnding && (
-                <div className={styles.empty} style={{ padding: '8px', fontSize: '0.8rem' }}>
-                  문항 없음
-                </div>
-              )}
-            </div>
-          )}
-        </Droppable>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
+                {page.blocks.length === 0 && !isStart && !isEnding && (
+                  <div className={styles.empty} style={{ padding: '8px', fontSize: '0.8rem' }}>
+                    문항 없음
+                  </div>
+                )}
+              </div>
+            )}
+          </Droppable>
+        )}
       </div>
     );
 
-    if (isStart) {
-       // Start page is NOT draggable
+    const isPageDraggable = !isStart && !isEnding && !isReviewMode;
+
+    const renderHeader = (dragHandleProps: any = {}) => (
+      <div 
+        className={`${styles.pageHeader} ${isActive ? styles.active : ''} ${isPageDraggable ? styles.draggable : ''}`}
+        onClick={() => setActivePageId(page.id)}
+        {...dragHandleProps}
+      >
+        {/* Accordion Toggle */}
+        <div 
+          className={`${styles.toggleBtn} ${!isExpanded ? styles.collapsed : ''}`}
+          onClick={(e) => togglePage(e, page.id)}
+          role="button"
+        >
+          <ChevronDown size={14} />
+        </div>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1 }}>
+            {renderLabel()}
+            {isAdded && <span style={{ fontSize: '0.7em', color: '#22C55E' }}>(New)</span>}
+            {isRemoved && <span style={{ fontSize: '0.7em', color: '#EF4444' }}>(Deleted)</span>}
+        </div>
+        
+        {/* Hover Actions */}
+        <div className={styles.pageActions}>
+          {!isEnding && (
+            <button 
+              className={styles.actionBtn} 
+              onClick={(e) => addBlock(e, page.id)}
+              title="질문 추가"
+            >
+              <Plus size={14} />
+            </button>
+          )}
+          {canDelete && (
+            <button 
+              className={styles.actionBtn} 
+              onClick={(e) => deletePage(e, page.id)}
+              title="페이지 삭제"
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
+        </div>
+      </div>
+    );
+
+    const pageContent = (
+       <div 
+          className={styles.pageGroup}
+          style={containerStyle}
+        >
+          {isPageDraggable ? null : renderHeader()}
+          {/* Blocks List (Accordion Content) */}
+          {blocksList}
+        </div>
+    );
+
+    // If it's a fixed page or review mode, don't wrap in Draggable
+    if (!isPageDraggable) {
        return (
-         <div className={styles.pageGroup} key={page.id} style={containerStyle}>
-            {content}
-            {blocksList}
+         <div key={page.id}>
+            {pageContent}
          </div>
        );
     }
 
     return (
-      <Draggable key={page.id} draggableId={page.id} index={index} isDragDisabled={isEnding || isRemoved || isImmutable}> 
-        {/* Disable drag for ending pages for now to simplify */}
-        {(provided) => (
+      <Draggable key={page.id} draggableId={page.id} index={index}> 
+        {(provided, snapshot) => (
           <div 
-            className={styles.pageGroup}
+            className={`${styles.pageGroup} ${snapshot.isDragging ? styles.dragging : ''}`}
             ref={provided.innerRef}
             {...provided.draggableProps}
-            style={{ ...provided.draggableProps.style, ...containerStyle }}
+            style={{ 
+              ...containerStyle,
+              ...provided.draggableProps.style 
+            }}
           >
-            {/* We need to pass dragHandleProps to the handle explicitly, but for simplified structure
-                we might need to clone element or restructure.
-                Previous was a direct child.
-                Fix: Apply dragHandleProps to the handle div inside content, 
-                BUT since content is a variable, we can't easily pass it.
-                Let's inline the content logic.
-            */}
-             <div 
-                className={`${styles.pageHeader} ${isActive ? styles.active : ''}`}
-                onClick={() => setActivePageId(page.id)}
-              >
-                {/* Accordion Toggle */}
-                <div 
-                  className={`${styles.toggleBtn} ${!isExpanded ? styles.collapsed : ''}`}
-                  onClick={(e) => togglePage(e, page.id)}
-                  role="button"
-                >
-                  <ChevronDown size={14} />
-                </div>
-
-                {/* Drag Handle (Questions only) */}
-                {!isEnding && !isImmutable && (
-                  <div {...provided.dragHandleProps} className={styles.dragHandle}>
-                    <GripVertical size={14} />
-                  </div>
-                )}
-                
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1 }}>
-                    {renderLabel()}
-                    {isAdded && <span style={{ fontSize: '0.7em', color: '#22C55E' }}>(New)</span>}
-                    {isRemoved && <span style={{ fontSize: '0.7em', color: '#EF4444' }}>(Deleted)</span>}
-                </div>
-                
-                {/* Hover Actions */}
-                <div className={styles.pageActions}>
-                  {!isEnding && (
-                    <button 
-                      className={styles.actionBtn} 
-                      onClick={(e) => addBlock(e, page.id)}
-                      title="질문 추가"
-                    >
-                      <Plus size={14} />
-                    </button>
-                  )}
-                  {canDelete && (
-                    <button 
-                      className={styles.actionBtn} 
-                      onClick={(e) => deletePage(e, page.id)}
-                      title="페이지 삭제"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  )}
-                </div>
-              </div>
-
-            {/* Blocks List (Accordion Content) */}
+            {renderHeader(provided.dragHandleProps)}
             {blocksList}
           </div>
         )}
