@@ -246,14 +246,15 @@ export const AiPanel = () => {
             onKeyDown={handleKeyDown}
             rows={1}
           />
-          <button 
-            className={styles.sendBtn} 
-            onClick={handleSend}
-            disabled={isLoading || !input.trim() || !geminiActive || isValidating}
-            title={getSendButtonTitle()}
-          >
-            <Send size={18} />
-          </button>
+          <div className={`${styles.sendBtnWrapper} f-tooltip-container`} data-tooltip={getSendButtonTitle()}>
+            <button 
+              className={styles.sendBtn} 
+              onClick={handleSend}
+              disabled={isLoading || !input.trim() || !geminiActive || isValidating}
+            >
+              <Send size={18} />
+            </button>
+          </div>
         </div>
       </div>
     </div>

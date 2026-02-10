@@ -57,3 +57,50 @@ input, textarea, select {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--f-text-muted);
 }
+
+/* Global Tooltip Utility */
+.f-tooltip-container {
+  position: relative;
+}
+
+.f-tooltip-container::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%) translateY(5px);
+  background-color: var(--f-text-main);
+  color: white;
+  padding: 6px 10px;
+  border-radius: var(--f-radius-sm);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease-out, transform 0.15s ease-out;
+  pointer-events: none;
+  z-index: 1000;
+  box-shadow: var(--f-shadow-premium);
+}
+
+.f-tooltip-container::before {
+  content: '';
+  position: absolute;
+  bottom: calc(100% + 5px);
+  left: 50%;
+  transform: translateX(-50%) translateY(5px);
+  border: 5px solid transparent;
+  border-top-color: var(--f-text-main);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease-out, transform 0.15s ease-out;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.f-tooltip-container:hover::after,
+.f-tooltip-container:hover::before {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}

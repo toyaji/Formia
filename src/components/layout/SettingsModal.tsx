@@ -125,14 +125,14 @@ export const SettingsModal = ({ onClose }: SettingsModalProps) => {
               </button>
               <button 
                 type="button"
-                className={`${styles.modeBtn} ${storageMode === 'cloud' ? styles.activeMode : ''}`}
+                className={`${styles.modeBtn} ${storageMode === 'cloud' ? styles.activeMode : ''} ${!isLoggedIn ? 'f-tooltip-container' : ''}`}
                 onClick={() => {
                   if (isLoggedIn) {
                     setStorageMode('cloud');
                   }
                 }}
                 disabled={!isLoggedIn}
-                title={!isLoggedIn ? "로그인이 필요한 기능입니다" : ""}
+                data-tooltip={!isLoggedIn ? "로그인이 필요한 기능입니다" : ""}
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                   {isLoggedIn ? <Cloud size={14} /> : <Lock size={14} />}

@@ -305,6 +305,12 @@
   color: var(--f-text-muted);
 }
 
+.sendBtnWrapper {
+  display: flex;
+  align-items: center;
+  margin-left: 8px;
+}
+
 .sendBtn {
   width: 36px;
   height: 36px;
@@ -316,7 +322,6 @@
   color: white;
   border-radius: 50%;
   transition: opacity 0.2s, transform 0.2s;
-  margin-left: 8px;
 }
 
 .sendBtn:hover:not(:disabled) {

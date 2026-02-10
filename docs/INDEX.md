@@ -18,6 +18,7 @@
 | **testing_strategy.md**        | ~2KB  | 테스트 전략                                            | 테스트 작성 시                 |
 | **security.md**                | ~24KB | BYOK 키 보안, 크로스플랫폼 동기화, Analytics 키        | AI 키, 보안, Analytics 연동 시 |
 | **product_requirements.md**    | ~1KB  | 제품 요구사항                                          | 기능 기획 시                   |
+| **design_system.md**           | ~2KB  | UX/UI 규칙, 커스텀 툴팁 사용법                         | UI/UX 및 디자인 가이드 필요 시 |
 
 ---
 
