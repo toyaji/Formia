@@ -29,12 +29,44 @@ export default function Home() {
       return getReviewViewModel();
     }
     // Fallback for non-review mode
-    const baseline = (effectiveFactor?.pages || []).map(p => ({ 
-      ...p, 
-      reviewMetadata: { status: 'kept' as const, patchId: undefined, fieldPatches: {} },
-      blocks: p.blocks.map(b => ({ ...b, reviewMetadata: { status: 'kept' as const, patchId: undefined, fieldPatches: {} } }))
-    }));
-    return sortPages(baseline) as ReviewFormPage[];
+    if (!effectiveFactor) return [] as ReviewFormPage[];
+
+    const result: ReviewFormPage[] = [];
+    
+    if (effectiveFactor.pages.start) {
+      result.push({ 
+        ...effectiveFactor.pages.start, 
+        reviewMetadata: { status: 'kept' as const, patchId: undefined, fieldPatches: {} },
+        blocks: effectiveFactor.pages.start.blocks.map(b => ({ 
+          ...b, 
+          reviewMetadata: { status: 'kept' as const, patchId: undefined, fieldPatches: {} } 
+        }))
+      });
+    }
+
+    effectiveFactor.pages.questions.forEach(p => {
+      result.push({ 
+        ...p, 
+        reviewMetadata: { status: 'kept' as const, patchId: undefined, fieldPatches: {} },
+        blocks: p.blocks.map(b => ({ 
+          ...b, 
+          reviewMetadata: { status: 'kept' as const, patchId: undefined, fieldPatches: {} } 
+        }))
+      });
+    });
+
+    if (effectiveFactor.pages.ending) {
+      result.push({ 
+        ...effectiveFactor.pages.ending, 
+        reviewMetadata: { status: 'kept' as const, patchId: undefined, fieldPatches: {} },
+        blocks: effectiveFactor.pages.ending.blocks.map(b => ({ 
+          ...b, 
+          reviewMetadata: { status: 'kept' as const, patchId: undefined, fieldPatches: {} } 
+        }))
+      });
+    }
+
+    return result;
   }, [isReviewMode, effectiveFactor, getReviewViewModel]);
 
   // Find current active page
@@ -58,8 +90,8 @@ export default function Home() {
             primary: '#3B82F6',
           },
         },
-        pages: [
-          {
+        pages: {
+          start: {
             id: 'page-start',
             type: 'start',
             title: '시작 페이지',
@@ -86,7 +118,8 @@ export default function Home() {
               }
             ]
           },
-          {
+          questions: [],
+          ending: {
             id: 'page-end',
             type: 'ending',
             title: '종료 페이지',
@@ -103,7 +136,7 @@ export default function Home() {
               }
             ]
           }
-        ],
+        },
       });
     }
   }, [formFactor, setFormFactor]);

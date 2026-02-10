@@ -24,23 +24,40 @@ export function validatePatchesDetailed(patches: Operation[], schema: FormFactor
     if (patch.op === 'remove') {
       const path = patch.path;
       
-      // Page removal
-      const pageMatch = path.match(/^\/pages\/(\d+)$/);
+      // Page removal: /pages/questions/0
+      const pageMatch = path.match(/^\/pages\/questions\/(\d+)$/);
       if (pageMatch) {
         const pageIndex = parseInt(pageMatch[1], 10);
-        const page = schema.pages[pageIndex];
+        const page = schema.pages.questions[pageIndex];
         if (page && page.removable === false) {
           errors.push(`Cannot remove non-removable page: ${page.id}`);
           return false;
         }
       }
 
-      // Block removal
-      const blockMatch = path.match(/^\/pages\/(\d+)\/blocks\/(\d+)$/);
+      // Special cases for start/ending
+      if (path === '/pages/start' || path === '/pages/ending') {
+        const section = path.split('/')[2] as 'start' | 'ending';
+        const page = schema.pages[section];
+        if (page && page.removable === false) {
+          errors.push(`Cannot remove non-removable page: ${page?.id || section}`);
+          return false;
+        }
+      }
+
+      // Block removal: /pages/(start|questions\/\d+|ending)\/blocks\/\d+
+      const blockMatch = path.match(/^\/pages\/(start|questions\/\d+|ending)\/blocks\/(\d+)$/);
       if (blockMatch) {
-        const pageIndex = parseInt(blockMatch[1], 10);
+        const sectionPath = blockMatch[1];
         const blockIndex = parseInt(blockMatch[2], 10);
-        const block = schema.pages[pageIndex]?.blocks[blockIndex];
+        let page: any;
+        if (sectionPath === 'start' || sectionPath === 'ending') {
+          page = schema.pages[sectionPath as 'start' | 'ending'];
+        } else {
+          const qIndex = parseInt(sectionPath.split('/')[1], 10);
+          page = schema.pages.questions[qIndex];
+        }
+        const block = page?.blocks?.[blockIndex];
         if (block && block.removable === false) {
           errors.push(`Cannot remove non-removable block: ${block.id}`);
           return false;
@@ -50,8 +67,10 @@ export function validatePatchesDetailed(patches: Operation[], schema: FormFactor
 
     // 2. Validate addition or replacement of types
     if (patch.op === 'add' || patch.op === 'replace') {
-      // Block addition
-      const blockAddMatch = patch.path.match(/^\/pages\/\d+\/blocks\/(\d+|-)$/);
+      const path = patch.path;
+
+      // Block addition: /pages/(start|questions\/\d+|ending)/blocks/(\d+|-)
+      const blockAddMatch = path.match(/^\/pages\/(start|questions\/\d+|ending)\/blocks\/(\d+|-)$/);
       if (blockAddMatch && patch.op === 'add') {
         const v = patch.value as any;
         if (!v || !v.id || !v.type || !v.content) {
@@ -64,8 +83,8 @@ export function validatePatchesDetailed(patches: Operation[], schema: FormFactor
         }
       }
 
-      // Block type replacement
-      const blockTypeMatch = patch.path.match(/^\/pages\/\d+\/blocks\/\d+\/type$/);
+      // Block type replacement: /pages/(start|questions\/\d+|ending)/blocks/\d+/type
+      const blockTypeMatch = path.match(/^\/pages\/(start|questions\/\d+|ending)\/blocks\/\d+\/type$/);
       if (blockTypeMatch) {
         const type = patch.value as string;
         if (!validBlockTypes.includes(type as any)) {
@@ -74,8 +93,8 @@ export function validatePatchesDetailed(patches: Operation[], schema: FormFactor
         }
       }
 
-      // Page addition
-      const pageAddMatch = patch.path.match(/^\/pages\/(\d+|-)$/);
+      // Page addition: /pages/questions/(\d+|-)
+      const pageAddMatch = path.match(/^\/pages\/questions\/(\d+|-)$/);
       if (pageAddMatch && patch.op === 'add') {
         const v = patch.value as any;
         if (!v || !v.id || !v.type || !v.title || !Array.isArray(v.blocks)) {
@@ -88,8 +107,8 @@ export function validatePatchesDetailed(patches: Operation[], schema: FormFactor
         }
       }
 
-      // Page type replacement
-      const pageTypeMatch = patch.path.match(/^\/pages\/\d+\/type$/);
+      // Page type replacement: /pages/(start|questions\/\d+|ending)/type
+      const pageTypeMatch = path.match(/^\/pages\/(start|questions\/\d+|ending)\/type$/);
       if (pageTypeMatch) {
         const type = patch.value as string;
         if (!validPageTypes.includes(type)) {

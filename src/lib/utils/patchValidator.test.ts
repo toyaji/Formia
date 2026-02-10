@@ -11,8 +11,8 @@ describe('PatchValidator', () => {
       updatedAt: '',
     },
     theme: { mode: 'light', tokens: {} },
-    pages: [
-      {
+    pages: {
+      start: {
         id: 'page-1',
         type: 'start',
         title: 'Start',
@@ -32,20 +32,29 @@ describe('PatchValidator', () => {
           }
         ]
       },
-      {
-        id: 'page-2',
-        type: 'default',
-        title: 'Middle',
-        removable: true,
+      questions: [
+        {
+          id: 'page-2',
+          type: 'default',
+          title: 'Middle',
+          removable: true,
+          blocks: []
+        }
+      ],
+      ending: {
+        id: 'page-3',
+        type: 'ending',
+        title: 'End',
+        removable: false,
         blocks: []
       }
-    ]
+    }
   };
 
   it('should allow non-remove operations', () => {
     const patches: any[] = [
-      { op: 'replace', path: '/pages/0/blocks/0/content/label', value: 'New Label' },
-      { op: 'add', path: '/pages/0/blocks/-', value: { id: '3', type: 'text', content: {} } }
+      { op: 'replace', path: '/pages/start/blocks/0/content/label', value: 'New Label' },
+      { op: 'add', path: '/pages/start/blocks/-', value: { id: '3', type: 'text', content: { label: 'Test' } } }
     ];
     const validated = validatePatches(patches, mockSchema);
     expect(validated).toHaveLength(2);
@@ -53,7 +62,7 @@ describe('PatchValidator', () => {
 
   it('should allow removal of removable blocks', () => {
     const patches: any[] = [
-      { op: 'remove', path: '/pages/0/blocks/1' } // block-2 is removable
+      { op: 'remove', path: '/pages/start/blocks/1' } // block-2 is removable
     ];
     const validated = validatePatches(patches, mockSchema);
     expect(validated).toHaveLength(1);
@@ -62,7 +71,7 @@ describe('PatchValidator', () => {
 
   it('should reject removal of non-removable blocks', () => {
     const patches: any[] = [
-      { op: 'remove', path: '/pages/0/blocks/0' } // block-1 is NOT removable
+      { op: 'remove', path: '/pages/start/blocks/0' } // block-1 is NOT removable
     ];
     const validated = validatePatches(patches, mockSchema);
     expect(validated).toHaveLength(0);
@@ -70,7 +79,7 @@ describe('PatchValidator', () => {
 
   it('should reject removal of non-removable pages', () => {
     const patches: any[] = [
-      { op: 'remove', path: '/pages/0' } // page-1 is NOT removable
+      { op: 'remove', path: '/pages/start' } // page-1 is NOT removable
     ];
     const validated = validatePatches(patches, mockSchema);
     expect(validated).toHaveLength(0);
@@ -78,7 +87,7 @@ describe('PatchValidator', () => {
 
   it('should allow removal of removable pages', () => {
     const patches: any[] = [
-      { op: 'remove', path: '/pages/1' } // page-2 is removable
+      { op: 'remove', path: '/pages/questions/0' } // page-2 is removable
     ];
     const validated = validatePatches(patches, mockSchema);
     expect(validated).toHaveLength(1);
@@ -88,7 +97,7 @@ describe('PatchValidator', () => {
     const patches: any[] = [
       { 
         op: 'add', 
-        path: '/pages/0/blocks/-', 
+        path: '/pages/start/blocks/-', 
         value: { id: 'invalid-id', type: 'shortText', content: { label: 'Invalid' } } 
       }
     ];
@@ -100,7 +109,7 @@ describe('PatchValidator', () => {
     const patches: any[] = [
       { 
         op: 'add', 
-        path: '/pages/0/blocks/-', 
+        path: '/pages/start/blocks/-', 
         value: { id: 'valid-id', type: 'text', content: { label: 'Valid' } } 
       }
     ];

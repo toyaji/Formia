@@ -90,10 +90,15 @@ export const useFormStore = create<FormState>()(
       setActivePageId: (id: string | null) => set({ activePageId: id, activeBlockId: null }),
       setActiveBlockId: (id: string | null) => set({ activeBlockId: id }),
       setFormFactor: (factor: FormFactor) => {
-        const sortedFactor = { ...factor, pages: sortPages(factor.pages) };
-        set({ formFactor: sortedFactor });
-        if (sortedFactor.pages.length > 0 && !get().activePageId) {
-          set({ activePageId: sortedFactor.pages[0].id });
+        set({ formFactor: factor });
+        if (!get().activePageId) {
+          if (factor.pages.start) {
+            set({ activePageId: factor.pages.start.id });
+          } else if (factor.pages.questions.length > 0) {
+            set({ activePageId: factor.pages.questions[0].id });
+          } else if (factor.pages.ending) {
+            set({ activePageId: factor.pages.ending.id });
+          }
         }
       },
 
@@ -110,7 +115,6 @@ export const useFormStore = create<FormState>()(
     const allSuccessful = results.every((r: any) => r === null);
 
     if (allSuccessful) {
-      next.pages = sortPages(next.pages);
       set({ formFactor: next });
     } else {
       console.error('Failed to apply some patches:', results);
@@ -397,7 +401,6 @@ export const useFormStore = create<FormState>()(
       
       const updated = JSON.parse(JSON.stringify(preReviewSnapshot));
       applyPatch(updated, pendingOps);
-      updated.pages = sortPages(updated.pages);
       
       const newPatches = pendingPatches.map((p: PatchItem) => 
         p.status === 'pending' ? { ...p, status: 'accepted' as const } : p

@@ -84,7 +84,11 @@ export const FormFactorSchema = z.object({
     mode: z.enum(['light', 'dark', 'system']).default('light'),
     tokens: DesignTokensSchema,
   }),
-  pages: z.array(PageSchema),
+  pages: z.object({
+    start: PageSchema,
+    questions: z.array(PageSchema),
+    ending: PageSchema
+  }),
   settings: z.object({
     submitButtonLabel: z.string().default('제출하기'),
     successMessage: z.string().default('성공적으로 제출되었습니다.'),

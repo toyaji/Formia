@@ -18,7 +18,11 @@ describe('GeminiProvider', () => {
       mode: 'light',
       tokens: {}
     },
-    pages: [{ id: 'page-1', type: 'default', title: 'Start', removable: true, blocks: [] }]
+    pages: {
+      start: { id: 'page-1', type: 'start', title: 'Start', removable: false, blocks: [] },
+      questions: [],
+      ending: { id: 'page-end', type: 'ending', title: 'End', removable: false, blocks: [] }
+    }
   };
 
   beforeEach(() => {
@@ -30,7 +34,7 @@ describe('GeminiProvider', () => {
     (fetch as any).mockResolvedValue({
       ok: true,
       json: async () => ({
-        patches: [{ op: 'add', path: '/pages/0/blocks/-', value: { id: '1', type: 'text', content: { label: 'New' }, removable: true } }],
+        patches: [{ op: 'add', path: '/pages/start/blocks/-', value: { id: '1', type: 'text', content: { label: 'New' }, removable: true } }],
         summary: 'Added a text field'
       })
     });

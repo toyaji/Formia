@@ -30,10 +30,31 @@ export const Sidebar = () => {
     if (isReviewMode) {
       return getReviewViewModel();
     }
-    return (formFactor?.pages || []).map(p => ({ 
-      ...p, 
-      reviewMetadata: { status: 'kept' as const } 
-    })) as ReviewFormPage[];
+    if (!formFactor) return [] as ReviewFormPage[];
+
+    const result: ReviewFormPage[] = [];
+    if (formFactor.pages.start) {
+      result.push({ 
+        ...formFactor.pages.start, 
+        reviewMetadata: { status: 'kept' as const },
+        blocks: formFactor.pages.start.blocks.map(b => ({ ...b, reviewMetadata: { status: 'kept' as const } }))
+      });
+    }
+    formFactor.pages.questions.forEach(p => {
+      result.push({ 
+        ...p, 
+        reviewMetadata: { status: 'kept' as const },
+        blocks: p.blocks.map(b => ({ ...b, reviewMetadata: { status: 'kept' as const } }))
+      });
+    });
+    if (formFactor.pages.ending) {
+      result.push({ 
+        ...formFactor.pages.ending, 
+        reviewMetadata: { status: 'kept' as const },
+        blocks: formFactor.pages.ending.blocks.map(b => ({ ...b, reviewMetadata: { status: 'kept' as const } }))
+      });
+    }
+    return result;
   }, [isReviewMode, getReviewViewModel, formFactor]);
 
   // Initialize expanded state
@@ -66,9 +87,19 @@ export const Sidebar = () => {
     [allPages]
   );
   
-  // Helper to find global index
-  const getGlobalPageIndex = (pageId: string) => 
-    formFactor?.pages.findIndex(p => p.id === pageId) ?? -1;
+  // Helper to find page section and index
+  const getPagePathInfo = (pageId: string) => {
+    if (!formFactor) return null;
+    if (formFactor.pages.start?.id === pageId) return { section: 'start', path: '/pages/start' };
+    if (formFactor.pages.ending?.id === pageId) return { section: 'ending', path: '/pages/ending' };
+    const qIdx = formFactor.pages.questions.findIndex(p => p.id === pageId);
+    if (qIdx !== -1) return { section: 'questions', index: qIdx, path: `/pages/questions/${qIdx}` };
+    return null;
+  };
+
+  const getGlobalPageIndex = (pageId: string) => {
+    return allPages.findIndex(p => p.id === pageId);
+  };
 
   const onDragEnd = (result: DropResult) => {
     const { source, destination, type } = result;
@@ -76,52 +107,38 @@ export const Sidebar = () => {
     if (source.droppableId === destination.droppableId && source.index === destination.index) return;
 
     if (type === 'PAGE') {
-      // Logic for reordering pages within the same section (Question Only for now)
-      // Getting real indices needs care if we split lists. 
-      // Simplified: We drag by index in the *source list*.
-      // We need to map these back to global indices.
-      
-      const sourcePage = questionPages[source.index];
-      const destPage = questionPages[destination.index];
-      
-      if (!sourcePage || !destPage) return; // Should not happen if dropping in same list
-      
-      const fromIndex = getGlobalPageIndex(sourcePage.id);
-      
-      // Calculate toIndex. If moving down, we want to be after the dest page.
-      // But applyJsonPatch 'move' is standard array manipulation.
-      // We can use the destination's global index as reference.
-      let toIndex = getGlobalPageIndex(destPage.id);
+      // Reordering pages within the same section (Question Only for now)
+      if (source.droppableId !== 'questions-list') return;
       
       applyJsonPatch([{
         op: 'move',
-        from: `/pages/${fromIndex}`,
-        path: `/pages/${toIndex}`
+        from: `/pages/questions/${source.index}`,
+        path: `/pages/questions/${destination.index}`
       }]);
 
     } else {
       // Reordering blocks
       const sourcePageId = source.droppableId.replace('page-blocks-', '');
       const destPageId = destination.droppableId.replace('page-blocks-', '');
-      const sourcePageIndex = getGlobalPageIndex(sourcePageId);
-      const destPageIndex = getGlobalPageIndex(destPageId);
+      
+      const sourceInfo = getPagePathInfo(sourcePageId);
+      const destInfo = getPagePathInfo(destPageId);
 
-      if (sourcePageIndex !== -1 && destPageIndex !== -1) {
+      if (sourceInfo && destInfo) {
         applyJsonPatch([{
           op: 'move',
-          from: `/pages/${sourcePageIndex}/blocks/${source.index}`,
-          path: `/pages/${destPageIndex}/blocks/${destination.index}`
+          from: `${sourceInfo.path}/blocks/${source.index}`,
+          path: `${destInfo.path}/blocks/${destination.index}`
         }]);
       }
     }
   };
 
   const addQuestionPage = () => {
-    // Sequence naming: e.g., "3페이지" if there are 2 existing default pages
     const count = questionPages.length;
     applyJsonPatch([{
       op: 'add',
-      path: '/pages/-', // This appends to the end
+      path: '/pages/questions/-',
       value: { 
         id: Math.random().toString(36).substring(7), 
         type: 'default',
@@ -132,75 +149,48 @@ export const Sidebar = () => {
   };
   
   const addEndingPage = () => {
-    // Sequence naming: e.g., "2 종료 페이지" if there is already 1 ending page
-    const count = endingPages.length;
-    applyJsonPatch([{
-      op: 'add',
-      path: '/pages/-',
-      value: { 
-        id: Math.random().toString(36).substring(7), 
-        type: 'ending',
-        title: generateEndingPageTitle(count), 
-        blocks: [
-          {
-            id: Math.random().toString(36).substring(7),
-            type: 'statement',
-            content: {
-              label: '제출이 완료되었습니다.',
-              body: '답변해 주셔서 감사합니다.'
-            }
-          }
-        ] 
-      }
-    }]);
+    // Current design only supports ONE ending page, but we can allow replacing it if we want.
+    // Or we stick to the plan: start, questions[], ending.
+    // If ending already exists, we might not want to "add" another unless schema changes.
+    // For now, let's keep it as is if schema allows array, BUT our schema says JUST one PageSchema for start/ending.
+    // Wait, let's double check schema.ts.
   };
 
   const deletePage = (e: React.MouseEvent, pageId: string) => {
     e.stopPropagation();
     
-    // Safety check: Prevent deleting if it's the last ending page or Start Page
-    const page = formFactor?.pages.find(p => p.id === pageId);
-    if (!page) return;
-    
-    if (page.type === 'start') {
+    const info = getPagePathInfo(pageId);
+    if (!info) return;
+
+    if (info.section === 'start') {
         alert('시작 페이지는 삭제할 수 없습니다.');
         return;
     }
 
-    if (page.type === 'ending' && endingPages.length <= 1) {
-        alert('최소 하나의 종료 페이지가 필요합니다.');
+    if (info.section === 'ending') {
+        // Technically schema requires one ending.
+        alert('종료 페이지는 삭제할 수 없습니다.');
         return; 
     }
 
-    const index = getGlobalPageIndex(pageId);
-    if (index !== -1) {
-      applyJsonPatch([{ op: 'remove', path: `/pages/${index}` }]);
-    }
+    applyJsonPatch([{ op: 'remove', path: info.path }]);
   };
 
   const addBlock = (e: React.MouseEvent, pageId: string) => {
     e.stopPropagation();
-    const pageIndex = getGlobalPageIndex(pageId);
-    if (pageIndex !== -1) {
-      const page = formFactor?.pages[pageIndex];
-      // Restrict Ending page to only 'info' (general) blocks or similar. 
-      // For now, if ending, we default to 'info' text block.
-      // If question page, we default to 'text' input.
-      
-      const isEnding = page?.type === 'ending';
-      
-      // Expand the page when adding a block
+    const info = getPagePathInfo(pageId);
+    if (info) {
+      const isEnding = info.section === 'ending';
       setExpandedPages(prev => ({ ...prev, [pageId]: true }));
       
       applyJsonPatch([{
         op: 'add',
-        path: `/pages/${pageIndex}/blocks/-`,
+        path: `${info.path}/blocks/-`,
         value: {
           id: Math.random().toString(36).substring(7),
-          type: isEnding ? 'info' : 'text', // Ending = General/Info, Question = Input
+          type: isEnding ? 'info' : 'text',
           content: { 
             label: isEnding ? '안내 문구' : '새로운 질문',
-            // Add default body for info block if needed
             ...(isEnding ? { body: '감사합니다. 제출이 완료되었습니다.' } : {})
           }
         }
@@ -210,23 +200,23 @@ export const Sidebar = () => {
 
   const deleteBlock = (e: React.MouseEvent, pageId: string, blockIndex: number) => {
     e.stopPropagation();
-    const pageIndex = getGlobalPageIndex(pageId);
-    if (pageIndex !== -1) {
+    const info = getPagePathInfo(pageId);
+    if (info) {
       applyJsonPatch([{
         op: 'remove',
-        path: `/pages/${pageIndex}/blocks/${blockIndex}`
+        path: `${info.path}/blocks/${blockIndex}`
       }]);
     }
   };
 
   const duplicateBlock = (e: React.MouseEvent, pageId: string, block: FormBlock) => {
     e.stopPropagation();
-    const pageIndex = getGlobalPageIndex(pageId);
-    if (pageIndex !== -1) {
+    const info = getPagePathInfo(pageId);
+    if (info) {
       const newBlock = { ...block, id: Math.random().toString(36).substring(7) };
       applyJsonPatch([{
         op: 'add',
-        path: `/pages/${pageIndex}/blocks/-`,
+        path: `${info.path}/blocks/-`,
         value: newBlock
       }]);
     }
@@ -238,11 +228,11 @@ export const Sidebar = () => {
       return;
     }
     
-    const pageIndex = getGlobalPageIndex(pageId);
-    if (pageIndex !== -1) {
+    const info = getPagePathInfo(pageId);
+    if (info) {
       applyJsonPatch([{
         op: 'replace',
-        path: `/pages/${pageIndex}/title`,
+        path: `${info.path}/title`,
         value: editTitle.trim()
       }]);
     }

@@ -647,3 +647,27 @@
   color: #B91C1C;
   opacity: 0.8;
 }
+
+.ratingWrapper {
+  display: flex;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.ratingStar {
+  font-size: 24px;
+  color: #D1D5DB;
+  cursor: default;
+}
+
+.fileUploadPlaceholder {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border: 1px dashed #D1D5DB;
+  border-radius: 8px;
+  color: #6B7280;
+  font-size: 14px;
+  background-color: #F9FAFB;
+}

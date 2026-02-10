@@ -93,13 +93,23 @@ function extractTargetInfo(op: Operation, formFactor: FormFactor, patchIndex: nu
   }
   
   // Page-level changes (blocks)
-  if (parts[0] === 'pages' && parts.length >= 4 && parts[2] === 'blocks') {
-    const pageIndex = parseInt(parts[1], 10);
-    const blockIndex = parts[3];
+  // New paths: /pages/questions/0/blocks/1 or /pages/start/blocks/0 or /pages/ending/blocks/0
+  if (parts[0] === 'pages' && parts.length >= 4 && parts.includes('blocks')) {
+    const section = parts[1]; // 'start', 'questions', or 'ending'
+    let page: FormPage | undefined;
+    let blocksPartIndex = parts.indexOf('blocks');
     
-    // Adding a new block (either explicit add to array or using '-' index)
-    // If op is 'add' and we are targeting the blocks array item directly (/pages/0/blocks/X)
-    if ((op.op === 'add' && parts.length === 4) || blockIndex === '-') {
+    if (section === 'questions') {
+      const qIndex = parseInt(parts[2], 10);
+      page = formFactor.pages.questions[qIndex];
+    } else if (section === 'start' || section === 'ending') {
+      page = formFactor.pages[section as 'start' | 'ending'];
+    }
+
+    const blockIndex = parts[blocksPartIndex + 1];
+    
+    // Adding a new block
+    if ((op.op === 'add' && parts.length === blocksPartIndex + 2) || blockIndex === '-') {
       const valueBlockId = (op as any).value?.id;
       return { 
         blockId: valueBlockId || `new-block-${patchIndex}`, 
@@ -109,47 +119,52 @@ function extractTargetInfo(op: Operation, formFactor: FormFactor, patchIndex: nu
     }
     
     const blockIdx = parseInt(blockIndex, 10);
-    const page = formFactor.pages[pageIndex];
     const blockId = page?.blocks?.[blockIdx]?.id;
     
-    // If path is exactly /pages/X/blocks/Y, it's a block-level operation (remove/replace)
-    if (parts.length === 4) {
+    // If path is exactly element-level, it's a block-level operation (remove/replace)
+    if (parts.length === blocksPartIndex + 2) {
       return { blockId, targetField: 'block', isNewBlock: false };
     }
     
     // content/label
-    if (parts[4] === 'content' && parts[5] === 'label') {
+    if (parts[blocksPartIndex + 2] === 'content' && parts[blocksPartIndex + 3] === 'label') {
       return { blockId, targetField: 'label', isNewBlock: false };
     }
     
-    // content/options/X or content/options/-
-    if (parts[4] === 'content' && parts[5] === 'options') {
-      const optionIndex = parts[6];
+    // content/options/X
+    if (parts[blocksPartIndex + 2] === 'content' && parts[blocksPartIndex + 3] === 'options') {
+      const optionIndex = parts[blocksPartIndex + 4];
       return { blockId, targetField: `options/${optionIndex}`, isNewBlock: false };
     }
     
-    // Other content fields (placeholder, required, etc.)
-    if (parts[4] === 'content') {
-      return { blockId, targetField: parts.slice(5).join('/') || 'content', isNewBlock: false };
+    // Other content fields
+    if (parts[blocksPartIndex + 2] === 'content') {
+      return { blockId, targetField: parts.slice(blocksPartIndex + 3).join('/') || 'content', isNewBlock: false };
     }
     
     // Block type change
-    if (parts[4] === 'type') {
+    if (parts[blocksPartIndex + 2] === 'type') {
       return { blockId, targetField: 'type', isNewBlock: false };
     }
     
     return { blockId, targetField: 'block', isNewBlock: false };
   }
   
-  // Page-level changes: /pages/0 or /pages/-
-  if (parts[0] === 'pages' && parts.length === 2) {
-    const pageIndex = parts[1];
-    if (op.op === 'add' || pageIndex === '-') {
-      return { blockId: (op as any).value?.id || `new-page-${patchIndex}`, targetField: 'page', isNewBlock: true };
+  // Page-level changes: /pages/start, /pages/questions/0, etc.
+  if (parts[0] === 'pages') {
+    const section = parts[1];
+    if (section === 'questions') {
+      const qIndex = parts[2];
+      if (op.op === 'add' || qIndex === '-') {
+        return { blockId: (op as any).value?.id || `new-page-${patchIndex}`, targetField: 'page', isNewBlock: true };
+      }
+      const idx = parseInt(qIndex, 10);
+      const pageId = formFactor.pages.questions[idx]?.id;
+      return { blockId: pageId, targetField: 'page', isNewBlock: false };
+    } else if (section === 'start' || section === 'ending') {
+      const pageId = formFactor.pages[section as 'start' | 'ending']?.id;
+      return { blockId: pageId, targetField: 'page', isNewBlock: false };
     }
-    const idx = parseInt(pageIndex, 10);
-    const pageId = formFactor.pages[idx]?.id;
-    return { blockId: pageId, targetField: 'page', isNewBlock: false };
   }
   
   return { blockId: undefined, targetField: 'unknown', isNewBlock: false };
@@ -284,84 +299,104 @@ export function buildReviewModel(
 ): ReviewFormPage[] {
   if (!snapshot || !effective) return [];
 
-  const originalPages = snapshot.pages || [];
-  const targetPages = effective.pages || [];
   const pending = pendingPatches.filter(p => p.status === 'pending');
 
-  // 1. Map target pages to ReviewFormPage
-  const result: ReviewFormPage[] = targetPages.map((page, pageIdx) => {
-    const originalPage = originalPages.find(p => p.id === page.id);
-    const isNew = !originalPage;
+  const processPage = (
+    originalPage: FormPage | undefined,
+    targetPage: FormPage | undefined,
+    section: string,
+    index?: number
+  ): ReviewFormPage | null => {
+    if (!originalPage && !targetPage) return null;
 
-    // Resolve ReviewMetadata for page
+    const isRemoved = !!originalPage && !targetPage;
+    const isAdded = !originalPage && !!targetPage;
+    const page = targetPage || originalPage!;
+
     const reviewMetadata: ReviewMetadata = {
-      status: isNew ? 'added' : 'kept',
-      patchId: isNew ? pending.find(p => p.changeType === 'add' && (p.patch as any).value?.id === page.id)?.id : undefined
+      status: isRemoved ? 'removed' : (isAdded ? 'added' : 'kept'),
+      patchId: undefined
     };
 
-    // Merge blocks within this page
+    // Find page-level patch
+    if (isRemoved) {
+      const path = section === 'questions' ? `/pages/questions/${index}` : `/pages/${section}`;
+      reviewMetadata.patchId = pending.find(p => p.changeType === 'remove' && p.patch.path === path)?.id;
+    } else if (isAdded) {
+      // Find add patch for this page. Fallback to targetBlockId comparison if value.id doesn't match
+      reviewMetadata.patchId = pending.find(p => 
+        p.changeType === 'add' && 
+        ((p.patch as any).value?.id === page.id || p.targetBlockId === page.id)
+      )?.id;
+    }
+
     const blocks = mergeReviewBlocks(
       originalPage?.blocks || [],
-      page.blocks,
+      targetPage?.blocks || [],
       pending,
-      isNew
+      isAdded
     );
 
-    // If not new, check if label or other page fields changed
-    if (!isNew && originalPage) {
-      if (originalPage.title !== page.title) {
+    if (reviewMetadata.status === 'kept' && originalPage && targetPage) {
+      if (originalPage.title !== targetPage.title) {
         reviewMetadata.status = 'modified';
-        // Field-level metadata could be added here if needed for page title
       }
     }
 
     return {
       ...page,
-      blocks,
+      blocks: isRemoved ? blocks.map(b => ({ ...b, reviewMetadata: { status: 'removed' as const } })) : blocks,
       reviewMetadata
     };
-  });
+  };
 
-  // 2. Identify and inject removed pages from snapshot
-  const targetPageIds = new Set(targetPages.map(p => p.id));
-  originalPages.forEach((originalPage, index) => {
-    if (!targetPageIds.has(originalPage.id)) {
-      // Find the removal patch
-      const patch = pending.find(p => p.changeType === 'remove' && p.patch.path === `/pages/${index}`);
-      
-      const reviewPage: ReviewFormPage = {
-        ...originalPage,
-        blocks: originalPage.blocks.map(b => ({
-          ...b,
-          reviewMetadata: { status: 'removed' }
-        })),
-        reviewMetadata: {
-          status: 'removed',
-          patchId: patch?.id
-        }
-      };
+  const result: ReviewFormPage[] = [];
 
-      // Heuristic: Insert at original index
-      const insertAt = Math.min(index, result.length);
-      result.splice(insertAt, 0, reviewPage);
+  // 1. Start Page
+  const startPage = processPage(snapshot.pages.start, effective.pages.start, 'start');
+  if (startPage) result.push(startPage);
+
+  // 2. Question Pages
+  const allQuestionIds = new Set([
+    ...snapshot.pages.questions.map(p => p.id),
+    ...effective.pages.questions.map(p => p.id)
+  ]);
+
+  // To maintain order, we iterate through snapshot first, then append new ones from effective
+  const handledIds = new Set<string>();
+  
+  // Snapshot order (with removals injected)
+  snapshot.pages.questions.forEach((op, idx) => {
+    const tp = effective.pages.questions.find(p => p.id === op.id);
+    const rp = processPage(op, tp, 'questions', idx);
+    if (rp) {
+      result.push(rp);
+      handledIds.add(op.id);
     }
   });
 
-  // 3. Re-sort by structural priority (Start -> Default -> Ending)
-  return sortPages(result);
+  // Append newly added pages that weren't in snapshot
+  effective.pages.questions.forEach((tp, idx) => {
+    if (!handledIds.has(tp.id)) {
+      const rp = processPage(undefined, tp, 'questions', idx);
+      if (rp) result.push(rp);
+    }
+  });
+
+  // 3. Ending Page
+  const endingPage = processPage(snapshot.pages.ending, effective.pages.ending, 'ending');
+  if (endingPage) result.push(endingPage);
+
+  return result;
 }
 
 /**
  * Ensures pages follow the strict order: Start -> Default -> Ending
  */
-export function sortPages<T extends { type?: string }>(pages: T[]): T[] {
-  const typePriority: Record<string, number> = { start: 0, default: 1, ending: 2 };
-
-  return [...pages].sort((a, b) => {
-    const priorityA = typePriority[a.type || 'default'] ?? 1;
-    const priorityB = typePriority[b.type || 'default'] ?? 1;
-    return priorityA - priorityB;
-  });
+export function sortPages(pages: any): any {
+  // Sorting is now implicitly handled by the schema structure.
+  // This is kept for API compatibility but returns as is for the questions array specifically if needed.
+  return pages;
 }
 
 /**

@@ -74,63 +74,83 @@ export const BlockRenderer = ({ block, previewBlockId, isParentChange }: BlockRe
   // Any pending changes at all
   const hasPendingChange = isAdded || isRemoved || isModified;
 
+  // Helper to find page section and index for current active page
+  const getActivePageInfo = () => {
+    if (!formFactor || !activePageId) return null;
+    if (formFactor.pages.start?.id === activePageId) return { section: 'start', path: '/pages/start', page: formFactor.pages.start };
+    if (formFactor.pages.ending?.id === activePageId) return { section: 'ending', path: '/pages/ending', page: formFactor.pages.ending };
+    const qIndex = formFactor.pages.questions.findIndex(p => p.id === activePageId);
+    if (qIndex !== -1) return { section: 'questions', index: qIndex, path: `/pages/questions/${qIndex}`, page: formFactor.pages.questions[qIndex] };
+    return null;
+  };
+
   const handleLabelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const pageIndex = formFactor?.pages.findIndex(p => p.id === activePageId);
-    const blockIndex = formFactor?.pages[pageIndex ?? 0]?.blocks.findIndex(b => b.id === id);
-    
-    if (pageIndex !== -1 && blockIndex !== -1) {
-      applyJsonPatch([{
-        op: 'replace',
-        path: `/pages/${pageIndex}/blocks/${blockIndex}/content/label`,
-        value: e.target.value
-      }]);
+    const info = getActivePageInfo();
+    if (info) {
+      const blockIndex = info.page.blocks.findIndex(b => b.id === id);
+      if (blockIndex !== -1) {
+        applyJsonPatch([{
+          op: 'replace',
+          path: `${info.path}/blocks/${blockIndex}/content/label`,
+          value: e.target.value
+        }]);
+      }
     }
   };
 
   const deleteBlock = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const pageIndex = formFactor?.pages.findIndex(p => p.id === activePageId);
-    const blockIndex = formFactor?.pages[pageIndex ?? 0]?.blocks.findIndex(b => b.id === id);
-    
-    if (pageIndex !== -1 && blockIndex !== -1) {
-      applyJsonPatch([{
-        op: 'remove',
-        path: `/pages/${pageIndex}/blocks/${blockIndex}`
-      }]);
+    const info = getActivePageInfo();
+    if (info) {
+      const blockIndex = info.page.blocks.findIndex(b => b.id === id);
+      if (blockIndex !== -1) {
+        applyJsonPatch([{
+          op: 'remove',
+          path: `${info.path}/blocks/${blockIndex}`
+        }]);
+      }
     }
   };
 
   const handleOptionChange = (optionIndex: number, newValue: string) => {
-    const pageIndex = formFactor?.pages.findIndex(p => p.id === activePageId) ?? 0;
-    const blockIndex = formFactor?.pages[pageIndex]?.blocks.findIndex(b => b.id === id) ?? 0;
-    
-    applyJsonPatch([{
-      op: 'replace',
-      path: `/pages/${pageIndex}/blocks/${blockIndex}/content/options/${optionIndex}`,
-      value: newValue
-    }]);
+    const info = getActivePageInfo();
+    if (info) {
+      const blockIndex = info.page.blocks.findIndex(b => b.id === id);
+      if (blockIndex !== -1) {
+        applyJsonPatch([{
+          op: 'replace',
+          path: `${info.path}/blocks/${blockIndex}/content/options/${optionIndex}`,
+          value: newValue
+        }]);
+      }
+    }
   };
 
   const addOption = () => {
-    const pageIndex = formFactor?.pages.findIndex(p => p.id === activePageId) ?? 0;
-    const blockIndex = formFactor?.pages[pageIndex]?.blocks.findIndex(b => b.id === id) ?? 0;
-    const currentOptions = content.options || [];
-    
-    applyJsonPatch([{
-      op: 'add',
-      path: `/pages/${pageIndex}/blocks/${blockIndex}/content/options/-`,
-      value: `옵션 ${currentOptions.length + 1}`
-    }]);
+    const info = getActivePageInfo();
+    if (info) {
+      const blockIndex = info.page.blocks.findIndex(b => b.id === id);
+      if (blockIndex !== -1) {
+        applyJsonPatch([{
+          op: 'add',
+          path: `${info.path}/blocks/${blockIndex}/content/options/-`,
+          value: `옵션 ${(content.options?.length || 0) + 1}`
+        }]);
+      }
+    }
   };
 
   const removeOption = (optionIndex: number) => {
-    const pageIndex = formFactor?.pages.findIndex(p => p.id === activePageId) ?? 0;
-    const blockIndex = formFactor?.pages[pageIndex]?.blocks.findIndex(b => b.id === id) ?? 0;
-    
-    applyJsonPatch([{
-      op: 'remove',
-      path: `/pages/${pageIndex}/blocks/${blockIndex}/content/options/${optionIndex}`
-    }]);
+    const info = getActivePageInfo();
+    if (info) {
+      const blockIndex = info.page.blocks.findIndex(b => b.id === id);
+      if (blockIndex !== -1) {
+        applyJsonPatch([{
+          op: 'remove',
+          path: `${info.path}/blocks/${blockIndex}/content/options/${optionIndex}`
+        }]);
+      }
+    }
   };
 
   // Helper to get option patch by index
@@ -141,137 +161,163 @@ export const BlockRenderer = ({ block, previewBlockId, isParentChange }: BlockRe
 
   const copyBlock = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const pageIndex = formFactor?.pages.findIndex(p => p.id === activePageId) ?? 0;
-    const blockIndex = formFactor?.pages[pageIndex]?.blocks.findIndex(b => b.id === id) ?? 0;
-    
-    const newBlock = { ...block, id: Math.random().toString(36).substring(7) };
-    applyJsonPatch([{
-      op: 'add',
-      path: `/pages/${pageIndex}/blocks/${blockIndex + 1}`,
-      value: newBlock
-    }]);
+    const info = getActivePageInfo();
+    if (info) {
+      const blockIndex = info.page.blocks.findIndex(b => b.id === id);
+      if (blockIndex !== -1) {
+        const newBlock = { ...block, id: Math.random().toString(36).substring(7) };
+        applyJsonPatch([{
+          op: 'add',
+          path: `${info.path}/blocks/${blockIndex + 1}`,
+          value: newBlock
+        }]);
+      }
+    }
   };
 
   const toggleRequired = () => {
-    const pageIndex = formFactor?.pages.findIndex(p => p.id === activePageId) ?? 0;
-    const blockIndex = formFactor?.pages[pageIndex]?.blocks.findIndex(b => b.id === id) ?? 0;
-    const currentValue = block.validation?.required || false;
-    
-    applyJsonPatch([{
-      op: 'replace',
-      path: `/pages/${pageIndex}/blocks/${blockIndex}/validation/required`,
-      value: !currentValue
-    }]);
+    const info = getActivePageInfo();
+    if (info) {
+      const blockIndex = info.page.blocks.findIndex(b => b.id === id);
+      if (blockIndex !== -1) {
+        const currentValue = block.validation?.required || false;
+        applyJsonPatch([{
+          op: 'replace',
+          path: `${info.path}/blocks/${blockIndex}/validation/required`,
+          value: !currentValue
+        }]);
+      }
+    }
   };
 
   const updateType = (newType: string) => {
-    const pageIndex = formFactor?.pages.findIndex(p => p.id === activePageId) ?? 0;
-    const blockIndex = formFactor?.pages[pageIndex]?.blocks.findIndex(b => b.id === id) ?? 0;
-    
-    applyJsonPatch([{
-      op: 'replace',
-      path: `/pages/${pageIndex}/blocks/${blockIndex}/type`,
-      value: newType
-    }]);
+    const info = getActivePageInfo();
+    if (info) {
+      const blockIndex = info.page.blocks.findIndex(b => b.id === id);
+      if (blockIndex !== -1) {
+        applyJsonPatch([{
+          op: 'replace',
+          path: `${info.path}/blocks/${blockIndex}/type`,
+          value: newType
+        }]);
+      }
+    }
   };
 
   const splitPage = () => {
-    const pageIndex = formFactor?.pages.findIndex(p => p.id === activePageId) ?? 0;
-    const blockIndex = formFactor?.pages[pageIndex]?.blocks.findIndex(b => b.id === id) ?? 0;
-    
-    if (!formFactor) return;
+    const info = getActivePageInfo();
+    if (info && info.section === 'questions') {
+      const blockIndex = info.page.blocks.findIndex(b => b.id === id);
+      if (blockIndex !== -1) {
+        const upperBlocks = info.page.blocks.slice(0, blockIndex + 1);
+        const lowerBlocks = info.page.blocks.slice(blockIndex + 1);
 
-    const currentPage = formFactor.pages[pageIndex];
-    const upperBlocks = currentPage.blocks.slice(0, blockIndex + 1);
-    const lowerBlocks = currentPage.blocks.slice(blockIndex + 1);
+        const newPage = {
+          id: Math.random().toString(36).substring(7),
+          type: 'default' as const,
+          title: '새 페이지',
+          blocks: lowerBlocks,
+          removable: true
+        };
 
-    const newPage = {
-      id: Math.random().toString(36).substring(7),
-      type: 'default' as const,
-      title: '새 페이지',
-      blocks: lowerBlocks,
-    };
-
-    applyJsonPatch([
-      { op: 'replace', path: `/pages/${pageIndex}/blocks`, value: upperBlocks },
-      { op: 'add', path: `/pages/${pageIndex + 1}`, value: newPage }
-    ]);
+        applyJsonPatch([
+          { op: 'replace', path: `${info.path}/blocks`, value: upperBlocks },
+          { op: 'add', path: `/pages/questions/${(info.index ?? 0) + 1}`, value: newPage }
+        ]);
+      }
+    }
   };
 
   const handleHelpTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const pageIndex = formFactor?.pages.findIndex(p => p.id === activePageId) ?? 0;
-    const blockIndex = formFactor?.pages[pageIndex]?.blocks.findIndex(b => b.id === id) ?? 0;
-    
-    applyJsonPatch([{
-      op: 'replace',
-      path: `/pages/${pageIndex}/blocks/${blockIndex}/content/helpText`,
-      value: e.target.value
-    }]);
+    const info = getActivePageInfo();
+    if (info) {
+      const blockIndex = info.page.blocks.findIndex(b => b.id === id);
+      if (blockIndex !== -1) {
+        applyJsonPatch([{
+          op: 'replace',
+          path: `${info.path}/blocks/${blockIndex}/content/helpText`,
+          value: e.target.value
+        }]);
+      }
+    }
   };
 
   const toggleMultiSelect = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const pageIndex = formFactor?.pages.findIndex(p => p.id === activePageId) ?? 0;
-    const blockIndex = formFactor?.pages[pageIndex]?.blocks.findIndex(b => b.id === id) ?? 0;
-    const currentValue = content.multiSelect || false;
-    const hasField = content.multiSelect !== undefined;
-    
-    applyJsonPatch([{
-      op: hasField ? 'replace' : 'add',
-      path: `/pages/${pageIndex}/blocks/${blockIndex}/content/multiSelect`,
-      value: !currentValue
-    }]);
+    const info = getActivePageInfo();
+    if (info) {
+      const blockIndex = info.page.blocks.findIndex(b => b.id === id);
+      if (blockIndex !== -1) {
+        const currentValue = content.multiSelect || false;
+        const hasField = content.multiSelect !== undefined;
+        applyJsonPatch([{
+          op: hasField ? 'replace' : 'add',
+          path: `${info.path}/blocks/${blockIndex}/content/multiSelect`,
+          value: !currentValue
+        }]);
+      }
+    }
   };
 
   const toggleAllowOther = (e?: React.MouseEvent) => {
     e?.stopPropagation();
-    const pageIndex = formFactor?.pages.findIndex(p => p.id === activePageId) ?? 0;
-    const blockIndex = formFactor?.pages[pageIndex]?.blocks.findIndex(b => b.id === id) ?? 0;
-    const currentValue = content.allowOther || false;
-    const hasField = content.allowOther !== undefined;
-    
-    applyJsonPatch([{
-      op: hasField ? 'replace' : 'add',
-      path: `/pages/${pageIndex}/blocks/${blockIndex}/content/allowOther`,
-      value: !currentValue
-    }]);
+    const info = getActivePageInfo();
+    if (info) {
+      const blockIndex = info.page.blocks.findIndex(b => b.id === id);
+      if (blockIndex !== -1) {
+        const currentValue = content.allowOther || false;
+        const hasField = content.allowOther !== undefined;
+        applyJsonPatch([{
+          op: hasField ? 'replace' : 'add',
+          path: `${info.path}/blocks/${blockIndex}/content/allowOther`,
+          value: !currentValue
+        }]);
+      }
+    }
   };
 
   const addPage = () => {
     if (!formFactor) return;
-    const pageIndex = formFactor.pages.findIndex(p => p.id === activePageId);
-    const questionPages = formFactor.pages.filter(p => !p.type || p.type === 'default');
+    const info = getActivePageInfo();
+    // Add new page after the current one if it's questions. 
+    // Or just append to questions.
+    const insertIndex = info && info.section === 'questions' ? (info.index ?? 0) + 1 : formFactor.pages.questions.length;
     
     const newPage = {
       id: Math.random().toString(36).substring(7),
       type: 'default' as const,
-      title: `${questionPages.length + 1}페이지`,
+      title: `${formFactor.pages.questions.length + 1}페이지`,
       blocks: [],
+      removable: true
     };
 
     applyJsonPatch([{
       op: 'add',
-      path: `/pages/${pageIndex + 1}`,
+      path: `/pages/questions/${insertIndex}`,
       value: newPage
     }]);
   };
 
   const addNewBlock = () => {
-    const pageIndex = formFactor?.pages.findIndex(p => p.id === activePageId) ?? 0;
-    const blockIndex = formFactor?.pages[pageIndex]?.blocks.findIndex(b => b.id === id) ?? 0;
-    
-    const newBlock = {
-      id: Math.random().toString(36).substring(7),
-      type: 'text' as const,
-      content: { label: '', placeholder: '응답을 입력해 주세요.' },
-      validation: { required: false },
-    };
+    const info = getActivePageInfo();
+    if (info) {
+      const blockIndex = info.page.blocks.findIndex(b => b.id === id);
+      if (blockIndex !== -1) {
+        const newBlock = {
+          id: Math.random().toString(36).substring(7),
+          type: 'text' as const,
+          content: { label: '', placeholder: '응답을 입력해 주세요.' },
+          validation: { required: false },
+          removable: true
+        };
 
-    applyJsonPatch([{
-      op: 'add',
-      path: `/pages/${pageIndex}/blocks/${blockIndex + 1}`,
-      value: newBlock
-    }]);
+        applyJsonPatch([{
+          op: 'add',
+          path: `${info.path}/blocks/${blockIndex + 1}`,
+          value: newBlock
+        }]);
+      }
+    }
   };
 
 
@@ -378,6 +424,29 @@ export const BlockRenderer = ({ block, previewBlockId, isParentChange }: BlockRe
             )}
           </div>
         );
+      case 'date':
+        return (
+          <input 
+            type="date" 
+            className={styles.input}
+          />
+        );
+      case 'rating':
+        return (
+          <div className={styles.ratingWrapper}>
+            {[...Array(content.maxRating || 5)].map((_, i) => (
+              <div key={i} className={styles.ratingStar}>
+                ☆
+              </div>
+            ))}
+          </div>
+        );
+      case 'file':
+        return (
+          <div className={styles.fileUploadPlaceholder}>
+            <Plus size={16} /> 파일 업로드
+          </div>
+        );
       case 'info':
         return (
           <div className={styles.infoBody}>
@@ -400,13 +469,17 @@ export const BlockRenderer = ({ block, previewBlockId, isParentChange }: BlockRe
                   className={styles.statementBodyInput}
                   value={content.body || ''}
                   onChange={(e) => {
-                    const pageIndex = formFactor?.pages.findIndex(p => p.id === activePageId) ?? 0;
-                    const blockIndex = formFactor?.pages[pageIndex]?.blocks.findIndex(b => b.id === id) ?? 0;
-                    applyJsonPatch([{
-                      op: 'replace',
-                      path: `/pages/${pageIndex}/blocks/${blockIndex}/content/body`,
-                      value: e.target.value
-                    }]);
+                    const info = getActivePageInfo();
+                    if (info) {
+                      const blockIndex = info.page.blocks.findIndex(b => b.id === id);
+                      if (blockIndex !== -1) {
+                        applyJsonPatch([{
+                          op: 'replace',
+                          path: `${info.path}/blocks/${blockIndex}/content/body`,
+                          value: e.target.value
+                        }]);
+                      }
+                    }
                     // Auto-resize textarea
                     e.target.style.height = 'auto';
                     e.target.style.height = e.target.scrollHeight + 'px';
@@ -469,9 +542,18 @@ export const BlockRenderer = ({ block, previewBlockId, isParentChange }: BlockRe
         if (isReviewMode) return;
         e.stopPropagation();
         // Find which page this block belongs to and switch to it
-        const blockPage = formFactor?.pages.find(p => p.blocks.some(b => b.id === id));
-        if (blockPage && blockPage.id !== activePageId) {
-          setActivePageId(blockPage.id);
+        if (!formFactor) return;
+        // Find which page this block belongs to and switch to it
+        let blockPageId: string | undefined;
+        if (formFactor.pages.start?.blocks.some(b => b.id === id)) blockPageId = formFactor.pages.start.id;
+        else if (formFactor.pages.ending?.blocks.some(b => b.id === id)) blockPageId = formFactor.pages.ending.id;
+        else {
+          const qPage = formFactor.pages.questions.find(p => p.blocks.some(b => b.id === id));
+          if (qPage) blockPageId = qPage.id;
+        }
+
+        if (blockPageId && blockPageId !== activePageId) {
+          setActivePageId(blockPageId);
         }
         setActiveBlockId(id);
       }}
@@ -480,7 +562,13 @@ export const BlockRenderer = ({ block, previewBlockId, isParentChange }: BlockRe
         <div className={styles.topBar}>
           <div className={styles.typeSelector}>
             <span className={styles.typeIcon}>
-              {BLOCK_METADATA[type]?.icon || 'T'}
+              {type === 'text' && 'T'}
+              {type === 'textarea' && 'A'}
+              {type === 'choice' && 'C'}
+              {type === 'date' && 'D'}
+              {type === 'rating' && 'R'}
+              {type === 'file' && 'F'}
+              {BLOCK_METADATA[type]?.icon}
             </span>
             <span className={styles.typeLabel}>
               {BLOCK_METADATA[type]?.label || '항목'}
