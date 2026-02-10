@@ -83,4 +83,29 @@ describe('PatchValidator', () => {
     const validated = validatePatches(patches, mockSchema);
     expect(validated).toHaveLength(1);
   });
+
+  it('should reject addition of blocks with invalid types', () => {
+    const patches: any[] = [
+      { 
+        op: 'add', 
+        path: '/pages/0/blocks/-', 
+        value: { id: 'invalid-id', type: 'shortText', content: { label: 'Invalid' } } 
+      }
+    ];
+    const validated = validatePatches(patches, mockSchema);
+    expect(validated).toHaveLength(0);
+  });
+
+  it('should allow addition of blocks with valid types', () => {
+    const patches: any[] = [
+      { 
+        op: 'add', 
+        path: '/pages/0/blocks/-', 
+        value: { id: 'valid-id', type: 'text', content: { label: 'Valid' } } 
+      }
+    ];
+    const validated = validatePatches(patches, mockSchema);
+    expect(validated).toHaveLength(1);
+    expect(validated[0].op).toBe('add');
+  });
 });

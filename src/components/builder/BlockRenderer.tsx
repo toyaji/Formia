@@ -1,4 +1,4 @@
-import { FormBlock } from '@/lib/core/schema';
+import { FormBlock, BlockTypeSchema } from '@/lib/core/schema';
 import styles from './BlockRenderer.module.css';
 import { useFormStore, PatchItem } from '@/store/useFormStore';
 import { Trash2, Plus, X, Check, GripVertical, ChevronDown, Copy, PlusCircle, FilePlus } from 'lucide-react';
@@ -440,7 +440,14 @@ export const BlockRenderer = ({ block, previewBlockId }: BlockRendererProps) => 
           </div>
         );
       default:
-        return <div>Unknown block type: {type}</div>;
+        return (
+          <div className={styles.unknownBlock}>
+            <p>지원하지 않는 블록 타입입니다: <strong>{type}</strong></p>
+            <p className={styles.unknownBlockHint}>
+              지원되는 타입: {BlockTypeSchema.options.filter(t => !['statement', 'info'].includes(t)).join(', ')}
+            </p>
+          </div>
+        );
     }
   };
 

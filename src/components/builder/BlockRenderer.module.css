@@ -631,3 +631,19 @@
 :global([data-viewport="mobile"]) .floatingActions {
   bottom: -40px;
 }
+
+.unknownBlock {
+  padding: 16px;
+  background-color: #FEF2F2;
+  border: 1px dashed #F87171;
+  border-radius: 8px;
+  color: #991B1B;
+  font-size: 0.9rem;
+}
+
+.unknownBlockHint {
+  margin-top: 8px;
+  font-size: 0.8rem;
+  color: #B91C1C;
+  opacity: 0.8;
+}

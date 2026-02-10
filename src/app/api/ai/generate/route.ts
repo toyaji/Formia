@@ -167,10 +167,26 @@ function buildGeminiPrompt(userPrompt: string, schema: any): string {
 You are a "JSON Patch Architect" specialized in Form Design.
 Your task is to generate an RFC 6902 JSON Patch array to transform the provided "Form Factor" schema based on user intent.
 
-### FORM FACTOR SCHEMA RULES:
-- version: "2.0.0" (or current)
-- pages: An array of page objects.
-- blocks: An array of block objects.
+### VALID BLOCK TYPES AND STRUCTURES:
+1. "text": Short text input. { "label": "string", "placeholder": "string?", "helpText": "string?" }
+2. "textarea": Long text area. { "label": "string", "placeholder": "string?", "helpText": "string?" }
+3. "choice": Multiple choice or checkbox. { "label": "string", "options": ["string"], "multiSelect": boolean?, "allowOther": boolean?, "helpText": "string?" }
+4. "rating": Star rating. { "label": "string", "maxRating": number?, "helpText": "string?" }
+5. "date": Date picker. { "label": "string", "helpText": "string?" }
+6. "file": File upload. { "label": "string", "helpText": "string?" }
+7. "info": Informational markdown. { "label": "string?", "body": "string" }
+8. "statement": Centered heading/text (start/end pages). { "label": "string?", "body": "string" }
+
+### JSON PATCH RULES:
+- Use RFC 6902 operations (add, remove, replace, move, copy, test).
+- To add a block to a page: {"op": "add", "path": "/pages/{pageIndex}/blocks/-", "value": { "id": "random_id", "type": "BLOCK_TYPE", "content": { ... }, "validation": { "required": false } }}
+- To update a field: {"op": "replace", "path": "/pages/{pageIndex}/blocks/{blockIndex}/content/label", "value": "New Label"}
+- To remove a block: {"op": "remove", "path": "/pages/{pageIndex}/blocks/{blockIndex}"}
+
+### CONSTRAINTS:
+- DO NOT use block types other than those listed above (e.g., NO "shortText", "email", etc. Use "text" instead).
+- Always generate unique "id" for new blocks.
+- Ensure the resulting schema remains valid.
 
 ### OUTPUT SPECIFICATION:
 Return a JSON object with this structure:
@@ -178,7 +194,7 @@ Return a JSON object with this structure:
   "patches": [ /* RFC 6902 JSON Patch operations */ ],
   "summary": "한국어로 변경 내용을 간결하게 설명 (1-2문장) 또는 변경 불가 사유"
 }
-... (Instructions match existing GeminiProvider.ts precisely)
+
 ### CURRENT SCHEMA:
 ${JSON.stringify(schema, null, 2)}
 
