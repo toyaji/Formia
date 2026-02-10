@@ -35,25 +35,38 @@ export function validatePatchesDetailed(patches: Operation[], schema: FormFactor
         }
       }
 
-      // Special cases for start/ending
-      if (path === '/pages/start' || path === '/pages/ending') {
-        const section = path.split('/')[2] as 'start' | 'ending';
-        const page = schema.pages[section];
+      // Special cases for start
+      if (path === '/pages/start') {
+        const page = schema.pages.start;
         if (page && page.removable === false) {
-          errors.push(`Cannot remove non-removable page: ${page?.id || section}`);
+          errors.push(`Cannot remove non-removable page: ${page?.id || 'start'}`);
           return false;
         }
       }
 
-      // Block removal: /pages/(start|questions\/\d+|ending)\/blocks\/\d+
-      const blockMatch = path.match(/^\/pages\/(start|questions\/\d+|ending)\/blocks\/(\d+)$/);
+      // Endings removal: /pages/endings/0
+      const endingsMatch = path.match(/^\/pages\/endings\/(\d+)$/);
+      if (endingsMatch) {
+          const pageIndex = parseInt(endingsMatch[1], 10);
+          const page = schema.pages.endings[pageIndex];
+          if (page && page.removable === false) {
+              errors.push(`Cannot remove non-removable page: ${page.id}`);
+              return false;
+          }
+      }
+
+      // Block removal: /pages/(start|questions\/\d+|endings\/\d+)\/blocks\/\d+
+      const blockMatch = path.match(/^\/pages\/(start|questions\/\d+|endings\/\d+)\/blocks\/(\d+)$/);
       if (blockMatch) {
         const sectionPath = blockMatch[1];
         const blockIndex = parseInt(blockMatch[2], 10);
         let page: any;
-        if (sectionPath === 'start' || sectionPath === 'ending') {
-          page = schema.pages[sectionPath as 'start' | 'ending'];
-        } else {
+        if (sectionPath === 'start') {
+          page = schema.pages.start;
+        } else if (sectionPath.startsWith('endings/')) {
+          const eIndex = parseInt(sectionPath.split('/')[1], 10);
+          page = schema.pages.endings[eIndex];
+        } else if (sectionPath.startsWith('questions/')) {
           const qIndex = parseInt(sectionPath.split('/')[1], 10);
           page = schema.pages.questions[qIndex];
         }
@@ -69,8 +82,8 @@ export function validatePatchesDetailed(patches: Operation[], schema: FormFactor
     if (patch.op === 'add' || patch.op === 'replace') {
       const path = patch.path;
 
-      // Block addition: /pages/(start|questions\/\d+|ending)/blocks/(\d+|-)
-      const blockAddMatch = path.match(/^\/pages\/(start|questions\/\d+|ending)\/blocks\/(\d+|-)$/);
+      // Block addition: /pages/(start|questions\/\d+|endings\/\d+)/blocks/(\d+|-)
+      const blockAddMatch = path.match(/^\/pages\/(start|questions\/\d+|endings\/\d+)\/blocks\/(\d+|-)$/);
       if (blockAddMatch && patch.op === 'add') {
         const v = patch.value as any;
         if (!v || !v.id || !v.type || !v.content) {
@@ -83,8 +96,8 @@ export function validatePatchesDetailed(patches: Operation[], schema: FormFactor
         }
       }
 
-      // Block type replacement: /pages/(start|questions\/\d+|ending)/blocks/\d+/type
-      const blockTypeMatch = path.match(/^\/pages\/(start|questions\/\d+|ending)\/blocks\/\d+\/type$/);
+      // Block type replacement: /pages/(start|questions\/\d+|endings\/\d+)/blocks/\d+/type
+      const blockTypeMatch = path.match(/^\/pages\/(start|questions\/\d+|endings\/\d+)\/blocks\/\d+\/type$/);
       if (blockTypeMatch) {
         const type = patch.value as string;
         if (!validBlockTypes.includes(type as any)) {
@@ -93,8 +106,8 @@ export function validatePatchesDetailed(patches: Operation[], schema: FormFactor
         }
       }
 
-      // Page addition: /pages/questions/(\d+|-)
-      const pageAddMatch = path.match(/^\/pages\/questions\/(\d+|-)$/);
+      // Page addition: /pages/questions/(\d+|-) or /pages/endings/(\d+|-)
+      const pageAddMatch = path.match(/^\/pages\/(questions|endings)\/(\d+|-)$/);
       if (pageAddMatch && patch.op === 'add') {
         const v = patch.value as any;
         if (!v || !v.id || !v.type || !v.title || !Array.isArray(v.blocks)) {
@@ -107,8 +120,8 @@ export function validatePatchesDetailed(patches: Operation[], schema: FormFactor
         }
       }
 
-      // Page type replacement: /pages/(start|questions\/\d+|ending)/type
-      const pageTypeMatch = path.match(/^\/pages\/(start|questions\/\d+|ending)\/type$/);
+      // Page type replacement: /pages/(start|questions\/\d+|endings\/\d+)/type
+      const pageTypeMatch = path.match(/^\/pages\/(start|questions\/\d+|endings\/\d+)\/type$/);
       if (pageTypeMatch) {
         const type = patch.value as string;
         if (!validPageTypes.includes(type)) {

@@ -95,15 +95,18 @@ function extractTargetInfo(op: Operation, formFactor: FormFactor, patchIndex: nu
   // Page-level changes (blocks)
   // New paths: /pages/questions/0/blocks/1 or /pages/start/blocks/0 or /pages/ending/blocks/0
   if (parts[0] === 'pages' && parts.length >= 4 && parts.includes('blocks')) {
-    const section = parts[1]; // 'start', 'questions', or 'ending'
+    const section = parts[1]; // 'start', 'questions', or 'endings'
     let page: FormPage | undefined;
     let blocksPartIndex = parts.indexOf('blocks');
     
     if (section === 'questions') {
       const qIndex = parseInt(parts[2], 10);
       page = formFactor.pages.questions[qIndex];
-    } else if (section === 'start' || section === 'ending') {
-      page = formFactor.pages[section as 'start' | 'ending'];
+    } else if (section === 'endings') {
+      const eIndex = parseInt(parts[2], 10);
+      page = formFactor.pages.endings[eIndex];
+    } else if (section === 'start') {
+      page = formFactor.pages.start;
     }
 
     const blockIndex = parts[blocksPartIndex + 1];
@@ -153,16 +156,17 @@ function extractTargetInfo(op: Operation, formFactor: FormFactor, patchIndex: nu
   // Page-level changes: /pages/start, /pages/questions/0, etc.
   if (parts[0] === 'pages') {
     const section = parts[1];
-    if (section === 'questions') {
+    if (section === 'questions' || section === 'endings') {
       const qIndex = parts[2];
       if (op.op === 'add' || qIndex === '-') {
         return { blockId: (op as any).value?.id || `new-page-${patchIndex}`, targetField: 'page', isNewBlock: true };
       }
       const idx = parseInt(qIndex, 10);
-      const pageId = formFactor.pages.questions[idx]?.id;
+      const list = section === 'questions' ? formFactor.pages.questions : formFactor.pages.endings;
+      const pageId = list[idx]?.id;
       return { blockId: pageId, targetField: 'page', isNewBlock: false };
-    } else if (section === 'start' || section === 'ending') {
-      const pageId = formFactor.pages[section as 'start' | 'ending']?.id;
+    } else if (section === 'start') {
+      const pageId = formFactor.pages.start?.id;
       return { blockId: pageId, targetField: 'page', isNewBlock: false };
     }
   }
@@ -320,7 +324,7 @@ export function buildReviewModel(
 
     // Find page-level patch
     if (isRemoved) {
-      const path = section === 'questions' ? `/pages/questions/${index}` : `/pages/${section}`;
+      const path = (section === 'questions' || section === 'endings') ? `/pages/${section}/${index}` : `/pages/${section}`;
       reviewMetadata.patchId = pending.find(p => p.changeType === 'remove' && p.patch.path === path)?.id;
     } else if (isAdded) {
       // Find add patch for this page. Fallback to targetBlockId comparison if value.id doesn't match
@@ -383,9 +387,29 @@ export function buildReviewModel(
     }
   });
 
-  // 3. Ending Page
-  const endingPage = processPage(snapshot.pages.ending, effective.pages.ending, 'ending');
-  if (endingPage) result.push(endingPage);
+  // 3. Ending Pages
+  const allEndingIds = new Set([
+    ...snapshot.pages.endings.map(p => p.id),
+    ...effective.pages.endings.map(p => p.id)
+  ]);
+
+  const handledEndIds = new Set<string>();
+  
+  snapshot.pages.endings.forEach((op, idx) => {
+    const tp = effective.pages.endings.find(p => p.id === op.id);
+    const rp = processPage(op, tp, 'endings', idx);
+    if (rp) {
+      result.push(rp);
+      handledEndIds.add(op.id);
+    }
+  });
+
+  effective.pages.endings.forEach((tp, idx) => {
+    if (!handledEndIds.has(tp.id)) {
+      const rp = processPage(undefined, tp, 'endings', idx);
+      if (rp) result.push(rp);
+    }
+  });
 
   return result;
 }

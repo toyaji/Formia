@@ -87,7 +87,7 @@ export const FormFactorSchema = z.object({
   pages: z.object({
     start: PageSchema,
     questions: z.array(PageSchema),
-    ending: PageSchema
+    endings: z.array(PageSchema)
   }),
   settings: z.object({
     submitButtonLabel: z.string().default('제출하기'),

@@ -56,16 +56,16 @@ export default function Home() {
       });
     });
 
-    if (effectiveFactor.pages.ending) {
+    effectiveFactor.pages.endings.forEach((p) => {
       result.push({ 
-        ...effectiveFactor.pages.ending, 
+        ...p, 
         reviewMetadata: { status: 'kept' as const, patchId: undefined, fieldPatches: {} },
-        blocks: effectiveFactor.pages.ending.blocks.map(b => ({ 
+        blocks: p.blocks.map(b => ({ 
           ...b, 
           reviewMetadata: { status: 'kept' as const, patchId: undefined, fieldPatches: {} } 
         }))
       });
-    }
+    });
 
     return result;
   }, [isReviewMode, effectiveFactor, getReviewViewModel]);
@@ -120,23 +120,25 @@ export default function Home() {
             ]
           },
           questions: [],
-          ending: {
-            id: 'page-end',
-            type: 'ending',
-            title: '종료 페이지',
-            removable: false,
-            blocks: [
-              {
-                id: 'end-header',
-                type: 'statement',
-                removable: false,
-                content: {
-                  label: '제출이 완료되었습니다.',
-                  body: '답변해 주셔서 감사합니다.'
+          endings: [
+            {
+              id: 'page-end',
+              type: 'ending',
+              title: '종료 페이지',
+              removable: false,
+              blocks: [
+                {
+                  id: 'end-header',
+                  type: 'statement',
+                  removable: false,
+                  content: {
+                    label: '제출이 완료되었습니다.',
+                    body: '답변해 주셔서 감사합니다.'
+                  }
                 }
-              }
-            ]
-          }
+              ]
+            }
+          ]
         },
       });
     }

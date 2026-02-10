@@ -78,7 +78,9 @@ export const BlockRenderer = ({ block, previewBlockId, isParentChange }: BlockRe
   const getActivePageInfo = () => {
     if (!formFactor || !activePageId) return null;
     if (formFactor.pages.start?.id === activePageId) return { section: 'start', path: '/pages/start', page: formFactor.pages.start };
-    if (formFactor.pages.ending?.id === activePageId) return { section: 'ending', path: '/pages/ending', page: formFactor.pages.ending };
+    if (formFactor.pages.start?.id === activePageId) return { section: 'start', path: '/pages/start', page: formFactor.pages.start };
+    const eIndex = formFactor.pages.endings.findIndex(p => p.id === activePageId);
+    if (eIndex !== -1) return { section: 'ending', path: `/pages/endings/${eIndex}`, page: formFactor.pages.endings[eIndex] };
     const qIndex = formFactor.pages.questions.findIndex(p => p.id === activePageId);
     if (qIndex !== -1) return { section: 'questions', index: qIndex, path: `/pages/questions/${qIndex}`, page: formFactor.pages.questions[qIndex] };
     return null;
@@ -87,7 +89,7 @@ export const BlockRenderer = ({ block, previewBlockId, isParentChange }: BlockRe
   const handleLabelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const info = getActivePageInfo();
     if (info) {
-      const blockIndex = info.page.blocks.findIndex(b => b.id === id);
+      const blockIndex = info.page.blocks.findIndex((b: FormBlock) => b.id === id);
       if (blockIndex !== -1) {
         applyJsonPatch([{
           op: 'replace',
@@ -102,7 +104,7 @@ export const BlockRenderer = ({ block, previewBlockId, isParentChange }: BlockRe
     e.stopPropagation();
     const info = getActivePageInfo();
     if (info) {
-      const blockIndex = info.page.blocks.findIndex(b => b.id === id);
+      const blockIndex = info.page.blocks.findIndex((b: FormBlock) => b.id === id);
       if (blockIndex !== -1) {
         applyJsonPatch([{
           op: 'remove',
@@ -115,7 +117,7 @@ export const BlockRenderer = ({ block, previewBlockId, isParentChange }: BlockRe
   const handleOptionChange = (optionIndex: number, newValue: string) => {
     const info = getActivePageInfo();
     if (info) {
-      const blockIndex = info.page.blocks.findIndex(b => b.id === id);
+      const blockIndex = info.page.blocks.findIndex((b: FormBlock) => b.id === id);
       if (blockIndex !== -1) {
         applyJsonPatch([{
           op: 'replace',
@@ -129,7 +131,7 @@ export const BlockRenderer = ({ block, previewBlockId, isParentChange }: BlockRe
   const addOption = () => {
     const info = getActivePageInfo();
     if (info) {
-      const blockIndex = info.page.blocks.findIndex(b => b.id === id);
+      const blockIndex = info.page.blocks.findIndex((b: FormBlock) => b.id === id);
       if (blockIndex !== -1) {
         applyJsonPatch([{
           op: 'add',
@@ -143,7 +145,7 @@ export const BlockRenderer = ({ block, previewBlockId, isParentChange }: BlockRe
   const removeOption = (optionIndex: number) => {
     const info = getActivePageInfo();
     if (info) {
-      const blockIndex = info.page.blocks.findIndex(b => b.id === id);
+      const blockIndex = info.page.blocks.findIndex((b: FormBlock) => b.id === id);
       if (blockIndex !== -1) {
         applyJsonPatch([{
           op: 'remove',
@@ -163,7 +165,7 @@ export const BlockRenderer = ({ block, previewBlockId, isParentChange }: BlockRe
     e.stopPropagation();
     const info = getActivePageInfo();
     if (info) {
-      const blockIndex = info.page.blocks.findIndex(b => b.id === id);
+      const blockIndex = info.page.blocks.findIndex((b: FormBlock) => b.id === id);
       if (blockIndex !== -1) {
         const newBlock = { ...block, id: Math.random().toString(36).substring(7) };
         applyJsonPatch([{
@@ -178,7 +180,7 @@ export const BlockRenderer = ({ block, previewBlockId, isParentChange }: BlockRe
   const toggleRequired = () => {
     const info = getActivePageInfo();
     if (info) {
-      const blockIndex = info.page.blocks.findIndex(b => b.id === id);
+      const blockIndex = info.page.blocks.findIndex((b: FormBlock) => b.id === id);
       if (blockIndex !== -1) {
         const currentValue = block.validation?.required || false;
         applyJsonPatch([{
@@ -193,7 +195,7 @@ export const BlockRenderer = ({ block, previewBlockId, isParentChange }: BlockRe
   const updateType = (newType: string) => {
     const info = getActivePageInfo();
     if (info) {
-      const blockIndex = info.page.blocks.findIndex(b => b.id === id);
+      const blockIndex = info.page.blocks.findIndex((b: FormBlock) => b.id === id);
       if (blockIndex !== -1) {
         applyJsonPatch([{
           op: 'replace',
@@ -207,7 +209,7 @@ export const BlockRenderer = ({ block, previewBlockId, isParentChange }: BlockRe
   const splitPage = () => {
     const info = getActivePageInfo();
     if (info && info.section === 'questions') {
-      const blockIndex = info.page.blocks.findIndex(b => b.id === id);
+      const blockIndex = info.page.blocks.findIndex((b: FormBlock) => b.id === id);
       if (blockIndex !== -1) {
         const upperBlocks = info.page.blocks.slice(0, blockIndex + 1);
         const lowerBlocks = info.page.blocks.slice(blockIndex + 1);
@@ -231,7 +233,7 @@ export const BlockRenderer = ({ block, previewBlockId, isParentChange }: BlockRe
   const handleHelpTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const info = getActivePageInfo();
     if (info) {
-      const blockIndex = info.page.blocks.findIndex(b => b.id === id);
+      const blockIndex = info.page.blocks.findIndex((b: FormBlock) => b.id === id);
       if (blockIndex !== -1) {
         applyJsonPatch([{
           op: 'replace',
@@ -246,7 +248,7 @@ export const BlockRenderer = ({ block, previewBlockId, isParentChange }: BlockRe
     e.stopPropagation();
     const info = getActivePageInfo();
     if (info) {
-      const blockIndex = info.page.blocks.findIndex(b => b.id === id);
+      const blockIndex = info.page.blocks.findIndex((b: FormBlock) => b.id === id);
       if (blockIndex !== -1) {
         const currentValue = content.multiSelect || false;
         const hasField = content.multiSelect !== undefined;
@@ -263,7 +265,7 @@ export const BlockRenderer = ({ block, previewBlockId, isParentChange }: BlockRe
     e?.stopPropagation();
     const info = getActivePageInfo();
     if (info) {
-      const blockIndex = info.page.blocks.findIndex(b => b.id === id);
+      const blockIndex = info.page.blocks.findIndex((b: FormBlock) => b.id === id);
       if (blockIndex !== -1) {
         const currentValue = content.allowOther || false;
         const hasField = content.allowOther !== undefined;
@@ -301,7 +303,7 @@ export const BlockRenderer = ({ block, previewBlockId, isParentChange }: BlockRe
   const addNewBlock = () => {
     const info = getActivePageInfo();
     if (info) {
-      const blockIndex = info.page.blocks.findIndex(b => b.id === id);
+      const blockIndex = info.page.blocks.findIndex((b: FormBlock) => b.id === id);
       if (blockIndex !== -1) {
         const newBlock = {
           id: Math.random().toString(36).substring(7),
@@ -471,7 +473,7 @@ export const BlockRenderer = ({ block, previewBlockId, isParentChange }: BlockRe
                   onChange={(e) => {
                     const info = getActivePageInfo();
                     if (info) {
-                      const blockIndex = info.page.blocks.findIndex(b => b.id === id);
+                      const blockIndex = info.page.blocks.findIndex((b: FormBlock) => b.id === id);
                       if (blockIndex !== -1) {
                         applyJsonPatch([{
                           op: 'replace',
@@ -545,11 +547,14 @@ export const BlockRenderer = ({ block, previewBlockId, isParentChange }: BlockRe
         if (!formFactor) return;
         // Find which page this block belongs to and switch to it
         let blockPageId: string | undefined;
-        if (formFactor.pages.start?.blocks.some(b => b.id === id)) blockPageId = formFactor.pages.start.id;
-        else if (formFactor.pages.ending?.blocks.some(b => b.id === id)) blockPageId = formFactor.pages.ending.id;
+        if (formFactor.pages.start?.blocks.some((b: FormBlock) => b.id === id)) blockPageId = formFactor.pages.start.id;
         else {
-          const qPage = formFactor.pages.questions.find(p => p.blocks.some(b => b.id === id));
-          if (qPage) blockPageId = qPage.id;
+          const ePage = formFactor.pages.endings.find(p => p.blocks.some((b: FormBlock) => b.id === id));
+          if (ePage) blockPageId = ePage.id;
+          else {
+            const qPage = formFactor.pages.questions.find(p => p.blocks.some((b: FormBlock) => b.id === id));
+            if (qPage) blockPageId = qPage.id;
+          }
         }
 
         if (blockPageId && blockPageId !== activePageId) {

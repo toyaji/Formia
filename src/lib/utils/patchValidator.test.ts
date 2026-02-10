@@ -41,13 +41,15 @@ describe('PatchValidator', () => {
           blocks: []
         }
       ],
-      ending: {
-        id: 'page-3',
-        type: 'ending',
-        title: 'End',
-        removable: false,
-        blocks: []
-      }
+      endings: [
+        {
+          id: 'page-3',
+          type: 'ending',
+          title: 'End',
+          removable: false,
+          blocks: []
+        }
+      ]
     }
   };
 

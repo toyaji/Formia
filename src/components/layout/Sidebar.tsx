@@ -47,12 +47,21 @@ export const Sidebar = () => {
         blocks: p.blocks.map(b => ({ ...b, reviewMetadata: { status: 'kept' as const } }))
       });
     });
-    if (formFactor.pages.ending) {
+    formFactor.pages.endings?.forEach((p: FormPage) => {
       result.push({ 
-        ...formFactor.pages.ending, 
+        ...p, 
         reviewMetadata: { status: 'kept' as const },
-        blocks: formFactor.pages.ending.blocks.map(b => ({ ...b, reviewMetadata: { status: 'kept' as const } }))
+        blocks: p.blocks.map(b => ({ ...b, reviewMetadata: { status: 'kept' as const } }))
       });
+    });
+    // Fallback for legacy data if endings array doesn't exist but ending object does
+    if (!formFactor.pages.endings && (formFactor.pages as any).ending) {
+        const p = (formFactor.pages as any).ending;
+        result.push({
+            ...p,
+            reviewMetadata: { status: 'kept' as const },
+            blocks: p.blocks.map((b: any) => ({ ...b, reviewMetadata: { status: 'kept' as const } }))
+        });
     }
     return result;
   }, [isReviewMode, getReviewViewModel, formFactor]);
@@ -91,7 +100,10 @@ export const Sidebar = () => {
   const getPagePathInfo = (pageId: string) => {
     if (!formFactor) return null;
     if (formFactor.pages.start?.id === pageId) return { section: 'start', path: '/pages/start' };
-    if (formFactor.pages.ending?.id === pageId) return { section: 'ending', path: '/pages/ending' };
+    
+    const eIdx = formFactor.pages.endings.findIndex(p => p.id === pageId);
+    if (eIdx !== -1) return { section: 'ending', path: `/pages/endings/${eIdx}` };
+
     const qIdx = formFactor.pages.questions.findIndex(p => p.id === pageId);
     if (qIdx !== -1) return { section: 'questions', index: qIdx, path: `/pages/questions/${qIdx}` };
     return null;
@@ -152,11 +164,28 @@ export const Sidebar = () => {
   };
   
   const addEndingPage = () => {
-    // Current design only supports ONE ending page, but we can allow replacing it if we want.
-    // Or we stick to the plan: start, questions[], ending.
-    // If ending already exists, we might not want to "add" another unless schema changes.
-    // For now, let's keep it as is if schema allows array, BUT our schema says JUST one PageSchema for start/ending.
-    // Wait, let's double check schema.ts.
+    if (!formFactor) return;
+    const count = endingPages.length;
+    applyJsonPatch([{
+      op: 'add',
+      path: '/pages/endings/-',
+      value: { 
+        id: Math.random().toString(36).substring(7), 
+        type: 'ending',
+        title: generateEndingPageTitle(count), 
+        blocks: [
+            {
+                id: Math.random().toString(36).substring(7),
+                type: 'statement',
+                removable: false,
+                content: {
+                  label: '제출이 완료되었습니다.',
+                  body: '답변해 주셔서 감사합니다.'
+                }
+            }
+        ] 
+      }
+    }]);
   };
 
   const deletePage = (e: React.MouseEvent, pageId: string) => {
@@ -171,9 +200,10 @@ export const Sidebar = () => {
     }
 
     if (info.section === 'ending') {
-        // Technically schema requires one ending.
-        alert('종료 페이지는 삭제할 수 없습니다.');
-        return; 
+        if (endingPages.length <= 1) {
+            alert('최소 하나의 종료 페이지는 유지되어야 합니다.');
+            return;
+        }
     }
 
     applyJsonPatch([{ op: 'remove', path: info.path }]);
@@ -435,11 +465,6 @@ export const Sidebar = () => {
                   </Draggable>
                 ))}
                 {provided.placeholder}
-                {page.blocks.length === 0 && !isStart && !isEnding && (
-                  <div className={styles.empty} style={{ padding: '8px', fontSize: '0.8rem' }}>
-                    문항 없음
-                  </div>
-                )}
               </div>
             )}
           </Droppable>

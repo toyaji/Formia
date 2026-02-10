@@ -21,7 +21,9 @@ describe('GeminiProvider', () => {
     pages: {
       start: { id: 'page-1', type: 'start', title: 'Start', removable: false, blocks: [] },
       questions: [],
-      ending: { id: 'page-end', type: 'ending', title: 'End', removable: false, blocks: [] }
+      endings: [
+        { id: 'page-end', type: 'ending', title: 'End', removable: false, blocks: [] }
+      ]
     }
   };
 

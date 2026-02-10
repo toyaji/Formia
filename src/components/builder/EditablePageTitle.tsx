@@ -48,10 +48,16 @@ export const EditablePageTitle = ({
         let path = '';
         const { formFactor } = useFormStore.getState();
         if (formFactor?.pages.start?.id === page.id) path = '/pages/start/title';
-        else if (formFactor?.pages.ending?.id === page.id) path = '/pages/ending/title';
         else {
             const qIdx = formFactor?.pages.questions.findIndex(p => p.id === page.id);
-            if (qIdx !== undefined && qIdx !== -1) path = `/pages/questions/${qIdx}/title`;
+            if (qIdx !== undefined && qIdx !== -1) {
+                path = `/pages/questions/${qIdx}/title`;
+            } else {
+                const eIdx = formFactor?.pages.endings.findIndex(p => p.id === page.id);
+                if (eIdx !== undefined && eIdx !== -1) {
+                    path = `/pages/endings/${eIdx}/title`;
+                }
+            }
         }
 
         if (path) {

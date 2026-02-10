@@ -19,13 +19,15 @@ describe('buildReviewModel', () => {
         ]
       },
       questions: [],
-      ending: {
-        id: 'page-end',
-        type: 'ending',
-        title: 'Ending',
-        removable: false,
-        blocks: []
-      }
+      endings: [
+        {
+          id: 'page-end',
+          type: 'ending',
+          title: 'Ending',
+          removable: false,
+          blocks: []
+        }
+      ]
     }
   };
 

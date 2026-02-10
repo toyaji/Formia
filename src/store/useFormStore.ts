@@ -96,8 +96,8 @@ export const useFormStore = create<FormState>()(
             set({ activePageId: factor.pages.start.id });
           } else if (factor.pages.questions.length > 0) {
             set({ activePageId: factor.pages.questions[0].id });
-          } else if (factor.pages.ending) {
-            set({ activePageId: factor.pages.ending.id });
+          } else if (factor.pages.endings.length > 0) {
+            set({ activePageId: factor.pages.endings[0].id });
           }
         }
       },
