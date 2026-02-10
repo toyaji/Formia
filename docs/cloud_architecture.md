@@ -465,7 +465,7 @@ model Response {
 
 ### 9.3 API 보안
 
-- API Key 관리 (BYOK는 클라이언트 사이드 유지)
+- API Key 관리 (BYOK는 서버 프록시 및 세션/DB 관리)
 - 권한 검증 (폼 소유자/협업자만 수정 가능)
 - Input Validation (Zod 스키마)
 
