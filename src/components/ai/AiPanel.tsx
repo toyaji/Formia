@@ -74,12 +74,37 @@ const ProposedChanges = () => {
 
 export const AiPanel = () => {
   const { 
-    messages, addMessage, clearMessages, config, formFactor,
-    saveSnapshot, setReviewMode, setPendingPatches, setActiveBlockId
+    messages, addMessage, clearMessages, formFactor,
+    saveSnapshot, setReviewMode, setPendingPatches, setActiveBlockId,
+    aiKeyStatus, setAiKeyStatus
   } = useFormStore();
   const { generatePatchWithSummary, isLoading, streamingText } = useAIPatch();
   const [input, setInput] = useState('');
+  const [isValidating, setIsValidating] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const geminiActive = aiKeyStatus['gemini']?.active;
+
+  useEffect(() => {
+    const fetchStatus = async () => {
+      try {
+        const res = await fetch('/api/secrets/status');
+        if (res.ok) {
+          const status = await res.json();
+          Object.entries(status).forEach(([provider, data]: [string, any]) => {
+            setAiKeyStatus(provider, data);
+          });
+        }
+      } catch (e) {
+        console.error('Failed to fetch AI key status:', e);
+      } finally {
+        setIsValidating(false);
+      }
+    };
+    
+    // Always fetch on mount to ensure we have the latest server state (session/db)
+    fetchStatus();
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -90,15 +115,7 @@ export const AiPanel = () => {
   }, [messages, isLoading, streamingText]);
 
   const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
-
-    if (!config.geminiApiKey) {
-      addMessage({
-        role: 'system_error',
-        content: 'Gemini API 키가 설정되지 않았습니다. 상단 설정(⚙️) 버튼을 눌러 키를 등록하세요.',
-      });
-      return;
-    }
+    if (!input.trim() || isLoading || !geminiActive) return;
 
     const userQuery = input;
     setInput('');
@@ -132,6 +149,13 @@ export const AiPanel = () => {
     }
   };
 
+  const getSendButtonTitle = () => {
+    if (isValidating) return 'API 키 상태 확인 중...';
+    if (!geminiActive) return 'Gemini API 키 설정이 필요합니다';
+    if (!input.trim()) return '요청 사항을 입력하세요';
+    return '요청 보내기';
+  };
+
   return (
     <div className={styles.container}>
       {/* Header */}
@@ -146,21 +170,23 @@ export const AiPanel = () => {
 
       {/* Message List - Modern Style */}
       <div className={styles.messageList}>
-        {/* API Key Setup Prompt */}
-        {!config.geminiApiKey && messages.length === 0 && (
+        {/* API Key Setup Prompt - Restored Original structure but placed above welcome */}
+        {!isValidating && !geminiActive && messages.length === 0 && (
           <div className={styles.setupPrompt}>
             <div className={styles.setupIcon}>🔑</div>
-            <h3 className={styles.setupTitle}>Gemini API 키를 설정해주세요</h3>
-            <p className={styles.setupDesc}>
-              AI 기능을 사용하려면 먼저 Gemini API 키를 등록해야 합니다.
-              <br />
-              상단 설정(⚙️) 버튼을 눌러 키를 입력하세요.
-            </p>
+            <div className={styles.setupContent}>
+              <h3 className={styles.setupTitle}>Gemini API 키를 설정해주세요</h3>
+              <p className={styles.setupDesc}>
+                AI 기능을 사용하려면 먼저 Gemini API 키를 등록해야 합니다.
+                <br />
+                상단 설정(⚙️) 버튼을 눌러 키를 입력하세요.
+              </p>
+            </div>
           </div>
         )}
 
-        {/* Welcome message when API key is set */}
-        {config.geminiApiKey && messages.length === 0 && (
+        {/* Welcome message - Always visible when chat is empty */}
+        {messages.length === 0 && (
           <div className={styles.assistantMessage}>
             안녕하세요! 어떤 폼을 만들고 싶으신가요?
           </div>
@@ -223,7 +249,8 @@ export const AiPanel = () => {
           <button 
             className={styles.sendBtn} 
             onClick={handleSend}
-            disabled={isLoading || !input.trim()}
+            disabled={isLoading || !input.trim() || !geminiActive || isValidating}
+            title={getSendButtonTitle()}
           >
             <Send size={18} />
           </button>

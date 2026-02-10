@@ -21,6 +21,7 @@ model User {
 
   accounts Account[]
   sessions Session[]
+  secrets  UserSecret[]
   forms    Form[]
 
   createdAt DateTime @default(now())
@@ -110,4 +111,22 @@ model Response {
   formId String
 
   @@index([formId, submittedAt])
+}
+model UserSecret {
+  id           String   @id @default(cuid())
+  userId       String
+  provider     String   // "gemini" | "openai" | "anthropic" | "ga4" | "mixpanel" 등
+  category     String   // "ai_secret" | "tracking"
+  encryptedKey String   // AES-256-GCM 암호화된 blob
+  iv           String
+  salt         String
+  keyVersion   Int      @default(1)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, provider])
+  @@map("user_secrets")
 }

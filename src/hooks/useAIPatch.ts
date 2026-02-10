@@ -8,7 +8,7 @@ export const useAIPatch = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [streamingText, setStreamingText] = useState('');
   
-  const provider = new GeminiProvider(config.geminiApiKey || undefined);
+  const provider = new GeminiProvider();
 
   const generatePatch = async (prompt: string): Promise<Operation[] | null> => {
     const result = await generatePatchWithSummary(prompt);

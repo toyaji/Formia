@@ -1,5 +1,5 @@
 import { AIProvider } from './AIProvider';
-import { FormFactor, BlockType } from '../core/schema';
+import { FormFactor } from '../core/schema';
 import { Operation } from 'rfc6902';
 import { validatePatches } from '../utils/patchValidator';
 
@@ -9,12 +9,6 @@ export interface AIResponse {
 }
 
 export class GeminiProvider implements AIProvider {
-  private apiKey: string | null = null;
-
-  constructor(apiKey?: string) {
-    this.apiKey = apiKey || process.env.NEXT_PUBLIC_GEMINI_API_KEY || null;
-  }
-
   getName(): string {
     return 'Google Gemini';
   }
@@ -24,229 +18,51 @@ export class GeminiProvider implements AIProvider {
     return result.patches;
   }
 
+  /**
+   * AI Proxy(/api/ai/generate)를 통해 AI 응답을 생성합니다.
+   * 이제 클라이언트 사이드에서는 API 키를 직접 다루지 않습니다.
+   */
   async generatePatchWithSummary(
     prompt: string, 
     currentSchema: FormFactor,
     onSummaryChunk?: (chunk: string) => void
   ): Promise<AIResponse> {
-    if (!this.apiKey) {
-      throw new Error('Gemini API Key is missing. Please provide it in settings.');
-    }
-
     try {
-      // Use streaming if callback provided
-      if (onSummaryChunk) {
-        return await this.streamGenerate(prompt, currentSchema, onSummaryChunk);
-      }
-
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${this.apiKey}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: this.buildPrompt(prompt, currentSchema) }] }],
-            generationConfig: {
-              responseMimeType: 'application/json',
-              temperature: 0.1,
-            }
-          })
-        }
-      );
+      const response = await fetch('/api/ai/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt,
+          currentSchema,
+          provider: 'gemini'
+        })
+      });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error?.message || 'Gemini API request failed');
+        throw new Error(errorData.error || 'AI Proxy request failed');
       }
 
+      // Handle streaming if onSummaryChunk is provided
+      // Note: Current AI Proxy simple implementation doesn't stream yet, 
+      // but the UI expects this pattern. In a future iteration, the proxy
+      // should support readable streams.
       const data = await response.json();
-      const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-      if (!textResponse) {
-        throw new Error('No response from Gemini');
-      }
-
-      const cleanJson = textResponse.replace(/```json\n?|```/g, '').trim();
-      const result = JSON.parse(cleanJson);
-
-      let patches: Operation[] = [];
-      let summary = '';
-
-      // Handle both old format (array) and new format (object with patches and summary)
-      if (Array.isArray(result)) {
-        patches = result;
-        summary = this.generateDefaultSummary(result);
-      } else if (result.patches && Array.isArray(result.patches)) {
-        patches = result.patches;
-        summary = result.summary || this.generateDefaultSummary(result.patches);
-      } else {
-        throw new Error('AI returned invalid format');
-      }
-
-      // Validate patches against removable constraint
-      const validatedPatches = validatePatches(patches, currentSchema);
       
+      const validatedPatches = validatePatches(data.patches || [], currentSchema);
+      
+      if (onSummaryChunk && data.summary) {
+        onSummaryChunk(data.summary);
+      }
+
       return { 
         patches: validatedPatches, 
-        summary: summary 
+        summary: data.summary || ''
       };
     } catch (error: any) {
-      console.error('[Gemini] Integration Error:', error);
+      console.error('[Gemini] Proxy Connection Error:', error);
       throw error;
     }
   }
-
-  private async streamGenerate(
-    prompt: string,
-    currentSchema: FormFactor,
-    onSummaryChunk: (chunk: string) => void
-  ): Promise<AIResponse> {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${this.apiKey}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: this.buildPrompt(prompt, currentSchema) }] }],
-          generationConfig: {
-            responseMimeType: 'application/json',
-            temperature: 0.1,
-          }
-        })
-      }
-    );
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error?.message || 'Gemini API request failed');
-    }
-
-    const reader = response.body?.getReader();
-    if (!reader) throw new Error('No response body');
-
-    const decoder = new TextDecoder();
-    let fullText = '';
-    let summaryStarted = false;
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      const chunk = decoder.decode(value, { stream: true });
-      const lines = chunk.split('\n');
-      
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          try {
-            const data = JSON.parse(line.slice(6));
-            const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-            fullText += text;
-            
-            // Try to stream summary as it comes
-            if (text.includes('"summary"')) {
-              summaryStarted = true;
-            }
-            if (summaryStarted && text) {
-              // Extract summary text pieces as they arrive
-              const summaryMatch = text.match(/"summary"\s*:\s*"([^"]*)"/);
-              if (summaryMatch) {
-                onSummaryChunk(summaryMatch[1]);
-              }
-            }
-          } catch (e) {
-            // Ignore parse errors for incomplete chunks
-          }
-        }
-      }
-    }
-
-    const cleanJson = fullText.replace(/```json\n?|```/g, '').trim();
-    const result = JSON.parse(cleanJson);
-
-    if (Array.isArray(result)) {
-      return { patches: result, summary: this.generateDefaultSummary(result) };
-    }
-
-    return { 
-      patches: result.patches || [], 
-      summary: result.summary || this.generateDefaultSummary(result.patches || [])
-    };
-  }
-
-  private generateDefaultSummary(patches: Operation[]): string {
-    const adds = patches.filter(p => p.op === 'add').length;
-    const removes = patches.filter(p => p.op === 'remove').length;
-    const replaces = patches.filter(p => p.op === 'replace').length;
-    
-    const parts = [];
-    if (adds > 0) parts.push(`${adds}개 추가`);
-    if (removes > 0) parts.push(`${removes}개 삭제`);
-    if (replaces > 0) parts.push(`${replaces}개 수정`);
-    
-    return parts.length > 0 ? parts.join(', ') + '했습니다.' : '변경 사항을 적용했습니다.';
-  }
-
-  private buildPrompt(userPrompt: string, schema: FormFactor): string {
-    return `
-You are a "JSON Patch Architect" specialized in Form Design.
-Your task is to generate an RFC 6902 JSON Patch array to transform the provided "Form Factor" schema based on user intent.
-
-### FORM FACTOR SCHEMA RULES:
-- version: "2.0.0"
-- pages: An array of page objects.
-  - id: Unique string
-  - title: (required) 
-    - Start Page: "시작 페이지"
-    - Primary Ending Page: "종료 페이지"
-    - New generic pages: "N페이지" (e.g. 1페이지, 2페이지)
-    - New ending pages (for early exit): "N 종료 페이지" (e.g. 2 종료 페이지)
-  - blocks: An array of block objects.
-    - type: 'text' | 'choice' | 'rating' | 'info' | 'textarea' | 'date' | 'file' | 'statement'
-    - id: Unique string (random)
-    - content:
-      - label: (required for input types)
-      - placeholder: (optional)
-      - options: (required for choice, array of strings)
-      - maxRating: (required for rating, number 1-10)
-      - body: (required for info, markdown string)
-    - removable: (optional boolean, defaults to true)
-      - CRITICAL: Headers for Start/Ending pages MUST have removable: false.
-
-### OUTPUT SPECIFICATION:
-Return a JSON object with this structure:
-{
-  "patches": [ /* RFC 6902 JSON Patch operations */ ],
-  "summary": "한국어로 변경 내용을 간결하게 설명 (1-2문장) 또는 변경 불가 사유"
 }
 
-- patches: Array of JSON Patch operations (op, path, value/from)
-- summary: 
-  - If patches are generated: Brief description of changes in Korean (e.g., "견종 질문에서 '푸들'을 '실버푸들'로 변경했습니다.")
-  - If NO patches are generated: Clear explanation of WHY in Korean, acting as a helpful assistant (e.g., "시작 페이지 제목은 설문의 핵심 요소이므로 삭제할 수 없습니다. 대신 내용을 수정해 드릴까요?").
-- Operations should target the "/pages/n/blocks/m" path.
-- For new blocks, generate a unique random string for "id".
-- **Immutability**: 
-  - DO NOT move or delete the Start Page (title: "시작 페이지") or the Primary Ending Page (title: "종료 페이지").
-  - DO NOT delete any block that has "removable": false.
-  - New blocks should generally have "removable": true (default).
-- **Page Ordering**: If the form has an 'ending' page, insert new generic pages BEFORE it. Do not append after the primary ending page.
-- **Page Naming**: 
-  - Mandatory generic pages: "1페이지", "2페이지", etc.
-  - Mandatory additional ending pages: "2 종료 페이지", "3 종료 페이지", etc.
-  - AI must use these titles unless user explicitly requests a specific title.
-- **Statement Blocks**: Use 'statement' block type for important headings or messages that need to be centered (like thank-you messages on ending pages). It supports 'label' (title) and 'body' (description/content) fields.
-- **Ending Content**: Content for ending pages MUST be placed inside a 'statement' block (or other relevant blocks) within the page's 'blocks' array.
-
-### CURRENT SCHEMA:
-${JSON.stringify(schema, null, 2)}
-
-### USER REQUEST:
-"${userPrompt}"
-
-JSON Response:`.trim();
-  }
-}

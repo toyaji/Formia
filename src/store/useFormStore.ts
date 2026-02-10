@@ -11,7 +11,7 @@ export interface Message {
 }
 
 interface AppConfig {
-  geminiApiKey: string | null;
+  // Config no longer stores secrets
 }
 
 // Phase 13: Patch item for inline diff review
@@ -52,6 +52,8 @@ interface FormState {
   // Settings
   config: AppConfig;
   setConfig: (config: Partial<AppConfig>) => void;
+  aiKeyStatus: Record<string, { active: boolean; masked: string }>;
+  setAiKeyStatus: (provider: string, status: { active: boolean; masked: string }) => void;
   
   // Viewport
   viewport: 'desktop' | 'mobile';
@@ -81,14 +83,7 @@ export const useFormStore = create<FormState>()(
       activePageId: null as string | null,
       activeBlockId: null as string | null,
       isDraft: false,
-      messages: [
-        {
-          id: 'welcome',
-          role: 'assistant',
-          content: '안녕하세요! 어떤 폼을 만들고 싶으신가요?',
-          timestamp: new Date().toISOString(),
-        }
-      ],
+      messages: [],
 
       setActivePageId: (id: string | null) => set({ activePageId: id, activeBlockId: null }),
       setActiveBlockId: (id: string | null) => set({ activeBlockId: id }),
@@ -205,12 +200,15 @@ export const useFormStore = create<FormState>()(
     },
 
     // Settings
-    config: {
-      geminiApiKey: null,
-    },
+    config: {},
     setConfig: (newConfig: Partial<AppConfig>) => set((state: FormState) => ({
       config: { ...state.config, ...newConfig }
     })),
+    aiKeyStatus: {},
+    setAiKeyStatus: (provider: string, status: { active: boolean; masked: string }) => 
+      set((state: FormState) => ({
+        aiKeyStatus: { ...state.aiKeyStatus, [provider]: status }
+      })),
 
     // Viewport
     viewport: 'desktop',
@@ -434,6 +432,8 @@ export const useFormStore = create<FormState>()(
     name: 'formia-storage',
     partialize: (state) => ({ 
       config: state.config,
+      // aiKeyStatus is transient but can be persisted for better UX
+      aiKeyStatus: state.aiKeyStatus,
     }),
   }
 )

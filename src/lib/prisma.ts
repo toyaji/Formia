@@ -13,7 +13,9 @@ function createPrismaClient() {
 }
 
 // Next.js 개발 서버의 Hot Reload 시 PrismaClient 인스턴스 중복 생성 방지
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
+// Force refresh once to pick up new schema changes (UserSecret)
+// export const prisma = globalForPrisma.prisma ?? createPrismaClient();
+export const prisma = createPrismaClient();
 
 if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma;

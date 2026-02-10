@@ -137,29 +137,55 @@
   color: #b91c1c;
 }
 
-/* API Key Setup Prompt */
+.systemMessage.info {
+  background-color: #f0f9ff;
+  border: 1px solid #bae6fd;
+  color: #0369a1;
+}
+
+/* API Key Setup Prompt - Neutral & Clean */
 .setupPrompt {
-  text-align: center;
-  padding: 40px 20px;
-  color: var(--f-text-muted);
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  margin: 4px 0 12px 0;
+  border-radius: var(--f-radius-md);
+  background-color: var(--f-background);
+  border: 1px solid var(--f-border);
+  color: var(--f-text-main);
+  animation: fadeIn 0.3s ease-out;
 }
 
 .setupIcon {
-  font-size: 2.5rem;
-  margin-bottom: 16px;
+  font-size: 1.2rem;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 2px;
+  opacity: 0.8;
+}
+
+.setupContent {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
 }
 
 .setupTitle {
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 600;
+  margin: 0;
   color: var(--f-text-main);
-  margin-bottom: 8px;
 }
 
 .setupDesc {
-  font-size: 0.85rem;
-  line-height: 1.6;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  margin: 0;
+  color: var(--f-text-muted);
 }
+
 
 
 /* Proposed Changes Card */
