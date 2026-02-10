@@ -11,6 +11,7 @@ import { Header } from '@/components/layout/Header';
 import { Undo2, Redo2, Check, X } from 'lucide-react';
 import { ReviewFormPage, sortPages } from '@/lib/utils/patchUtils';
 import { FormPage } from '@/lib/core/schema';
+import { EditablePageTitle } from '@/components/builder/EditablePageTitle';
 
 export default function Home() {
   const { 
@@ -199,14 +200,14 @@ export default function Home() {
           {/* 1. Start Page */}
           {pagesToRender.filter(p => p.type === 'start').map((page) => (
             <div key={page.id} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <span style={{
-                fontSize: '0.9rem',
-                fontWeight: 600,
-                color: 'var(--f-text-muted)',
-                marginLeft: '4px'
-              }}>
-                {page.title}
-              </span>
+              <EditablePageTitle 
+                page={page}
+                isActive={activePageId === page.id}
+                isAdded={page.reviewMetadata.status === 'added'}
+                isRemoved={page.reviewMetadata.status === 'removed'}
+                isReviewMode={isReviewMode}
+                patchId={page.reviewMetadata.patchId}
+              />
               <div 
                 id={`page-${page.id}`}
                 style={{ 
@@ -236,28 +237,14 @@ export default function Home() {
 
             return (
               <div key={page.id} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <span style={{
-                  fontSize: '0.9rem',
-                  fontWeight: 600,
-                  color: isRemoved ? '#EF4444' : (isAdded ? '#22C55E' : (isActive ? 'var(--f-primary)' : 'var(--f-text-muted)')),
-                  marginLeft: '4px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}>
-                  {page.title}
-                  
-                  {isReviewMode && (isAdded || isRemoved) && patchId && (
-                    <div className={diffStyles.reviewChip} data-change-type={isAdded ? 'add' : 'remove'}>
-                      <button onClick={(e) => { e.stopPropagation(); resolvePagePatch(patchId!, 'accept'); }}>
-                        <Check size={12} />
-                      </button>
-                      <button onClick={(e) => { e.stopPropagation(); resolvePagePatch(patchId!, 'reject'); }}>
-                        <X size={12} />
-                      </button>
-                    </div>
-                  )}
-                </span>
+                <EditablePageTitle 
+                  page={page}
+                  isActive={isActive}
+                  isAdded={isAdded}
+                  isRemoved={isRemoved}
+                  isReviewMode={isReviewMode}
+                  patchId={patchId}
+                />
 
                 <div 
                   id={`page-${page.id}`}
@@ -297,27 +284,14 @@ export default function Home() {
 
             return (
               <div key={page.id} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <span style={{
-                  fontSize: '0.9rem',
-                  fontWeight: 600,
-                  color: isRemoved ? '#EF4444' : (isAdded ? '#22C55E' : 'var(--f-text-muted)'),
-                  marginLeft: '4px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}>
-                  {page.title}
-                  {isReviewMode && (isAdded || isRemoved) && patchId && (
-                    <div className={diffStyles.reviewChip} data-change-type={isAdded ? 'add' : 'remove'}>
-                      <button onClick={(e) => { e.stopPropagation(); resolvePagePatch(patchId!, 'accept'); }}>
-                        <Check size={12} />
-                      </button>
-                      <button onClick={(e) => { e.stopPropagation(); resolvePagePatch(patchId!, 'reject'); }}>
-                        <X size={12} />
-                      </button>
-                    </div>
-                  )}
-                </span>
+                <EditablePageTitle 
+                  page={page}
+                  isActive={activePageId === page.id}
+                  isAdded={isAdded}
+                  isRemoved={isRemoved}
+                  isReviewMode={isReviewMode}
+                  patchId={patchId}
+                />
                 <div 
                   id={`page-${page.id}`}
                   style={{ 
