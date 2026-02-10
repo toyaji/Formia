@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import SessionProviderWrapper from "@/components/providers/SessionProviderWrapper";
+import { GoogleOneTap } from "@/components/auth/GoogleOneTap";
 
 export const metadata: Metadata = {
   title: "Formia | AI-Powered Form Builder",
@@ -22,7 +24,10 @@ export default function RootLayout({
         />
       </head>
       <body>
-        {children}
+        <SessionProviderWrapper>
+          <GoogleOneTap />
+          {children}
+        </SessionProviderWrapper>
       </body>
     </html>
   );

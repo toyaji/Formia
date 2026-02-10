@@ -4,6 +4,8 @@ import styles from './Header.module.css';
 import { Undo2, Redo2, Save, Play, Settings, Monitor, Smartphone } from 'lucide-react';
 import { SettingsModal } from './SettingsModal';
 
+import { UserAvatar } from './UserAvatar';
+
 export const Header = () => {
   const { formFactor, viewport, setViewport, history, future, undo, redo, applyJsonPatch } = useFormStore();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -109,6 +111,8 @@ export const Header = () => {
           <button className={styles.primaryBtn}>
             <Save size={16} /> Save
           </button>
+          <div className={styles.divider} />
+          <UserAvatar />
         </div>
       </header>
 

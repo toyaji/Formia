@@ -19,8 +19,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     strategy: 'database',
   },
   pages: {
-    // 커스텀 로그인 페이지 (나중에 구현)
-    // signIn: '/login',
+    signIn: '/login',
   },
   callbacks: {
     session({ session, user }) {
