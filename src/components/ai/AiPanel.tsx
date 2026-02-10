@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useFormStore, Message, PatchItem } from '@/store/useFormStore';
 import { useAIPatch } from '@/hooks/useAIPatch';
 import styles from './AiPanel.module.css';
-import { Send, Trash2, Check, X, AlertCircle } from 'lucide-react';
+import { Send, Trash2, Check, X, AlertCircle, RotateCcw } from 'lucide-react';
 import { convertOperationsToPatchItems } from '@/lib/utils/patchUtils';
 
 // Typing Indicator Component
@@ -114,17 +114,7 @@ export const AiPanel = () => {
     scrollToBottom();
   }, [messages, isLoading, streamingText]);
 
-  const handleSend = async () => {
-    if (!input.trim() || isLoading || !geminiActive) return;
-
-    const userQuery = input;
-    setInput('');
-
-    addMessage({
-      role: 'user',
-      content: userQuery,
-    });
-
+  const processAIRequest = async (userQuery: string) => {
     const result = await generatePatchWithSummary(userQuery, false);
 
     if (result && result.patches.length > 0 && formFactor) {
@@ -140,6 +130,25 @@ export const AiPanel = () => {
         content: result.summary,
       });
     }
+  };
+
+  const handleSend = async () => {
+    if (!input.trim() || isLoading || !geminiActive) return;
+
+    const userQuery = input;
+    setInput('');
+
+    addMessage({
+      role: 'user',
+      content: userQuery,
+    });
+
+    await processAIRequest(userQuery);
+  };
+
+  const handleRetry = async (content: string) => {
+    if (isLoading || !geminiActive) return;
+    await processAIRequest(content);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -197,7 +206,7 @@ export const AiPanel = () => {
             return (
               <div key={idx} className={`${styles.systemMessage} ${styles.error}`}>
                 <AlertCircle size={16} />
-                {msg.content}
+                <div className={styles.messageText}>{msg.content}</div>
               </div>
             );
           }
@@ -205,7 +214,14 @@ export const AiPanel = () => {
           if (msg.role === 'user') {
             return (
               <div key={idx} className={styles.userMessage}>
-                {msg.content}
+                <div className={styles.messageText}>{msg.content}</div>
+                <button 
+                  className={styles.retryBtn} 
+                  onClick={() => handleRetry(msg.content)}
+                  title="다시 시도"
+                >
+                  <RotateCcw size={14} />
+                </button>
               </div>
             );
           }

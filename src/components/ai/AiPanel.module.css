@@ -53,6 +53,7 @@
 
 /* User Message - Full width box */
 .userMessage {
+  position: relative;
   width: 100%;
   padding: 10px 14px;
   background-color: var(--f-background);
@@ -62,6 +63,33 @@
   line-height: 1.5;
   color: var(--f-text-main);
   animation: fadeIn 0.3s ease-out;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.messageText {
+  flex: 1;
+}
+
+.retryBtn {
+  opacity: 0;
+  color: var(--f-text-muted);
+  padding: 4px;
+  border-radius: var(--f-radius-sm);
+  transition: all 0.2s;
+  flex-shrink: 0;
+  margin-top: -2px;
+}
+
+.userMessage:hover .retryBtn {
+  opacity: 1;
+}
+
+.retryBtn:hover {
+  background-color: var(--f-border);
+  color: var(--f-primary);
 }
 
 /* Assistant Message - Clean text style */
@@ -119,16 +147,33 @@
 /* System Message */
 .systemMessage {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: flex-start;
   gap: 8px;
   padding: 12px 16px;
   margin: 8px 0;
   border-radius: var(--f-radius-md);
   font-size: 0.85rem;
   line-height: 1.4;
-  text-align: center;
+  text-align: left;
   animation: fadeIn 0.3s ease-out;
+  transition: max-height 0.3s ease-out;
+}
+
+.systemMessage .messageText {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-all;
+}
+
+/* Optional: Show full message on hover if it's truncated */
+.systemMessage:hover .messageText {
+  display: block;
+  overflow-y: auto;
+  max-height: 200px;
 }
 
 .systemMessage.error {
