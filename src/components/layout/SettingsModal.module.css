@@ -219,7 +219,39 @@
   gap: 6px;
   font-size: 0.85rem;
   color: var(--f-success);
+}
+
+.statusGroup {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-top: 4px;
+}
+
+.evictBtn {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--f-text-muted);
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  border-radius: var(--f-radius-sm);
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.evictBtn:hover {
+  color: var(--f-danger);
+  background-color: #fee2e2;
+  text-decoration: none;
+}
+
+.evictBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  text-decoration: none;
 }
 
 .statusBadge.inactive {

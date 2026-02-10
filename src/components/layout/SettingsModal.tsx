@@ -17,6 +17,7 @@ export const SettingsModal = ({ onClose }: SettingsModalProps) => {
   const [apiKey, setApiKey] = useState('');
   const [storageMode, setStorageMode] = useState<'session' | 'cloud'>('session');
   const [isSaving, setIsSaving] = useState(false);
+  const [isEvicting, setIsEvicting] = useState(false);
   
   const isLoggedIn = !!session?.user;
 
@@ -28,6 +29,38 @@ export const SettingsModal = ({ onClose }: SettingsModalProps) => {
       setStorageMode('session');
     }
   }, [isLoggedIn, storageMode]);
+
+  const handleEvict = async () => {
+    if (!confirm('정말로 저장된 API 키를 삭제하시겠습니까?')) return;
+    
+    setIsEvicting(true);
+    try {
+      // Evict from both session and cloud to be sure
+      const sessionPromise = fetch('/api/secrets/session', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: 'gemini' })
+      });
+      
+      const dbPromise = isLoggedIn ? fetch('/api/secrets', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: 'gemini' })
+      }) : Promise.resolve({ ok: true });
+
+      const [sessionRes, dbRes] = await Promise.all([sessionPromise, dbPromise]);
+
+      if (sessionRes.ok && dbRes.ok) {
+        setAiKeyStatus('gemini', { active: false, masked: '' });
+      } else {
+        alert('키 삭제 중 오류가 발생했습니다.');
+      }
+    } catch (e) {
+      console.error('Evict secret error:', e);
+    } finally {
+      setIsEvicting(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!apiKey) return;
@@ -80,17 +113,28 @@ export const SettingsModal = ({ onClose }: SettingsModalProps) => {
         <div className={styles.content}>
           <section className={styles.section}>
             <label className={styles.label}>Google Gemini API Key</label>
-            <div className={styles.statusBadge + (geminiStatus.active ? '' : ` ${styles.inactive}`)}>
-              {geminiStatus.active ? (
-                <>
-                  <CheckCircle2 size={14} />
-                  <span>설정됨 ({geminiStatus.masked})</span>
-                </>
-              ) : (
-                <>
-                  <AlertCircle size={14} />
-                  <span>키가 설정되지 않았습니다.</span>
-                </>
+            <div className={styles.statusGroup}>
+              <div className={styles.statusBadge + (geminiStatus.active ? '' : ` ${styles.inactive}`)}>
+                {geminiStatus.active ? (
+                  <>
+                    <CheckCircle2 size={14} />
+                    <span>설정됨 ({geminiStatus.masked})</span>
+                  </>
+                ) : (
+                  <>
+                    <AlertCircle size={14} />
+                    <span>키가 설정되지 않았습니다.</span>
+                  </>
+                )}
+              </div>
+              {geminiStatus.active && (
+                <button 
+                  className={styles.evictBtn}
+                  onClick={handleEvict}
+                  disabled={isEvicting}
+                >
+                  {isEvicting ? '삭제 중...' : '삭제'}
+                </button>
               )}
             </div>
             
