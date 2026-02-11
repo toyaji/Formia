@@ -11,17 +11,25 @@ import { Header } from '@/components/layout/Header';
 import { Undo2, Redo2, Check, X } from 'lucide-react';
 import { ReviewFormPage, sortPages } from '@/lib/utils/patchUtils';
 import { FormPage } from '@/lib/core/schema';
+import { useSession } from 'next-auth/react';
 import { EditablePageTitle } from '@/components/builder/EditablePageTitle';
 
 export default function Home() {
+  const { data: session } = useSession();
   const { 
     formFactor, setFormFactor, getEffectiveFactor, 
     activePageId, setActivePageId, viewport, undo, redo, history, future, 
     activeBlockId, setActiveBlockId, applyJsonPatch,
     isReviewMode, pendingPatches, preReviewSnapshot,
     acceptPatch, rejectPatch, resolvePagePatch,
-    getReviewViewModel
+    getReviewViewModel, setSession
   } = useFormStore();
+
+  // Keep session in sync with store for persistence selection
+  useEffect(() => {
+    setSession(session);
+  }, [session, setSession]);
+
   const effectiveFactor = getEffectiveFactor();
 
   // Compute pages to render (Normal vs Review)

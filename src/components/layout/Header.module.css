@@ -167,15 +167,33 @@
   box-shadow: 0 6px 20px rgba(59, 130, 246, 0.23);
 }
 
-.secondaryBtn {
-  background-color: var(--f-background);
-  color: var(--f-text-main);
-  border: 1px solid var(--f-border);
-  padding: 8px 16px;
-  border-radius: var(--f-radius-sm);
-  font-weight: 600;
-  font-size: 0.9rem;
+.saveStatus {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--f-text-muted);
+  padding: 0 8px;
+  transition: all 0.3s ease;
+}
+
+.saveStatus.saving {
+  color: var(--f-primary);
+}
+
+.saveStatus.saved {
+  color: #10b981; /* Green */
+}
+
+.saveStatus.error {
+  color: #ef4444; /* Red */
+}
+
+.rotating {
+  animation: rotate 1.5s linear infinite;
+}
+
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }

@@ -3,6 +3,10 @@ import { persist } from 'zustand/middleware';
 import { FormFactor } from '@/lib/core/schema';
 import { applyPatch, Operation } from 'rfc6902';
 import { buildReviewModel, ReviewFormPage, sortPages } from '@/lib/utils/patchUtils';
+import { CloudAPIRepository } from '@/lib/infrastructure/CloudAPIRepository';
+import { TauriFileRepository } from '@/lib/infrastructure/TauriFileRepository';
+import { LocalStorageRepository } from '@/lib/infrastructure/LocalStorageRepository';
+import { FormRepository } from '@/lib/core/repository';
 
 export interface Message {
   id: string;
@@ -76,6 +80,25 @@ interface FormState {
   preReviewSnapshot: FormFactor | null;
   saveSnapshot: () => void;
   restoreSnapshot: () => void;
+  
+  // Persistence State
+  session: any;
+  setSession: (session: any) => void;
+  formId: string;
+  saveStatus: 'idle' | 'saving' | 'saved' | 'error';
+  syncWithPersistence: (session?: any) => Promise<void>;
+}
+
+const isTauri = typeof window !== 'undefined' && ((window as any).__TAURI_INTERNALS__ !== undefined || (window as any).__TAURI__ !== undefined);
+
+function getRepository(session: any): FormRepository {
+  if (session?.user?.id) {
+    return new CloudAPIRepository();
+  }
+  if (isTauri) {
+    return new TauriFileRepository();
+  }
+  return new LocalStorageRepository();
 }
 
 export const useFormStore = create<FormState>()(
@@ -102,6 +125,31 @@ export const useFormStore = create<FormState>()(
         }
       },
 
+      formId: 'default-form', // TODO: Load from URL or List
+      saveStatus: 'idle',
+      session: null,
+      setSession: (session: any) => set({ session }),
+
+      syncWithPersistence: async (customSession?: any) => {
+        const { formFactor, formId, session } = get();
+        const effectiveSession = customSession || session;
+        if (!formFactor || !formId) return;
+        
+        set({ saveStatus: 'saving' });
+        try {
+          const repo = getRepository(session);
+          await repo.save(formId, formFactor);
+          set({ saveStatus: 'saved' });
+          // Reset to idle after 3s
+          setTimeout(() => {
+            if (get().saveStatus === 'saved') set({ saveStatus: 'idle' });
+          }, 3000);
+        } catch (error) {
+          console.error('Persistence sync failed:', error);
+          set({ saveStatus: 'error' });
+        }
+      },
+
   applyJsonPatch: (patches: Operation[]) => {
     get().recordAction();
     const current = get().formFactor;
@@ -116,6 +164,14 @@ export const useFormStore = create<FormState>()(
 
     if (allSuccessful) {
       set({ formFactor: next });
+      
+      // Auto-save logic
+      const timeoutId = (window as any)._formiaSaveTimeout;
+      if (timeoutId) clearTimeout(timeoutId);
+      
+      (window as any)._formiaSaveTimeout = setTimeout(() => {
+        get().syncWithPersistence();
+      }, 1000); // 1s debounce
     } else {
       console.error('Failed to apply some patches:', results);
     }
