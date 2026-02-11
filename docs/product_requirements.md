@@ -8,32 +8,36 @@ Formia is an AI-first form builder that prioritizes speed of creation and high-q
 
 ### 2.1 AI Agent Interface
 
-- **Command Center**: A sidebar where users interact with the Formia Agent.
-- **State Sync**: Changes requested in chat are reflected in real-time in the form builder canvas.
-- **Action History**: Ability to undo/redo AI-generated changes.
+- **Command Center (Implemented)**: A sidebar where users interact with the Formia Agent.
+- **State Sync (Implemented)**: Changes requested in chat are reflected in real-time in the form builder canvas.
+- **Action History (Implemented)**: Ability to undo/redo AI-generated changes.
 
 ### 2.2 Modern Form Editor
 
-- **Live Preview**: Real-time rendering of the form on desktop and mobile.
-- **Block System**: Modular fields (Text, Multiple Choice, Rating, File Upload, etc.).
-- **Logic Builder**: Visually or conversationally define branching paths.
+- **Live Preview (Implemented)**: Real-time rendering of the form on desktop and mobile.
+- **Block System (Implemented)**: Modular fields (Text, Multiple Choice, Rating, File Upload, etc.).
+- **Logic Builder (In-Progress)**: Visually or conversationally define branching paths.
 
 ### 2.3 Aesthetics & UX
 
-- **Premium Themes**: Out-of-the-box "Wow" designs (Dark mode, Neomorphism, Apple-style).
-- **Smooth Transitions**: Micro-animations for every field interaction.
+- **Premium Themes (Implemented)**: Out-of-the-box "Wow" designs (Dark mode, Neomorphism, Apple-style).
+- **Smooth Transitions (Implemented)**: Micro-animations for every field interaction.
 
 ### 2.4 Form Deployment & Response Collection
 
-- **One-Click Publish**: Deploy forms to a public URL (`forms.formia.io/<id>`).
-- **Response Dashboard**: View and export collected responses.
-- **Analytics**: Basic response analytics (completion rate, drop-off points).
+- **One-Click Publish (In-Progress)**: Deploy forms to a public URL (`forms.formia.io/<id>`).
+- **Response Dashboard (In-Progress)**: View and export collected responses.
+- **Analytics (Future)**: Basic response analytics (completion rate, drop-off points).
 
 ### 2.5 Authentication & Collaboration
 
-- **OAuth Login**: Google & GitHub sign-in for web users.
-- **Cloud Sync**: Forms saved to the cloud, accessible from any device.
-- **Collaboration** _(Future)_: Real-time multi-user editing.
+- **OAuth Login (Implemented)**: Google & GitHub sign-in for web users.
+- **Cloud Sync (Implemented)**: Forms saved to the cloud, accessible from any device.
+- **Collaboration (Future)**: Real-time multi-user editing.
+
+---
+
+_마지막 업데이트: 2026-02-11_
 
 ## 3. User Personas
 

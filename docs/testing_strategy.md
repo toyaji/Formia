@@ -62,3 +62,7 @@ A set of reference `.formia` files in `tests/fixtures/` that represent various s
 - **Security**: Test keys must NEVER be committed to the repository.
 - **Guide**: `docs/testing_setup.md` will be created to guide new contributors on how to set up their own local test environment with their own keys.
 - **Database**: Test database uses a separate SQLite file (`test.db`) that is gitignored and recreated on each test run.
+
+---
+
+_마지막 업데이트: 2026-02-11_
