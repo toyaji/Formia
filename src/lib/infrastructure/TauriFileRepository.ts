@@ -16,19 +16,19 @@ import { documentDir, join } from '@tauri-apps/api/path';
  * Saves forms as .formia (JSON) files in the user's documents directory.
  */
 export class TauriFileRepository implements FormRepository {
-  private async getProjectDir() {
+  async getStoragePath() {
     const docDir = await documentDir();
-    const projectDir = await join(docDir, 'Formia');
-    
-    // Ensure project directory exists
+    return await join(docDir, 'Formia');
+  }
+
+  private async ensureDir() {
     if (!await exists('Formia', { baseDir: BaseDirectory.Document })) {
       await mkdir('Formia', { baseDir: BaseDirectory.Document });
     }
-    
-    return projectDir;
   }
 
   async save(id: string, content: FormFactor): Promise<void> {
+    await this.ensureDir();
     const filename = `Formia/${id}.formia`;
     const data = JSON.stringify(content, null, 2);
     
@@ -64,15 +64,20 @@ export class TauriFileRepository implements FormRepository {
       for (const entry of entries) {
         if (entry.isFile && entry.name.endsWith('.formia')) {
           const id = entry.name.replace('.formia', '');
-          // We could read metadata from inside, but for list performance, we just return basic info
-          forms.push({
-            id,
-            title: id, // Placeholder title, should ideally be read from file or filename
-            updatedAt: new Date().toISOString() // Placeholder
-          });
+          try {
+            const data = await readTextFile(`Formia/${entry.name}`, { baseDir: BaseDirectory.Document });
+            const form = JSON.parse(data) as FormFactor;
+            forms.push({
+              id,
+              title: form.metadata.title,
+              updatedAt: form.metadata.updatedAt
+            });
+          } catch (err) {
+            console.error(`[Tauri] Failed to read ${entry.name}:`, err);
+          }
         }
       }
-      return forms;
+      return forms.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
     } catch (e) {
       console.error('[Tauri] Failed to list files:', e);
       return [];
@@ -85,6 +90,22 @@ export class TauriFileRepository implements FormRepository {
       await remove(filename, { baseDir: BaseDirectory.Document });
     } catch (e) {
       console.error(`[Tauri] Failed to delete ${filename}:`, e);
+      throw e;
+    }
+  }
+
+  /**
+   * Imports a .formia file from an absolute path into the local repository.
+   */
+  async importExternalFile(path: string): Promise<string> {
+    try {
+      const data = await readTextFile(path);
+      const content = JSON.parse(data) as FormFactor;
+      const id = content.metadata.title.replace(/\s+/g, '_').toLowerCase() + '_' + Date.now().toString().slice(-4);
+      await this.save(id, content);
+      return id;
+    } catch (e) {
+      console.error('[Tauri] Failed to import file:', e);
       throw e;
     }
   }

@@ -23,6 +23,17 @@
   letter-spacing: -0.02em;
 }
 
+.logoLink {
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  transition: opacity 0.2s;
+}
+
+.logoLink:hover {
+  opacity: 0.8;
+}
+
 .divider {
   width: 1px;
   height: 24px;

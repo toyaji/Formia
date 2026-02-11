@@ -6,7 +6,7 @@ import { buildReviewModel, ReviewFormPage, sortPages } from '@/lib/utils/patchUt
 import { CloudAPIRepository } from '@/lib/infrastructure/CloudAPIRepository';
 import { TauriFileRepository } from '@/lib/infrastructure/TauriFileRepository';
 import { LocalStorageRepository } from '@/lib/infrastructure/LocalStorageRepository';
-import { FormRepository } from '@/lib/core/repository';
+import { FormInfo, FormRepository } from '@/lib/core/repository';
 
 export interface Message {
   id: string;
@@ -84,9 +84,17 @@ interface FormState {
   // Persistence State
   session: any;
   setSession: (session: any) => void;
-  formId: string;
+  formId: string | null;
+  setFormId: (id: string | null) => void;
   saveStatus: 'idle' | 'saving' | 'saved' | 'error';
   syncWithPersistence: (session?: any) => Promise<void>;
+  
+  // Dashboard & Initialization
+  formsList: FormInfo[];
+  isLoadingForms: boolean;
+  loadAllForms: () => Promise<void>;
+  initApp: (session?: any) => Promise<void>;
+  exportCurrentForm: () => Promise<void>;
 }
 
 const isTauri = typeof window !== 'undefined' && ((window as any).__TAURI_INTERNALS__ !== undefined || (window as any).__TAURI__ !== undefined);
@@ -125,10 +133,54 @@ export const useFormStore = create<FormState>()(
         }
       },
 
-      formId: 'default-form', // TODO: Load from URL or List
+      formId: null,
+      setFormId: (id: string | null) => set({ formId: id }),
       saveStatus: 'idle',
       session: null,
       setSession: (session: any) => set({ session }),
+      formsList: [],
+      isLoadingForms: false,
+
+      initApp: async (initSession: any) => {
+        const currentSession = initSession || get().session;
+        const repo = getRepository(currentSession);
+        const { formId, formFactor } = get();
+
+        // If we already have a formId and factor, we are good
+        if (formId && formFactor) return;
+
+        try {
+          let targetId = formId;
+
+          if (!targetId) {
+            const list = await repo.list();
+            if (list.length > 0) {
+              targetId = list[0].id;
+            }
+          }
+
+          if (targetId) {
+            const factor = await repo.load(targetId);
+            set({ formFactor: factor, formId: targetId });
+          }
+        } catch (e) {
+          console.error('[initApp] Failed to load initial form:', e);
+        }
+      },
+
+      loadAllForms: async () => {
+        set({ isLoadingForms: true });
+        const { session } = get();
+        try {
+          const repo = getRepository(session);
+          const forms = await repo.list();
+          set({ formsList: forms });
+        } catch (e) {
+          console.error('Failed to load forms list:', e);
+        } finally {
+          set({ isLoadingForms: false });
+        }
+      },
 
       syncWithPersistence: async (customSession?: any) => {
         const { formFactor, formId, session } = get();
@@ -137,10 +189,9 @@ export const useFormStore = create<FormState>()(
         
         set({ saveStatus: 'saving' });
         try {
-          const repo = getRepository(session);
+          const repo = getRepository(effectiveSession);
           await repo.save(formId, formFactor);
           set({ saveStatus: 'saved' });
-          // Reset to idle after 3s
           setTimeout(() => {
             if (get().saveStatus === 'saved') set({ saveStatus: 'idle' });
           }, 3000);
@@ -148,6 +199,19 @@ export const useFormStore = create<FormState>()(
           console.error('Persistence sync failed:', error);
           set({ saveStatus: 'error' });
         }
+      },
+
+      exportCurrentForm: async () => {
+        const { formFactor, formId } = get();
+        if (!formFactor) return;
+        const data = JSON.stringify(formFactor, null, 2);
+        const blob = new Blob([data], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${formId || 'form'}.formia`;
+        a.click();
+        URL.revokeObjectURL(url);
       },
 
   applyJsonPatch: (patches: Operation[]) => {
@@ -501,8 +565,8 @@ export const useFormStore = create<FormState>()(
     name: 'formia-storage',
     partialize: (state) => ({ 
       config: state.config,
-      // aiKeyStatus is transient but can be persisted for better UX
       aiKeyStatus: state.aiKeyStatus,
+      formId: state.formId, // Persist last edited form ID
     }),
   }
 )

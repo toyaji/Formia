@@ -5,6 +5,7 @@ import { Undo2, Redo2, Save, Play, Settings, Monitor, Smartphone, Cloud, FileCod
 import { SettingsModal } from './SettingsModal';
 
 import { UserAvatar } from './UserAvatar';
+import Link from 'next/link';
 
 export const Header = () => {
   const { 
@@ -64,7 +65,9 @@ export const Header = () => {
     <>
       <header className={styles.header}>
         <div className={styles.left}>
-          <span className={styles.logo}>Formia</span>
+          <Link href="/dashboard" className={styles.logoLink}>
+            <span className={styles.logo}>Formia</span>
+          </Link>
           <div className={styles.divider} />
           {isEditingTitle ? (
             <input 

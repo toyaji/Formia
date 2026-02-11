@@ -19,7 +19,7 @@ export class LocalStorageRepository implements FormRepository {
       [id]: {
         id,
         title: content.metadata.title,
-        updatedAt: new Date().toISOString()
+        updatedAt: content.metadata.updatedAt || new Date().toISOString()
       }
     };
     localStorage.setItem(`${this.prefix}index`, JSON.stringify(updatedIndex));

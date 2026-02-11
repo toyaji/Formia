@@ -26,4 +26,9 @@ export interface FormRepository {
    * Deletes a form from storage.
    */
   delete(id: string): Promise<void>;
+
+  /**
+   * Optional: Returns the base path for file-based repositories
+   */
+  getStoragePath?(): Promise<string>;
 }

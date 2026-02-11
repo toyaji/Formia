@@ -22,13 +22,43 @@ export default function Home() {
     activeBlockId, setActiveBlockId, applyJsonPatch,
     isReviewMode, pendingPatches, preReviewSnapshot,
     acceptPatch, rejectPatch, resolvePagePatch,
-    getReviewViewModel, setSession
+    getReviewViewModel, setSession, initApp, formId
   } = useFormStore();
 
-  // Keep session in sync with store for persistence selection
+  // Initialize app: sync session and load last form
   useEffect(() => {
     setSession(session);
-  }, [session, setSession]);
+    initApp(session);
+  }, [session, setSession, initApp]);
+
+  // If after initialization we still have no formFactor, set a default one
+  useEffect(() => {
+    if (!formFactor && !formId) {
+      setFormFactor({
+        version: '1.0',
+        metadata: {
+          title: '새 설문',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        theme: {
+          mode: 'light',
+          tokens: {},
+        },
+        pages: {
+          start: {
+            id: 'start',
+            type: 'start',
+            title: '시작 페이지',
+            blocks: [],
+            removable: false
+          },
+          questions: [],
+          endings: []
+        }
+      });
+    }
+  }, [formFactor, formId, setFormFactor]);
 
   const effectiveFactor = getEffectiveFactor();
 
