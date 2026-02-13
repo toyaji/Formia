@@ -208,6 +208,27 @@
   box-shadow: 0 6px 20px rgba(59, 130, 246, 0.23);
 }
 
+.secondaryBtn, .secondaryLinkBtn {
+  background-color: white;
+  color: var(--f-text-main);
+  border: 1px solid var(--f-border);
+  padding: 8px 16px;
+  border-radius: var(--f-radius-sm);
+  font-weight: 600;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.secondaryBtn:hover, .secondaryLinkBtn:hover {
+  background-color: var(--f-background);
+  border-color: var(--f-text-muted);
+}
+
 .saveStatus {
   display: flex;
   align-items: center;

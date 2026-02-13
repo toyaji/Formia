@@ -99,6 +99,7 @@ interface FormState {
   exportFormById: (id: string) => Promise<void>;
   importForm: (factor: FormFactor) => Promise<void>;
   deleteForm: (id: string) => Promise<void>;
+  loadFormById: (id: string) => Promise<void>;
 }
 
 const isTauri = typeof window !== 'undefined' && ((window as any).__TAURI_INTERNALS__ !== undefined || (window as any).__TAURI__ !== undefined);
@@ -170,16 +171,29 @@ export const useFormStore = create<FormState>()(
           }
 
           if (targetId) {
-            const factor = await repo.load(targetId);
-            set({ 
-              formFactor: factor, 
-              formId: targetId,
-              saveStatus: 'saved', // Loaded from repo, so matched
-              lastSyncedAt: factor.metadata.updatedAt || new Date().toISOString()
-            });
+            await get().loadFormById(targetId);
           }
         } catch (e) {
           console.error('[initApp] Failed to load initial form:', e);
+        }
+      },
+
+      loadFormById: async (id: string) => {
+        if (!id || id === 'draft' || id === 'new') return;
+        
+        const { session } = get();
+        const repo = getRepository(session);
+        try {
+          const factor = await repo.load(id);
+          set({ 
+            formFactor: factor, 
+            formId: id,
+            saveStatus: 'saved',
+            lastSyncedAt: factor.metadata.updatedAt || new Date().toISOString()
+          });
+        } catch (e) {
+          console.error(`[loadFormById] Failed to load form ${id}:`, e);
+          throw e;
         }
       },
 
@@ -635,6 +649,7 @@ export const useFormStore = create<FormState>()(
       config: state.config,
       aiKeyStatus: state.aiKeyStatus,
       formId: state.formId, // Persist last edited form ID
+      formFactor: state.formFactor, // Persist current form factor for session recovery
     }),
   }
 )

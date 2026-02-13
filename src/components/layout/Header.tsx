@@ -11,7 +11,7 @@ import { format } from 'date-fns';
 export const Header = () => {
   const { 
     formFactor, viewport, setViewport, history, future, undo, redo, applyJsonPatch,
-    saveStatus, lastSyncedAt, session, syncWithPersistence
+    saveStatus, lastSyncedAt, session, syncWithPersistence, formId
   } = useFormStore();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -154,9 +154,9 @@ export const Header = () => {
           >
             <Settings size={18} />
           </button>
-          <button className={styles.secondaryBtn}>
+          <Link href={`/preview/${formId || 'draft'}`} className={styles.secondaryLinkBtn}>
             <Play size={16} /> Preview
-          </button>
+          </Link>
           <div className={styles.divider} />
           <UserAvatar />
         </div>
