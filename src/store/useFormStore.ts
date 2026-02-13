@@ -87,6 +87,7 @@ interface FormState {
   formId: string | null;
   setFormId: (id: string | null) => void;
   saveStatus: 'idle' | 'saving' | 'saved' | 'error';
+  lastSyncedAt: string | null;
   syncWithPersistence: (session?: any) => Promise<void>;
   
   // Dashboard & Initialization
@@ -95,6 +96,7 @@ interface FormState {
   loadAllForms: () => Promise<void>;
   initApp: (session?: any) => Promise<void>;
   exportCurrentForm: () => Promise<void>;
+  exportFormById: (id: string) => Promise<void>;
 }
 
 const isTauri = typeof window !== 'undefined' && ((window as any).__TAURI_INTERNALS__ !== undefined || (window as any).__TAURI__ !== undefined);
@@ -136,6 +138,7 @@ export const useFormStore = create<FormState>()(
       formId: null,
       setFormId: (id: string | null) => set({ formId: id }),
       saveStatus: 'idle',
+      lastSyncedAt: null,
       session: null,
       setSession: (session: any) => set({ session }),
       formsList: [],
@@ -191,10 +194,7 @@ export const useFormStore = create<FormState>()(
         try {
           const repo = getRepository(effectiveSession);
           await repo.save(formId, formFactor);
-          set({ saveStatus: 'saved' });
-          setTimeout(() => {
-            if (get().saveStatus === 'saved') set({ saveStatus: 'idle' });
-          }, 3000);
+          set({ saveStatus: 'saved', lastSyncedAt: new Date().toISOString() });
         } catch (error) {
           console.error('Persistence sync failed:', error);
           set({ saveStatus: 'error' });
@@ -209,9 +209,30 @@ export const useFormStore = create<FormState>()(
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${formId || 'form'}.formia`;
+        const title = formFactor.metadata.title.replace(/\s+/g, '_') || 'form';
+        a.download = `${title}.formia`;
         a.click();
         URL.revokeObjectURL(url);
+      },
+
+      exportFormById: async (id: string) => {
+        const { session } = get();
+        try {
+          const repo = getRepository(session);
+          const factor = await repo.load(id);
+          const data = JSON.stringify(factor, null, 2);
+          const blob = new Blob([data], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          const title = factor.metadata.title.replace(/\s+/g, '_') || id;
+          a.download = `${title}.formia`;
+          a.click();
+          URL.revokeObjectURL(url);
+        } catch (e) {
+          console.error('Failed to export form:', e);
+          alert('파일을 내보내는데 실패했습니다.');
+        }
       },
 
   applyJsonPatch: (patches: Operation[]) => {

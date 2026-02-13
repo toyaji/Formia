@@ -30,7 +30,8 @@ export default function DashboardPage() {
     loadAllForms, 
     setSession,
     setFormId,
-    setFormFactor 
+    setFormFactor,
+    exportFormById
   } = useFormStore();
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -82,8 +83,8 @@ export default function DashboardPage() {
       {/* Simple Top Nav */}
       <nav style={{ padding: '16px 24px', borderBottom: '1px solid #e2e8f0', background: 'white' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '20px' }}>
-          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800, fontSize: '1.2rem', color: '#1a1a1a' }}>
-            <span style={{ color: '#00c853' }}>Formia</span>
+          <Link href="/" className={styles.logoLink}>
+            <span className={styles.logo}>Formia</span>
           </Link>
           <div style={{ height: '20px', width: '1px', background: '#e2e8f0' }} />
           <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#4a5568' }}>워크스페이스</span>
@@ -102,12 +103,6 @@ export default function DashboardPage() {
         </div>
 
         <div className={styles.filterBar}>
-          <div className={styles.tabs}>
-            <button className={`${styles.tab} ${styles.active}`}>전체 {formsList.length}</button>
-            <button className={styles.tab}>작성 중</button>
-            <button className={styles.tab}>진행 중</button>
-            <button className={styles.tab}>휴지통</button>
-          </div>
           <div className={styles.searchWrapper}>
             <Search size={18} className={styles.searchIcon} />
             <input 
@@ -124,7 +119,6 @@ export default function DashboardPage() {
           <table className={styles.table}>
             <thead>
               <tr>
-                <th style={{ width: '100px' }}>상태</th>
                 <th>제목</th>
                 <th>수정된 날짜</th>
                 <th>마지막 편집한 사람</th>
@@ -145,9 +139,6 @@ export default function DashboardPage() {
                 filteredForms.map(form => (
                   <tr key={form.id} className={styles.formRow} onClick={() => handleLoadForm(form.id)}>
                     <td>
-                      <span className={styles.statusBadge}>진행 중</span>
-                    </td>
-                    <td>
                       <div className={styles.formTitleCell}>
                         <span className={styles.formTitle}>{form.title}</span>
                         <span className={styles.formMeta}>{form.id}</span>
@@ -167,7 +158,14 @@ export default function DashboardPage() {
                     </td>
                     <td onClick={(e) => e.stopPropagation()}>
                       <div className={styles.actions}>
-                        <button className={styles.actionBtn} title="내보내기">
+                        <button 
+                          className={styles.actionBtn} 
+                          title="내보내기"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            exportFormById(form.id);
+                          }}
+                        >
                           <Download size={16} />
                         </button>
                         <button className={styles.actionBtn}>

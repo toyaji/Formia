@@ -192,3 +192,19 @@
   align-items: center;
   gap: 16px;
 }
+
+.logoLink {
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+}
+
+.logo {
+  font-weight: 900;
+  font-size: 1.5rem;
+  letter-spacing: -0.04em;
+  background: linear-gradient(135deg, var(--f-primary) 0%, #60a5fa 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}

@@ -17,10 +17,13 @@
 }
 
 .logo {
-  font-weight: 800;
-  font-size: 1.2rem;
-  color: var(--f-primary);
-  letter-spacing: -0.02em;
+  font-weight: 900;
+  font-size: 1.5rem;
+  letter-spacing: -0.04em;
+  background: linear-gradient(135deg, var(--f-primary) 0%, #60a5fa 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .logoLink {
@@ -193,7 +196,7 @@
 }
 
 .saveStatus.saved {
-  color: #10b981; /* Green */
+  color: #10b981;
 }
 
 .saveStatus.error {

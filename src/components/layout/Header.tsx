@@ -6,11 +6,12 @@ import { SettingsModal } from './SettingsModal';
 
 import { UserAvatar } from './UserAvatar';
 import Link from 'next/link';
+import { format } from 'date-fns';
 
 export const Header = () => {
   const { 
     formFactor, viewport, setViewport, history, future, undo, redo, applyJsonPatch,
-    saveStatus, session, syncWithPersistence
+    saveStatus, lastSyncedAt, session, syncWithPersistence
   } = useFormStore();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -31,18 +32,28 @@ export const Header = () => {
 
   const renderSaveStatus = () => {
     const isCloud = !!session?.user?.id;
-    const StorageIcon = isCloud ? Cloud : (isTauri ? FileCode : Info);
     const storageText = isCloud ? 'Cloud' : (isTauri ? 'Local' : 'Draft');
 
     if (saveStatus === 'saving') {
       return (
         <div className={`${styles.saveStatus} ${styles.saving}`}>
           <RefreshCw size={14} className={styles.rotating} />
-          <span>Saving to {storageText}...</span>
+          <span>Syncing...</span>
         </div>
       );
     }
-    if (saveStatus === 'saved') {
+    
+    if (saveStatus === 'error') {
+      return (
+        <div className={`${styles.saveStatus} ${styles.error}`} onClick={() => syncWithPersistence()} style={{ cursor: 'pointer' }}>
+          <AlertCircle size={14} />
+          <span>Sync Error (Retry)</span>
+        </div>
+      );
+    }
+
+    // Always show 'Saved' if we have synced once, even if status is idle
+    if (saveStatus === 'saved' || lastSyncedAt) {
       return (
         <div className={`${styles.saveStatus} ${styles.saved}`}>
           <Check size={14} />
@@ -50,14 +61,7 @@ export const Header = () => {
         </div>
       );
     }
-    if (saveStatus === 'error') {
-      return (
-        <div className={`${styles.saveStatus} ${styles.error}`} onClick={() => syncWithPersistence()}>
-          <AlertCircle size={14} />
-          <span>Save Error (Retry)</span>
-        </div>
-      );
-    }
+
     return null;
   };
 

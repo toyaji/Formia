@@ -48,13 +48,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const userId = session.user.id;
   const existing = await prisma.form.findUnique({ where: { id } });
-
-  if (!existing) {
-    return NextResponse.json({ error: 'Form not found' }, { status: 404 });
-  }
-
-  if (existing.ownerId !== session.user.id) {
+  if (existing && existing.ownerId !== userId) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
@@ -62,14 +58,28 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const body = await request.json();
     const { title, factor } = body;
 
-    const form = await prisma.form.update({
+    // factor에서 title을 추출하여 DB title 컬럼과 동기화
+    const factorObj = typeof factor === 'string' ? JSON.parse(factor) : factor;
+    const derivedTitle = title || (factorObj?.metadata?.title) || 'Untitled Form';
+    
+    const factorString = factor !== undefined 
+      ? (typeof factor === 'string' ? factor : JSON.stringify(factor))
+      : JSON.stringify({});
+
+    const form = await prisma.form.upsert({
       where: { id },
-      data: {
-        ...(title !== undefined && { title }),
+      update: {
+        title: derivedTitle,
         ...(factor !== undefined && {
-          factor: typeof factor === 'string' ? factor : JSON.stringify(factor),
+          factor: factorString,
           version: { increment: 1 },
         }),
+      },
+      create: {
+        id,
+        title: derivedTitle,
+        factor: factorString,
+        ownerId: userId,
       },
     });
 
@@ -78,9 +88,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       factor: JSON.parse(form.factor),
     });
   } catch (error) {
-    console.error('[API] Failed to update form:', error);
+    console.error('[API] Failed to save/update form:', error);
     return NextResponse.json(
-      { error: 'Failed to update form' },
+      { error: 'Failed to save form' },
       { status: 500 }
     );
   }
