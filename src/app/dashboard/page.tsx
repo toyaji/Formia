@@ -21,6 +21,7 @@ import styles from './Dashboard.module.css';
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import { useRef } from 'react';
+import { UserAvatar } from '@/components/layout/UserAvatar';
 
 export default function DashboardPage() {
   const { data: session } = useSession();
@@ -199,15 +200,18 @@ export default function DashboardPage() {
   return (
     <div className={styles.container}>
       {/* Simple Top Nav */}
-      <nav style={{ padding: '16px 24px', borderBottom: '1px solid #e2e8f0', background: 'white' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '20px' }}>
-          <Link href="/" className={styles.logoLink}>
-            <span className={styles.logo}>Formia</span>
-          </Link>
-          <div style={{ height: '20px', width: '1px', background: '#e2e8f0' }} />
-          <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#4a5568' }}>
-            {session?.user?.name ? `${session.user.name}의 워크스페이스` : '워크스페이스'}
-          </span>
+      <nav style={{ padding: '0 20px', height: '60px', borderBottom: '1px solid #e2e8f0', background: 'white', display: 'flex', alignItems: 'center' }}>
+        <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div className={styles.leftGroup} style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div className={styles.logoContainer}>
+              <span className={styles.logo}>Formia</span>
+            </div>
+            <div style={{ height: '24px', width: '1px', background: '#e2e8f0' }} />
+            <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#4a5568' }}>
+              {session?.user?.name ? `${session.user.name}의 워크스페이스` : '워크스페이스'}
+            </span>
+          </div>
+          <UserAvatar />
         </div>
       </nav>
 

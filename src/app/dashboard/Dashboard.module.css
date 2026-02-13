@@ -258,8 +258,7 @@
   gap: 16px;
 }
 
-.logoLink {
-  text-decoration: none;
+.logoContainer {
   display: flex;
   align-items: center;
 }

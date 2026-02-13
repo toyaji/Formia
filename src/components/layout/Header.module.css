@@ -19,22 +19,20 @@
 .logo {
   font-weight: 900;
   font-size: 1.5rem;
+  line-height: 1;
   letter-spacing: -0.04em;
   background: linear-gradient(135deg, var(--f-primary) 0%, #60a5fa 100%);
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  display: flex;
+  align-items: center;
 }
 
 .logoLink {
   text-decoration: none;
   display: flex;
   align-items: center;
-  transition: opacity 0.2s;
-}
-
-.logoLink:hover {
-  opacity: 0.8;
 }
 
 .divider {
@@ -45,7 +43,7 @@
 
 .titleInput {
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   color: var(--f-text-main);
   background: transparent;
   border: none;
@@ -56,6 +54,17 @@
   transition: background-color 0.2s;
 }
 
+.title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--f-text-main);
+  padding: 4px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 300px;
+}
+
 .titleInput:hover {
   background-color: rgba(0,0,0,0.05);
 }
@@ -64,6 +73,26 @@
   outline: none;
   background-color: white;
   box-shadow: 0 0 0 2px var(--f-primary);
+}
+
+.workspaceLink {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--f-text-muted);
+  text-decoration: none;
+  transition: color 0.2s;
+  white-space: nowrap;
+}
+
+.workspaceLink:hover {
+  color: var(--f-text-main);
+}
+
+.breadcrumbSeparator {
+  font-size: 0.8rem;
+  color: #cbd5e0;
+  margin: 0 -4px;
+  user-select: none;
 }
 
 
@@ -99,6 +128,7 @@
 .center {
   display: flex;
   align-items: center;
+  gap: 16px;
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
@@ -106,22 +136,20 @@
 
 .viewportToggle {
   display: flex;
-  background-color: var(--f-background);
-  padding: 4px;
-  border-radius: var(--f-radius-md);
+  align-items: center;
   gap: 4px;
-  border: 1px solid var(--f-border);
 }
 
 .viewportBtn {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--f-radius-sm);
+  border-radius: 4px;
   color: var(--f-text-muted);
   transition: all 0.2s;
+  cursor: pointer;
 }
 
 .viewportBtn:hover {
@@ -130,9 +158,8 @@
 }
 
 .viewportBtn.active {
-  background-color: white;
+  background-color: rgba(0,0,0,0.05);
   color: var(--f-primary);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 
 .right {

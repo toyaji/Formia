@@ -69,10 +69,14 @@ export const Header = () => {
     <>
       <header className={styles.header}>
         <div className={styles.left}>
-          <Link href="/dashboard" className={styles.logoLink}>
+          <div className={styles.logoLink}>
             <span className={styles.logo}>Formia</span>
-          </Link>
+          </div>
           <div className={styles.divider} />
+          <Link href="/dashboard" className={styles.workspaceLink}>
+            {session?.user?.name ? `${session.user.name}의 워크스페이스` : '워크스페이스'}
+          </Link>
+          <span className={styles.breadcrumbSeparator}>&gt;</span>
           {isEditingTitle ? (
             <input 
               className={styles.titleInput}
@@ -100,26 +104,6 @@ export const Header = () => {
               {formFactor?.metadata.title}
             </span>
           )}
-          <div className={styles.divider} />
-          
-          <div className={styles.historyGroup}>
-            <button 
-              onClick={undo} 
-              disabled={history.length === 0} 
-              className={styles.historyBtn} 
-              title="실행 취소 (Undo)"
-            >
-              <Undo2 size={16} />
-            </button>
-            <button 
-              onClick={redo} 
-              disabled={future.length === 0} 
-              className={styles.historyBtn} 
-              title="다시 실행 (Redo)"
-            >
-              <Redo2 size={16} />
-            </button>
-          </div>
         </div>
 
         <div className={styles.center}>
@@ -137,6 +121,25 @@ export const Header = () => {
               title="Mobile View"
             >
               <Smartphone size={18} />
+            </button>
+          </div>
+          <div className={styles.divider} />
+          <div className={styles.historyGroup}>
+            <button 
+              onClick={undo} 
+              disabled={history.length === 0} 
+              className={styles.historyBtn} 
+              title="실행 취소 (Undo)"
+            >
+              <Undo2 size={16} />
+            </button>
+            <button 
+              onClick={redo} 
+              disabled={future.length === 0} 
+              className={styles.historyBtn} 
+              title="다시 실행 (Redo)"
+            >
+              <Redo2 size={16} />
             </button>
           </div>
         </div>
