@@ -20,6 +20,7 @@ import {
 import styles from './Dashboard.module.css';
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
+import { useRef } from 'react';
 
 export default function DashboardPage() {
   const { data: session } = useSession();
@@ -31,9 +32,24 @@ export default function DashboardPage() {
     setSession,
     setFormId,
     setFormFactor,
-    exportFormById
+    exportFormById,
+    importForm
   } = useFormStore();
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!searchTerm) {
+      setDebouncedSearchTerm('');
+      return;
+    }
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 400); 
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   useEffect(() => {
     setSession(session);
@@ -41,7 +57,7 @@ export default function DashboardPage() {
   }, [session, loadAllForms, setSession]);
 
   const filteredForms = formsList.filter(form => 
-    form.title.toLowerCase().includes(searchTerm.toLowerCase())
+    form.title.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
   );
 
   const handleCreateNew = () => {
@@ -78,6 +94,51 @@ export default function DashboardPage() {
     router.push('/');
   };
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      processFile(file);
+    }
+  };
+
+  const processFile = (file: File) => {
+    if (!file.name.endsWith('.formia')) {
+      alert('.formia 파일만 가져올 수 있습니다.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const factor = JSON.parse(e.target?.result as string);
+        await importForm(factor);
+      } catch (err) {
+        console.error('Import failed:', err);
+        alert('올바른 .formia 파일이 아닙니다.');
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      processFile(file);
+    }
+  };
+
   return (
     <div className={styles.container}>
       {/* Simple Top Nav */}
@@ -87,21 +148,13 @@ export default function DashboardPage() {
             <span className={styles.logo}>Formia</span>
           </Link>
           <div style={{ height: '20px', width: '1px', background: '#e2e8f0' }} />
-          <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#4a5568' }}>워크스페이스</span>
+          <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#4a5568' }}>
+            {session?.user?.name ? `${session.user.name}의 워크스페이스` : '워크스페이스'}
+          </span>
         </div>
       </nav>
 
       <main className={styles.content}>
-        <div className={styles.header}>
-          <div className={styles.titleGroup}>
-            <h1>신바울의 워크스페이스</h1>
-          </div>
-          <button className={styles.createBtn} onClick={handleCreateNew}>
-            <Plus size={20} />
-            <span>새 신청 폼 만들기</span>
-          </button>
-        </div>
-
         <div className={styles.filterBar}>
           <div className={styles.searchWrapper}>
             <Search size={18} className={styles.searchIcon} />
@@ -113,6 +166,24 @@ export default function DashboardPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
+          
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button className={styles.importBtn} onClick={() => fileInputRef.current?.click()}>
+              <Upload size={18} />
+              <span>가져오기</span>
+            </button>
+            <button className={styles.createBtn} onClick={handleCreateNew}>
+              <Plus size={18} />
+              <span>새 신청 폼 만들기</span>
+            </button>
+          </div>
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleFileUpload} 
+            accept=".formia" 
+            style={{ display: 'none' }} 
+          />
         </div>
 
         <div className={styles.tableContainer}>
@@ -180,17 +251,20 @@ export default function DashboardPage() {
           </table>
         </div>
 
-        {/* Import Area */}
-        <div style={{ marginTop: '40px', padding: '24px', border: '2px dashed #e2e8f0', borderRadius: '12px', textAlign: 'center' }}>
-          <Upload size={32} style={{ color: '#a0aec0', marginBottom: '12px' }} />
-          <h3 style={{ marginBottom: '8px', fontWeight: 600 }}>외부 .formia 파일 가져오기</h3>
-          <p style={{ color: '#718096', fontSize: '0.9rem', marginBottom: '16px' }}>
-            컴퓨터에 저장된 설문 파일을 드래그하거나 선택하여 워크스페이스에 추가할 수 있습니다.
+        <div 
+          className={`${styles.importArea} ${isDragging ? styles.active : ''}`}
+          onClick={() => fileInputRef.current?.click()}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+          <Upload size={40} className={styles.importIcon} strokeWidth={1.5} />
+          <h3 className={styles.importTitle}>외부 .formia 파일 가져오기</h3>
+          <p className={styles.importDescription}>
+            컴퓨터에 저장된 설문 파일을 이 영역으로 드래그하거나<br />
+            클릭하여 워크스페이스에 즉시 추가할 수 있습니다.
           </p>
-          <button 
-            style={{ padding: '8px 16px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '0.9rem', fontWeight: 600 }}
-            onClick={() => alert('파일 선택 기능은 곧 구현됩니다.')}
-          >
+          <button className={styles.importActionBtn}>
             파일 선택하기
           </button>
         </div>

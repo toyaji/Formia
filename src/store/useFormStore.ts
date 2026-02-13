@@ -97,6 +97,7 @@ interface FormState {
   initApp: (session?: any) => Promise<void>;
   exportCurrentForm: () => Promise<void>;
   exportFormById: (id: string) => Promise<void>;
+  importForm: (factor: FormFactor) => Promise<void>;
 }
 
 const isTauri = typeof window !== 'undefined' && ((window as any).__TAURI_INTERNALS__ !== undefined || (window as any).__TAURI__ !== undefined);
@@ -136,7 +137,12 @@ export const useFormStore = create<FormState>()(
       },
 
       formId: null,
-      setFormId: (id: string | null) => set({ formId: id }),
+      setFormId: (id: string | null) => {
+        const currentId = get().formId;
+        if (id !== currentId) {
+          set({ formId: id, formFactor: null, saveStatus: 'idle', lastSyncedAt: null });
+        }
+      },
       saveStatus: 'idle',
       lastSyncedAt: null,
       session: null,
@@ -149,7 +155,7 @@ export const useFormStore = create<FormState>()(
         const repo = getRepository(currentSession);
         const { formId, formFactor } = get();
 
-        // If we already have a formId and factor, we are good
+        // If we already have the correct formId and factor, we are good
         if (formId && formFactor) return;
 
         try {
@@ -164,7 +170,12 @@ export const useFormStore = create<FormState>()(
 
           if (targetId) {
             const factor = await repo.load(targetId);
-            set({ formFactor: factor, formId: targetId });
+            set({ 
+              formFactor: factor, 
+              formId: targetId,
+              saveStatus: 'saved', // Loaded from repo, so matched
+              lastSyncedAt: factor.metadata.updatedAt || new Date().toISOString()
+            });
           }
         } catch (e) {
           console.error('[initApp] Failed to load initial form:', e);
@@ -232,6 +243,27 @@ export const useFormStore = create<FormState>()(
         } catch (e) {
           console.error('Failed to export form:', e);
           alert('파일을 내보내는데 실패했습니다.');
+        }
+      },
+
+      importForm: async (factor: FormFactor) => {
+        const { session, loadAllForms } = get();
+        try {
+          const repo = getRepository(session);
+          const newId = `form_${Math.random().toString(36).substring(2, 11)}`;
+          const importedFactor = {
+            ...factor,
+            metadata: {
+              ...factor.metadata,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            }
+          };
+          await repo.save(newId, importedFactor);
+          await loadAllForms();
+        } catch (e) {
+          console.error('Failed to import form:', e);
+          alert('파일을 가져오는데 실패했습니다.');
         }
       },
 
