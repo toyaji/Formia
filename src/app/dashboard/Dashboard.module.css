@@ -182,6 +182,7 @@
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+  position: relative;
 }
 
 .actionBtn {
@@ -196,10 +197,55 @@
   border: 1px solid transparent;
 }
 
-.actionBtn:hover {
+.actionBtn:hover, .actionBtn.active {
   background-color: #edf2f7;
   color: var(--f-text-main);
   border-color: #e2e8f0;
+}
+
+.dropdownMenu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  background-color: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+  z-index: 100;
+  min-width: 160px;
+  overflow: hidden;
+  animation: slideDown 0.2s ease-out;
+}
+
+.dropdownItem {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--f-text-main);
+  transition: background-color 0.2s;
+  text-align: left;
+}
+
+.dropdownItem:hover {
+  background-color: #f7fafc;
+}
+
+.dropdownItem.delete {
+  color: #e53e3e;
+}
+
+.dropdownItem.delete:hover {
+  background-color: #fff5f5;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .emptyState {

@@ -33,11 +33,13 @@ export default function DashboardPage() {
     setFormId,
     setFormFactor,
     exportFormById,
-    importForm
+    importForm,
+    deleteForm
   } = useFormStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [isDragging, setIsDragging] = useState(false);
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -50,6 +52,12 @@ export default function DashboardPage() {
     }, 400); 
     return () => clearTimeout(timer);
   }, [searchTerm]);
+
+  useEffect(() => {
+    const handleClickOutside = () => setActiveMenuId(null);
+    window.addEventListener('click', handleClickOutside);
+    return () => window.removeEventListener('click', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     setSession(session);
@@ -66,7 +74,8 @@ export default function DashboardPage() {
     setFormFactor({
       version: '1.0',
       metadata: {
-        title: '새 설문',
+        title: 'Formia 설문지',
+        description: '앞으로 AI Agent가 당신의 설문을 만들어 드립니다.',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       },
@@ -79,11 +88,59 @@ export default function DashboardPage() {
           id: 'start',
           type: 'start',
           title: '시작 페이지',
-          blocks: [],
+          description: '앞으로 AI Agent가 당신의 설문을 만들어 드립니다.',
+          blocks: [
+            {
+              id: 'start-block-1',
+              type: 'statement',
+              content: {
+                label: 'Formia 설문지',
+                body: '앞으로 AI Agent가 당신의 설문을 만들어 드립니다.',
+              },
+              removable: true
+            },
+            {
+              id: 'q1',
+              type: 'text',
+              content: {
+                label: '이름을 입력해 주세요.',
+                placeholder: '예: 홍길동'
+              },
+              validation: { required: true },
+              removable: true
+            },
+            {
+              id: 'q2',
+              type: 'choice',
+              content: {
+                label: '신청 경로를 선택해 주세요.',
+                options: ['지인 추천', 'SNS 광고', '검색 엔진', '기타']
+              },
+              removable: true
+            }
+          ],
           removable: false
         },
         questions: [],
-        endings: []
+        endings: [
+          {
+            id: 'end',
+            type: 'ending',
+            title: '완료 페이지',
+            blocks: [
+              {
+                id: 'end-block-1',
+                type: 'statement',
+                content: {
+                  label: '신청이 완료되었습니다.',
+                  body: '빠른 시일 내에 확인 후 연락드리겠습니다. 감사합니다!'
+                },
+                removable: true
+              }
+            ],
+            removable: true
+          }
+        ]
       }
     });
     router.push('/');
@@ -174,7 +231,7 @@ export default function DashboardPage() {
             </button>
             <button className={styles.createBtn} onClick={handleCreateNew}>
               <Plus size={18} />
-              <span>새 신청 폼 만들기</span>
+              <span>새 폼 만들기</span>
             </button>
           </div>
           <input 
@@ -235,13 +292,48 @@ export default function DashboardPage() {
                           onClick={(e) => {
                             e.stopPropagation();
                             exportFormById(form.id);
+                            setActiveMenuId(null);
                           }}
                         >
                           <Download size={16} />
                         </button>
-                        <button className={styles.actionBtn}>
+                        <button 
+                          className={`${styles.actionBtn} ${activeMenuId === form.id ? styles.active : ''}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveMenuId(activeMenuId === form.id ? null : form.id);
+                          }}
+                        >
                           <MoreHorizontal size={18} />
                         </button>
+
+                        {activeMenuId === form.id && (
+                          <div className={styles.dropdownMenu}>
+                            {/* TODO: 게시하기 기능 구현 (추후 개발 예정) */}
+                            <button 
+                              className={styles.dropdownItem}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                alert('준비 중인 기능입니다.');
+                                setActiveMenuId(null);
+                              }}
+                            >
+                              <ExternalLink size={16} />
+                              <span>게시하기</span>
+                            </button>
+                            <button 
+                              className={`${styles.dropdownItem} ${styles.delete}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteForm(form.id);
+                                setActiveMenuId(null);
+                              }}
+                            >
+                              <Trash2 size={16} />
+                              <span>삭제하기</span>
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </td>
                   </tr>

@@ -98,6 +98,7 @@ interface FormState {
   exportCurrentForm: () => Promise<void>;
   exportFormById: (id: string) => Promise<void>;
   importForm: (factor: FormFactor) => Promise<void>;
+  deleteForm: (id: string) => Promise<void>;
 }
 
 const isTauri = typeof window !== 'undefined' && ((window as any).__TAURI_INTERNALS__ !== undefined || (window as any).__TAURI__ !== undefined);
@@ -264,6 +265,20 @@ export const useFormStore = create<FormState>()(
         } catch (e) {
           console.error('Failed to import form:', e);
           alert('파일을 가져오는데 실패했습니다.');
+        }
+      },
+
+      deleteForm: async (id: string) => {
+        const { session, loadAllForms } = get();
+        if (!confirm('정말 삭제하시겠습니까?')) return;
+        
+        try {
+          const repo = getRepository(session);
+          await repo.delete(id);
+          await loadAllForms();
+        } catch (e) {
+          console.error('Failed to delete form:', e);
+          alert('삭제에 실패했습니다.');
         }
       },
 
