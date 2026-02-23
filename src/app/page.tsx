@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import styles from './page.module.css';
 import diffStyles from '@/components/builder/PageDiff.module.css';
 import { useFormStore } from '@/store/useFormStore';
+import { useHydrated } from '@/hooks/useHydrated';
 import { BlockRenderer } from '@/components/builder/BlockRenderer';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { AiPanel } from '@/components/ai/AiPanel';
@@ -26,10 +27,7 @@ export default function Home() {
     getReviewViewModel, setSession, initApp, formId
   } = useFormStore();
 
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useHydrated();
 
   // Initialize app: sync session and load last form
   useEffect(() => {
@@ -39,8 +37,10 @@ export default function Home() {
 
   // If after initialization we still have no formFactor, set a default one
   useEffect(() => {
-    if (!formFactor && !formId) {
-      setFormFactor(getDefaultForm());
+    if (!formFactor) {
+      if (!formId || formId === 'draft' || formId === 'new') {
+        setFormFactor(getDefaultForm());
+      }
     }
   }, [formFactor, formId, setFormFactor]);
 
@@ -106,6 +106,37 @@ export default function Home() {
       }
     }
   }, [activePageId]);
+
+  if (!mounted) {
+    return (
+      <div style={{ 
+        height: '100vh', 
+        width: '100vw', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        background: 'var(--f-background)'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ 
+            width: '40px', 
+            height: '40px', 
+            border: '4px solid var(--f-border)', 
+            borderTopColor: 'var(--f-primary)', 
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto 16px'
+          }} />
+          <p style={{ color: 'var(--f-text-muted)', fontSize: '0.9rem' }}>애플리케이션을 초기화하고 있습니다...</p>
+        </div>
+        <style>{`
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw' }}>

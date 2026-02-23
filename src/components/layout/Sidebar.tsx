@@ -1,6 +1,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useFormStore } from '@/store/useFormStore';
+import { useHydrated } from '@/hooks/useHydrated';
 import styles from './Sidebar.module.css';
 import { FormBlock, FormPage, BlockType } from '@/lib/core/schema';
 import { BLOCK_METADATA } from '@/lib/constants/blocks';
@@ -13,14 +14,11 @@ export const Sidebar = () => {
   const { 
     formFactor, activePageId, activeBlockId, 
     setActivePageId, setActiveBlockId, applyJsonPatch,
-    isReviewMode, preReviewSnapshot, pendingPatches,
+    isReviewMode,
     getReviewViewModel
   } = useFormStore();
-
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  
+  const hydrated = useHydrated();
   
   // Accordion state: map of pageId -> boolean (true = expanded)
   const [expandedPages, setExpandedPages] = useState<Record<string, boolean>>({});
@@ -29,14 +27,14 @@ export const Sidebar = () => {
   const [editingPageId, setEditingPageId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
 
-  // Compute pages to render (Normal vs Review)
   // We need to enable `getReviewPages` only when isReviewMode is true AND we have a snapshot
   const allPages = useMemo(() => {
-    if (!mounted || !formFactor) return [] as ReviewFormPage[];
+    if (!hydrated || !formFactor) return [] as ReviewFormPage[];
 
     if (isReviewMode) {
       return getReviewViewModel();
     }
+    if (!formFactor) return [] as ReviewFormPage[];
 
     const result: ReviewFormPage[] = [];
     if (formFactor.pages.start) {
