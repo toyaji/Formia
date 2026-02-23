@@ -16,6 +16,11 @@ export const Sidebar = () => {
     isReviewMode, preReviewSnapshot, pendingPatches,
     getReviewViewModel
   } = useFormStore();
+
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   
   // Accordion state: map of pageId -> boolean (true = expanded)
   const [expandedPages, setExpandedPages] = useState<Record<string, boolean>>({});
@@ -27,10 +32,11 @@ export const Sidebar = () => {
   // Compute pages to render (Normal vs Review)
   // We need to enable `getReviewPages` only when isReviewMode is true AND we have a snapshot
   const allPages = useMemo(() => {
+    if (!mounted || !formFactor) return [] as ReviewFormPage[];
+
     if (isReviewMode) {
       return getReviewViewModel();
     }
-    if (!formFactor) return [] as ReviewFormPage[];
 
     const result: ReviewFormPage[] = [];
     if (formFactor.pages.start) {

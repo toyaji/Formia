@@ -10,7 +10,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     Google({
       // Google Cloud Console에서 OAuth 2.0 클라이언트 생성 후 아래 값을 .env.local에 설정하세요.
       // 가이드: https://console.cloud.google.com/apis/credentials
-      // Authorized redirect URI: http://localhost:3000/api/auth/callback/google
+      // Authorized redirect URI: http://localhost:3001/api/auth/callback/google
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),

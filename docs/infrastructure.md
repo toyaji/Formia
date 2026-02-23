@@ -40,7 +40,7 @@
 **구성**: 모든 것이 로컬
 
 ```
-localhost:3000  → Next.js (프론트 + API Routes)
+localhost:3001  → Next.js (프론트 + API Routes)
                   └── SQLite (formia.db)
 ```
 
@@ -65,7 +65,7 @@ services:
   app:
     build: .
     ports:
-      - "80:3000"
+      - "80:3001"
     volumes:
       - ./data:/app/data # SQLite 영속화
       - ./.env.production:/app/.env
@@ -500,7 +500,7 @@ primary_region = "nrt"  # Tokyo (Primary)
   DATABASE_URL = "file:/litefs/formia.db"
 
 [[services]]
-  internal_port = 3000
+  internal_port = 3001
   protocol = "tcp"
 
   [[services.ports]]

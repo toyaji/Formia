@@ -87,7 +87,7 @@ A rich set of form blocks designed for maximum conversion.
    ```bash
    npm run dev
    ```
-   Open [http://localhost:3000](http://localhost:3000) to start building!
+   Open [http://localhost:3001](http://localhost:3001) to start building!
 
 ---
 

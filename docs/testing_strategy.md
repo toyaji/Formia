@@ -55,7 +55,7 @@ A set of reference `.formia` files in `tests/fixtures/` that represent various s
 
 1.  **Schema Validation**: Every time the Agent produces a patch, a JSON Schema validator checks for structural integrity before applying it to the UI.
 2.  **Snapshot Testing**: Compare the rendered HTML of the form card against a known "good" Araform-style baseline.
-3.  **Visual Regression**: Antigravity can take screenshots of `localhost:3000` and compare them to ensure no design tokens were accidentally broken.
+3.  **Visual Regression**: Antigravity can take screenshots of `localhost:3001` and compare them to ensure no design tokens were accidentally broken.
 
 ## 4. Testing Account / Secret Management
 

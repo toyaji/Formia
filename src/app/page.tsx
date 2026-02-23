@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import styles from './page.module.css';
 import diffStyles from '@/components/builder/PageDiff.module.css';
 import { useFormStore } from '@/store/useFormStore';
@@ -26,6 +26,11 @@ export default function Home() {
     getReviewViewModel, setSession, initApp, formId
   } = useFormStore();
 
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Initialize app: sync session and load last form
   useEffect(() => {
     setSession(session);
@@ -43,11 +48,11 @@ export default function Home() {
 
   // Compute pages to render (Normal vs Review)
   const pagesToRender = useMemo(() => {
+    if (!mounted || !effectiveFactor) return [] as ReviewFormPage[];
+    
     if (isReviewMode) {
       return getReviewViewModel();
     }
-    // Fallback for non-review mode
-    if (!effectiveFactor) return [] as ReviewFormPage[];
 
     const result: ReviewFormPage[] = [];
     

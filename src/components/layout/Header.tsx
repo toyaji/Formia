@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useFormStore } from '@/store/useFormStore';
 import styles from './Header.module.css';
 import { Undo2, Redo2, Save, Play, Settings, Monitor, Smartphone, Cloud, FileCode, Check, RefreshCw, AlertCircle, Info } from 'lucide-react';
@@ -16,6 +16,11 @@ export const Header = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editTitle, setEditTitle] = useState(formFactor?.metadata.title || '');
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const isTauri = typeof window !== 'undefined' && ((window as any).__TAURI_INTERNALS__ !== undefined || (window as any).__TAURI__ !== undefined);
 
@@ -101,7 +106,7 @@ export const Header = () => {
               }}
               title="더블 클릭하여 제목 수정"
             >
-              {formFactor?.metadata.title}
+              {mounted ? formFactor?.metadata.title : ''}
             </span>
           )}
         </div>
