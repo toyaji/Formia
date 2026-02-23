@@ -76,14 +76,16 @@ export const AiPanel = () => {
   const { 
     messages, addMessage, clearMessages, formFactor,
     saveSnapshot, setReviewMode, setPendingPatches, setActiveBlockId,
-    aiKeyStatus, setAiKeyStatus
+    aiKeyStatus, setAiKeyStatus, config
   } = useFormStore();
+  const activeProvider = config.activeAiProvider || 'gemini';
+  const isAiActive = aiKeyStatus[activeProvider]?.active;
+  const providerLabel = activeProvider === 'openai' ? 'OpenAI' : 'Gemini';
   const { generatePatchWithSummary, isLoading, streamingText } = useAIPatch();
   const [input, setInput] = useState('');
   const [isValidating, setIsValidating] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const geminiActive = aiKeyStatus['gemini']?.active;
 
   useEffect(() => {
     const fetchStatus = async () => {
@@ -134,7 +136,7 @@ export const AiPanel = () => {
   };
 
   const handleSend = async () => {
-    if (!input.trim() || isLoading || !geminiActive) return;
+    if (!input.trim() || isLoading || !isAiActive) return;
 
     const userQuery = input;
     setInput('');
@@ -148,7 +150,7 @@ export const AiPanel = () => {
   };
 
   const handleRetry = async (content: string) => {
-    if (isLoading || !geminiActive) return;
+    if (isLoading || !isAiActive) return;
     await processAIRequest(content);
   };
 
@@ -161,7 +163,7 @@ export const AiPanel = () => {
 
   const getSendButtonTitle = () => {
     if (isValidating) return 'API 키 상태 확인 중...';
-    if (!geminiActive) return 'Gemini API 키 설정이 필요합니다';
+    if (!isAiActive) return `${providerLabel} API 키 설정이 필요합니다`;
     if (!input.trim()) return '요청 사항을 입력하세요';
     return '요청 보내기';
   };
@@ -181,13 +183,13 @@ export const AiPanel = () => {
       {/* Message List - Modern Style */}
       <div className={styles.messageList}>
         {/* API Key Setup Prompt - Restored Original structure but placed above welcome */}
-        {!isValidating && !geminiActive && messages.length === 0 && (
+        {!isValidating && !isAiActive && messages.length === 0 && (
           <div className={styles.setupPrompt}>
             <div className={styles.setupIcon}>🔑</div>
             <div className={styles.setupContent}>
-              <h3 className={styles.setupTitle}>Gemini API 키를 설정해주세요</h3>
+              <h3 className={styles.setupTitle}>{providerLabel} API 키를 설정해주세요</h3>
               <p className={styles.setupDesc}>
-                AI 기능을 사용하려면 먼저 Gemini API 키를 등록해야 합니다.
+                AI 기능을 사용하려면 먼저 {providerLabel} API 키를 등록해야 합니다.
                 <br />
                 상단 설정(⚙️) 버튼을 눌러 키를 입력하세요.
               </p>
@@ -267,7 +269,7 @@ export const AiPanel = () => {
             <button 
               className={styles.sendBtn} 
               onClick={handleSend}
-              disabled={isLoading || !input.trim() || !geminiActive || isValidating}
+              disabled={isLoading || !input.trim() || !isAiActive || isValidating}
             >
               <Send size={18} />
             </button>

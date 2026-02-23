@@ -16,7 +16,7 @@ export interface Message {
 }
 
 interface AppConfig {
-  // Config no longer stores secrets
+  activeAiProvider?: string;
 }
 
 // Phase 13: Patch item for inline diff review

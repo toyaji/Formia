@@ -112,6 +112,8 @@ async function callAIProvider(
   switch (provider) {
     case 'gemini':
       return callGemini(apiKey, prompt, currentSchema);
+    case 'openai':
+      return callOpenAI(apiKey, prompt, currentSchema);
     default:
       throw new Error(`Unsupported provider: ${provider}`);
   }
@@ -149,6 +151,85 @@ async function callGemini(apiKey: string, prompt: string, currentSchema: any) {
 
   const cleanJson = textResponse.replace(/```json\n?|```/g, '').trim();
   const result = JSON.parse(cleanJson);
+
+  if (Array.isArray(result)) {
+    return { patches: result, summary: '' };
+  } else if (result.patches && Array.isArray(result.patches)) {
+    return { patches: result.patches, summary: result.summary || '' };
+  } else {
+    throw new Error('AI returned invalid format');
+  }
+}
+
+async function callOpenAI(apiKey: string, prompt: string, currentSchema: any) {
+  const systemPrompt = `
+You are a "JSON Patch Architect" specialized in Form Design.
+Your task is to generate an RFC 6902 JSON Patch array to transform the provided "Form Factor" schema based on user intent.
+
+### VALID BLOCK TYPES AND STRUCTURES:
+1. "text": Short text input. { "label": "string", "placeholder": "string?", "helpText": "string?" }
+2. "textarea": Long text area. { "label": "string", "placeholder": "string?", "helpText": "string?" }
+3. "choice": Multiple choice or checkbox. { "label": "string", "options": ["string"], "multiSelect": boolean?, "allowOther": boolean?, "helpText": "string?" }
+4. "rating": Star rating. { "label": "string", "maxRating": number?, "helpText": "string?" }
+5. "date": Date picker. { "label": "string", "helpText": "string?" }
+6. "file": File upload. { "label": "string", "helpText": "string?" }
+7. "info": Informational markdown. { "label": "string?", "body": "string" }
+8. "statement": Centered heading/text (start/end pages). { "label": "string?", "body": "string" }
+ 
+ ### VALID PAGE STRUCTURE:
+ {
+   "id": "string",
+   "type": "start" | "default" | "ending",
+   "title": "string",
+   "blocks": []
+ }
+ 
+ ### JSON PATCH RULES:
+- Use RFC 6902 operations (add, remove, replace, move, copy, test).
+- To add a block to a page: {"op": "add", "path": "/pages/{pageIndex}/blocks/-", "value": { "id": "random_id", "type": "BLOCK_TYPE", "content": { ... }, "validation": { "required": false } }}
+- To update a field: {"op": "replace", "path": "/pages/{pageIndex}/blocks/{blockIndex}/content/label", "value": "New Label"}
+- To remove a block: {"op": "remove", "path": "/pages/{pageIndex}/blocks/{blockIndex}"}
+
+### CONSTRAINTS:
+- DO NOT use block types other than those listed above (e.g., NO "shortText", "email", etc. Use "text" instead).
+- Always generate unique "id" for new blocks.
+- Ensure the resulting schema remains valid.
+
+### OUTPUT SPECIFICATION:
+Return a JSON object with this structure:
+{
+  "patches": [ /* RFC 6902 JSON Patch operations */ ],
+  "summary": "한국어로 변경 내용을 간결하게 설명 (1-2문장) 또는 변경 불가 사유"
+}
+
+### CURRENT SCHEMA:
+${JSON.stringify(currentSchema, null, 2)}
+`.trim();
+
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o', // Using gpt-4o as a premium default
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: prompt }
+      ],
+      response_format: { type: 'json_object' },
+      temperature: 0.1,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error?.message || 'OpenAI API request failed');
+  }
+
+  const data = await response.json();
+  const result = JSON.parse(data.choices[0].message.content);
 
   if (Array.isArray(result)) {
     return { patches: result, summary: '' };

@@ -1,6 +1,8 @@
 import { useState, useCallback } from 'react';
 import { useFormStore } from '@/store/useFormStore';
 import { GeminiProvider, AIResponse } from '@/lib/ai/GeminiProvider';
+import { OpenAIProvider } from '@/lib/ai/OpenAIProvider';
+import { AIProvider } from '@/lib/ai/AIProvider';
 import { Operation } from 'rfc6902';
 
 export const useAIPatch = () => {
@@ -8,7 +10,8 @@ export const useAIPatch = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [streamingText, setStreamingText] = useState('');
   
-  const provider = new GeminiProvider();
+  const activeProviderName = config.activeAiProvider || 'gemini';
+  const provider: AIProvider = activeProviderName === 'openai' ? new OpenAIProvider() : new GeminiProvider();
 
   const generatePatch = async (prompt: string): Promise<Operation[] | null> => {
     const result = await generatePatchWithSummary(prompt);
@@ -29,7 +32,7 @@ export const useAIPatch = () => {
         ? (chunk: string) => setStreamingText(prev => prev + chunk)
         : undefined;
 
-      const result = await provider.generatePatchWithSummary(
+      const result = await (provider as any).generatePatchWithSummary(
         prompt, 
         formFactor,
         onSummaryChunk
