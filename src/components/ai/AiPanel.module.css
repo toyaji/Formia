@@ -363,14 +363,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--f-primary);
+  background: linear-gradient(135deg, var(--f-primary) 0%, #60a5fa 100%);
   color: white;
   border-radius: 50%;
-  transition: opacity 0.2s, transform 0.2s;
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
 .sendBtn:hover:not(:disabled) {
-  transform: scale(1.05);
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
 }
 
 .sendBtn:disabled {
