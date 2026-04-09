@@ -52,11 +52,9 @@
   justify-content: center;
   width: 20px;
   height: 20px;
-  background-color: #22C55E;
-  border-radius: 50%;
-  font-size: 10px;
-  font-weight: 700;
-  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  color: #3B82F6;
 }
 
 .typeLabel {
@@ -76,8 +74,73 @@
   cursor: grab;
 }
 
+.typeSelectorWrapper {
+  position: relative;
+}
+
 .topBarRight {
   width: 120px;
+}
+
+/* Dropdown */
+.typeDropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 160px;
+  background-color: white;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  padding: 4px;
+  z-index: 100;
+}
+
+.dropdownItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.dropdownItem:hover {
+  background-color: #F3F4F6;
+}
+
+.dropdownItemActive {
+  background-color: #EFF6FF;
+}
+
+.dropdownIcon {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: #3B82F6;
+}
+
+.dropdownLabel {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.checkIcon {
+  color: #3B82F6;
+}
+
+.iconImage {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+  display: block;
 }
 
 /* Label & Help Text */

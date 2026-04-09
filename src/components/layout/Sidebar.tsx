@@ -404,7 +404,11 @@ export const Sidebar = () => {
                   }}
                 >
                   <span className={styles.blockIcon}>
-                    {BLOCK_METADATA[block.type as BlockType]?.icon || block.type[0].toUpperCase()}
+                    {BLOCK_METADATA[block.type as BlockType]?.icon.startsWith('/') ? (
+                      <img src={BLOCK_METADATA[block.type as BlockType]?.icon} alt="" className={styles.iconImage} />
+                    ) : (
+                      BLOCK_METADATA[block.type as BlockType]?.icon || block.type[0].toUpperCase()
+                    )}
                   </span>
                   <span className={styles.blockLabel}>
                     {block.content.label || BLOCK_METADATA[block.type as BlockType]?.label || block.type}
@@ -440,7 +444,11 @@ export const Sidebar = () => {
                         }}
                       >
                         <span className={styles.blockIcon}>
-                          {BLOCK_METADATA[block.type]?.icon || block.type[0].toUpperCase()}
+                          {BLOCK_METADATA[block.type]?.icon.startsWith('/') ? (
+                            <img src={BLOCK_METADATA[block.type]?.icon} alt="" className={styles.iconImage} />
+                          ) : (
+                            BLOCK_METADATA[block.type]?.icon || block.type[0].toUpperCase()
+                          )}
                         </span>
                         <span className={styles.blockLabel}>
                           {block.content.label || BLOCK_METADATA[block.type]?.label || block.type}

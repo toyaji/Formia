@@ -1,49 +1,43 @@
-# Formia UX & UI Rules
+# Formia Design System: Icons
 
-## 1. Tooltip & Hover Interaction
+This document defines the icon design system for Formia, inspired by modern interactive form builders like Araform and Typeform.
 
-### Custom CSS Tooltip Utility
+## 1. Icon Philosophy
 
-To avoid the slow response time (1-2s delay) of native browser tooltips (`title` attribute), Formia uses a custom CSS-based tooltip utility.
+Formia uses **symbolic graphic icons** instead of plain text or standard generic icons to provide a premium, intuitive user experience. Icons are designed to be recognizable at a glance, representing the core function of each question type.
 
-#### Usage
+## 2. Visual Style
 
-Add the `.f-tooltip-container` utility class and the `data-tooltip` attribute to any element (or its wrapper if the element is disabled).
+- **Type**: Minimalist line-art.
+- **Color**: Professional Blue (`#3B82F6`).
+- **Background**: Pure white or transparent.
+- **Consistency**: All icons follow the same stroke width and geometric style to ensure a cohesive look across the sidebar and editor.
 
-```html
-<!-- Example: Enabled Element -->
-<button class="f-tooltip-container" data-tooltip="Click to save changes">
-  Save
-</button>
+## 3. Question Type Icons
 
-<!-- Example: Disabled Element (Wrapper Required) -->
-<div class="f-tooltip-container" data-tooltip="Login required">
-  <button disabled>Cloud Save</button>
-</div>
-```
+The following icons are mapped to each `BlockType` in `BLOCK_METADATA`:
 
-#### Style Specifications
+| Block Type  | Icon Symbol Description               | File Path                     |
+| :---------- | :------------------------------------ | :---------------------------- |
+| `text`      | Horizontal line with a text cursor    | `/assets/icons/text.png`      |
+| `textarea`  | Multiple horizontal lines (paragraph) | `/assets/icons/textarea.png`  |
+| `choice`    | Bulleted list / Radio button list     | `/assets/icons/choice.png`    |
+| `rating`    | Five-pointed star                     | `/assets/icons/rating.png`    |
+| `date`      | Calendar grid                         | `/assets/icons/date.png`      |
+| `file`      | Paperclip (attachment)                | `/assets/icons/file.png`      |
+| `info`      | Lowercase 'i' in a circle             | `/assets/icons/info.png`      |
+| `statement` | Document / Sheet of paper             | `/assets/icons/statement.png` |
 
-- **Background**: `var(--f-text-main)` (Dark/Neutral)
-- **Text**: White, `0.75rem`
-- **Animation**: 150ms fade-in/out with a slight `5px` vertical translation.
-- **Trigger**: Instant on hover.
+## 4. Implementation Details
 
----
+- **Storage**: Icons are stored in `public/assets/icons/` as high-quality PNGs.
+- **Metadata**: Mapped via `BLOCK_METADATA` in `src/lib/constants/blocks.ts`.
+- **Rendering**: The `BlockRenderer` and `Sidebar` components check if an icon value starts with `/` to determine whether to render it as an `<img>` tag or fallback to text.
 
-## 2. Global Design Tokens
+## 5. Maintenance & Expansion
 
-Refer to `src/styles/tokens.css` for consistent styling.
+When adding new block types:
 
-- **Primary**: `#3b82f6` (System Blue)
-- **Surface**: `#ffffff`
-- **Background**: `#f6f9ff` (Soft Blue-Gray)
-- **Radius**: `var(--f-radius-md)` (8px) for standard components.
-
----
-
-## 3. AI Interaction States
-
-- **Validation**: While checking API key status, the UI should remain stable without flashing placeholders. Use `isValidating` states.
-- **Empty State**: Always show the welcome message ("안녕하세요! ...") to provide a conversational starting point.
-- **Inhibited Actions**: If an action is blocked (e.g., missing API key), the trigger button must be disabled and provide a clear tooltip explanation on hover.
+1. Generate or design a symbolic icon following the minimalist blue line-art style.
+2. Save to `public/assets/icons/` (standard naming: `type.png`).
+3. Update `BLOCK_METADATA` and ensure the rendering logic handles the new path.

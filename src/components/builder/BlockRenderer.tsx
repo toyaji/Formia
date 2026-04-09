@@ -1,7 +1,8 @@
-import { FormBlock, BlockTypeSchema } from '@/lib/core/schema';
+import { useState, useRef, useEffect } from 'react';
+import { FormBlock, BlockTypeSchema, BlockType } from '@/lib/core/schema';
 import styles from './BlockRenderer.module.css';
 import { useFormStore, PatchItem } from '@/store/useFormStore';
-import { Trash2, Plus, X, Check, GripVertical, ChevronDown, Copy, PlusCircle, FilePlus } from 'lucide-react';
+import { Trash2, Plus, X, Check, GripVertical, ChevronDown, Copy, PlusCircle, FilePlus, Type, AlignLeft, List, Star, Calendar, FileUp, Info, Type as StatementIcon } from 'lucide-react';
 import { ReviewFormBlock } from '@/lib/utils/patchUtils';
 import { BLOCK_METADATA } from '@/lib/constants/blocks';
 
@@ -58,6 +59,23 @@ export const BlockRenderer = ({ block, previewBlockId, isParentChange }: BlockRe
     acceptPatchesByBlockId, rejectPatchesByBlockId, setActivePageId
   } = useFormStore();
   const isActive = activeBlockId === id && !isReviewMode;
+
+  const [isTypeDropdownOpen, setIsTypeDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsTypeDropdownOpen(false);
+      }
+    };
+    if (isTypeDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isTypeDropdownOpen]);
 
   const reviewMetadata = (block as any).reviewMetadata || { status: 'kept' };
   const isRemoved = reviewMetadata.status === 'removed';
@@ -565,20 +583,56 @@ export const BlockRenderer = ({ block, previewBlockId, isParentChange }: BlockRe
     >
       {isActive && type !== 'statement' && (
         <div className={styles.topBar}>
-          <div className={styles.typeSelector}>
-            <span className={styles.typeIcon}>
-              {type === 'text' && 'T'}
-              {type === 'textarea' && 'A'}
-              {type === 'choice' && 'C'}
-              {type === 'date' && 'D'}
-              {type === 'rating' && 'R'}
-              {type === 'file' && 'F'}
-              {BLOCK_METADATA[type]?.icon}
-            </span>
-            <span className={styles.typeLabel}>
-              {BLOCK_METADATA[type]?.label || '항목'}
-            </span>
-            <ChevronDown size={14} className={styles.chevron} />
+          <div className={styles.typeSelectorWrapper} ref={dropdownRef}>
+            <div 
+              className={styles.typeSelector} 
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsTypeDropdownOpen(!isTypeDropdownOpen);
+              }}
+            >
+              <span className={styles.typeIcon}>
+                {BLOCK_METADATA[type]?.icon.startsWith('/') ? (
+                  <img src={BLOCK_METADATA[type]?.icon} alt="" className={styles.iconImage} />
+                ) : (
+                  BLOCK_METADATA[type]?.icon
+                )}
+              </span>
+              <span className={styles.typeLabel}>
+                {BLOCK_METADATA[type]?.label || '항목'}
+              </span>
+              <ChevronDown size={14} className={styles.chevron} />
+            </div>
+
+            {isTypeDropdownOpen && (
+              <div className={styles.typeDropdown}>
+                {BlockTypeSchema.options
+                  .filter(t => t !== 'info' && t !== 'statement')
+                  .map((t) => (
+                    <div 
+                      key={t} 
+                      className={`${styles.dropdownItem} ${t === type ? styles.dropdownItemActive : ''}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        updateType(t);
+                        setIsTypeDropdownOpen(false);
+                      }}
+                    >
+                      <span className={styles.dropdownIcon}>
+                        {BLOCK_METADATA[t as BlockType]?.icon.startsWith('/') ? (
+                          <img src={BLOCK_METADATA[t as BlockType]?.icon} alt="" className={styles.iconImage} />
+                        ) : (
+                          BLOCK_METADATA[t as BlockType]?.icon
+                        )}
+                      </span>
+                      <span className={styles.dropdownLabel}>
+                        {BLOCK_METADATA[t as BlockType]?.label}
+                      </span>
+                      {t === type && <Check size={14} className={styles.checkIcon} />}
+                    </div>
+                  ))}
+              </div>
+            )}
           </div>
           <div className={styles.dragHandle}>
             <GripVertical size={16} />
