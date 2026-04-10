@@ -5,6 +5,8 @@
   border: 1px solid var(--border);
   overflow: hidden;
   font-size: 0.85rem;
+  /* Prevent flexbox crushing in AiPanel */
+  flex-shrink: 0;
 }
 
 .toggleButton {
@@ -47,6 +49,7 @@
   flex-direction: column;
   gap: 0.75rem;
   max-height: 400px;
+  min-height: 0;
   overflow-y: auto;
 }
 

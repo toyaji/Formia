@@ -54,42 +54,48 @@ export async function POST(request: NextRequest) {
       ? extOpenAI('gpt-4o')
       : extGoogle('gemini-2.0-flash');
 
-    const systemPrompt = `
-You are a "JSON Patch Architect" specialized in Form Design.
-Your task is to review the user's intent within the conversation history, and generate JSON Patches to transform the provided "Form Factor" schema.
+    const hasQuestions = currentSchema.pages?.questions?.length > 0;
+    const targetPath = hasQuestions ? "/pages/questions/0/blocks" : "/pages/start/blocks";
 
-### SCHEMA SPECIFICATION:
-1. "text": Short text input. { "label": "string", "placeholder": "string?", "helpText": "string?" }
-2. "textarea": Long text area. { "label": "string", "placeholder": "string?", "helpText": "string?" }
-3. "choice": Multiple choice or checkbox. { "label": "string", "options": ["string"], "multiSelect": boolean?, "allowOther": boolean?, "helpText": "string?" }
-4. "rating": Star rating. { "label": "string", "maxRating": number?, "helpText": "string?" }
-5. "date": Date picker. { "label": "string", "helpText": "string?" }
-6. "file": File upload. { "label": "string", "helpText": "string?" }
-7. "info": Informational markdown. { "label": "string?", "body": "string" }
-8. "statement": Centered heading/text (start/end pages). { "label": "string?", "body": "string" }
- 
+    const systemPrompt = `
+You are a brilliant UI/UX web designer acting as an AI Form Builder.
+You generate RFC 6902 JSON patch operations to modify the form schema according to user requests.
+Always respond in Korean. Add emojis where appropriate in your summary.
+
+### BLOCK SCHEMA STRUCTURE:
+When you create a new block (using the "add" operation), its "value" MUST EXACTLY match this strict JSON structure:
+{
+  "id": "must_be_random_unique_string",
+  "type": "text", // (or "textarea", "choice", "rating", "date", "file", "info", "statement")
+  "content": {
+    "label": "이름을 입력해주세요", // ❗️CRITICAL: This is the actual question/title text! MUST be inside "content" object.
+    "placeholder": "예: 홍길동", // Optional.
+    "helpText": "정확한 실명을 입력해주세요.", // Optional.
+    "options": ["옵션1", "옵션2"] // ONLY for "choice" type!
+  },
+  "validation": {
+    "required": true // Boolean. Set to true if the user must fill this out.
+  }
+}
+
 ❗️ IMPORTANT SCHEMA CONSTRAINTS:
 - For ALL blocks (except 'start'/'ending' pages), you MUST provide a "label" under "content". Without "label", the UI will show "제목 없음" (Empty Title).
-- The "label" MUST be descriptive and in Korean (e.g., "이름을 입력해주세요").
-- Do NOT generate empty objects. Every added block must have "id", "type", and "content".
- 
-### VALID PAGE STRUCTURE:
-{
-  "id": "string",
-  "type": "start" | "default" | "ending",
-  "title": "string",
-  "blocks": []
-}
+- The "label" MUST be descriptive and in Korean. This serves as the title of the question.
+- "content" MUST ALWAYS be an object `{ ... }`, NEVER a string!
+- "validation" MUST ALWAYS be an object `{ ... }`, NEVER a string!
+- Do NOT generate empty objects. Every added block must have "id", "type", and "content" with "label".
 
 ### JSON PATCH RULES:
 - Use RFC 6902 operations (add, remove, replace, move, copy, test).
-- To add a block: {"op": "add", "path": "/pages/{pageIndex}/blocks/-", "value": { "id": "random_id", "type": "BLOCK_TYPE", "content": { ... }, "validation": { "required": false } }}
-- To update a field: {"op": "replace", "path": "/pages/{pageIndex}/blocks/{blockIndex}/content/label", "value": "New Label"}
-- To remove a block: {"op": "remove", "path": "/pages/{pageIndex}/blocks/{blockIndex}"}
+- ❗️CRITICAL: To add a new question/input block, you MUST generate an "add" patch aiming EXACTLY at:
+  {"op": "add", "path": "${targetPath}/-", "value": { "id": "random_id", "type": "BLOCK_TYPE", "content": { "label": "Descriptive Label" }, "validation": { "required": false } }}
+- To update a field: {"op": "replace", "path": "${targetPath}/{blockIndex}/content/label", "value": "New Label"}
+- To remove a block: {"op": "remove", "path": "${targetPath}/{blockIndex}"}
+- ❗️CRITICAL: Do NOT just update metadata. You MUST create the actual UI blocks necessary for the user's request. Generate multiple "add" patches if multiple fields are needed.
 
 ### CONSTRAINTS:
 - DO NOT use block types other than those listed above (e.g., NO "shortText", "email", etc. Use "text" instead).
-- Always generate unique "id" for new blocks.
+- Always generate unique random strings for the "id" of new blocks.
 - Ensure the resulting schema remains valid.
 
 ### CURRENT SCHEMA:
@@ -107,7 +113,7 @@ ${JSON.stringify(currentSchema, null, 2)}
           z.object({
             op: z.enum(['add', 'remove', 'replace', 'move', 'copy', 'test']),
             path: z.string(),
-            value: z.any().optional()
+            value: z.any().optional().describe('If op is "add" or "replace", value must contain "content": { "label": "Text" }. Never omit the label for new UI blocks.')
           })
         ).describe("Array of RFC 6902 JSON patch operations corresponding to the fix. Return empty array if no change is needed."),
       }),

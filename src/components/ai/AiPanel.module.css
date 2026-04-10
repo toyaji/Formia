@@ -242,6 +242,7 @@
   margin-top: 8px;
   box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.1);
   animation: slideUp 0.3s ease-out;
+  flex-shrink: 0;
 }
 
 @keyframes slideUp {
