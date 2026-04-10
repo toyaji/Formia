@@ -6,7 +6,7 @@ import { AIProvider } from '@/lib/ai/AIProvider';
 import { Operation } from 'rfc6902';
 
 export const useAIPatch = () => {
-  const { formFactor, addMessage, config } = useFormStore();
+  const { formFactor, addMessage, messages, config } = useFormStore();
   const [isLoading, setIsLoading] = useState(false);
   const [streamingText, setStreamingText] = useState('');
   
@@ -35,6 +35,7 @@ export const useAIPatch = () => {
       const result = await (provider as any).generatePatchWithSummary(
         prompt, 
         formFactor,
+        messages,
         onSummaryChunk
       );
       
@@ -58,7 +59,7 @@ export const useAIPatch = () => {
       setIsLoading(false);
       setStreamingText('');
     }
-  }, [formFactor, addMessage, provider]);
+  }, [formFactor, addMessage, messages, provider]);
 
   return {
     generatePatch,

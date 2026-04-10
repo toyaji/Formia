@@ -15,12 +15,16 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@ai-sdk/google": "^3.0.61",
+    "@ai-sdk/openai": "^3.0.52",
+    "@ai-sdk/react": "^3.0.158",
     "@auth/prisma-adapter": "^2.11.1",
     "@hello-pangea/dnd": "^18.0.1",
     "@prisma/adapter-better-sqlite3": "^7.3.0",
     "@prisma/client": "^7.3.0",
     "@tauri-apps/api": "^2.1.0",
     "@tauri-apps/plugin-fs": "^2.4.5",
+    "ai": "^6.0.156",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.378.0",

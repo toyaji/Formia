@@ -1,0 +1,104 @@
+.debuggerContainer {
+  margin-top: 1rem;
+  border-radius: 8px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  font-size: 0.85rem;
+}
+
+.toggleButton {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background-color: var(--surface-hover, rgba(0, 0, 0, 0.02));
+  border: none;
+  cursor: pointer;
+  color: var(--text-main);
+  transition: background-color 0.2s ease;
+}
+
+.toggleButton:hover {
+  background-color: var(--surface-active, rgba(0, 0, 0, 0.04));
+}
+
+.leftGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+}
+
+.panel {
+  padding: 1rem;
+  border-top: 1px solid var(--border);
+  background-color: var(--surface);
+}
+
+.instruction {
+  margin: 0 0 1rem 0;
+  color: var(--text-muted);
+}
+
+.patchList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.patchItem {
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  background-color: var(--surface);
+}
+
+.statusAccepted { border-left: 3px solid #10b981; }
+.statusRejected { border-left: 3px solid #ef4444; }
+.statusPending { border-left: 3px solid #eab308; }
+
+.patchHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  background-color: var(--surface-hover, rgba(0,0,0,0.02));
+  border-bottom: 1px solid var(--border);
+}
+
+.badgeOp {
+  font-weight: 600;
+  font-family: monospace;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+}
+
+.badgeOp[data-op="add"] { background-color: #d1fae5; color: #065f46; }
+.badgeOp[data-op="remove"] { background-color: #fee2e2; color: #991b1b; }
+.badgeOp[data-op="replace"] { background-color: #e0e7ff; color: #3730a3; }
+.badgeOp[data-op="move"] { background-color: #fef3c7; color: #92400e; }
+
+.badgeStatus {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: capitalize;
+}
+
+.codeBlock {
+  padding: 0.75rem;
+  margin: 0;
+  background-color: rgba(0, 0, 0, 0.03);
+  overflow-x: auto;
+}
+
+.codeBlock pre {
+  margin: 0;
+  font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+  color: var(--text-main);
+}

@@ -2,6 +2,7 @@ import { AIProvider } from './AIProvider';
 import { FormFactor } from '../core/schema';
 import { Operation } from 'rfc6902';
 import { validatePatchesDetailed } from '../utils/patchValidator';
+import { Message } from '@/store/useFormStore';
 
 export interface AIResponse {
   patches: Operation[];
@@ -13,27 +14,31 @@ export class GeminiProvider implements AIProvider {
     return 'Google Gemini';
   }
 
-  async generatePatch(prompt: string, currentSchema: FormFactor): Promise<Operation[]> {
-    const result = await this.generatePatchWithSummary(prompt, currentSchema);
+  async generatePatch(prompt: string, currentSchema: FormFactor, messages: Message[] = []): Promise<Operation[]> {
+    const result = await this.generatePatchWithSummary(prompt, currentSchema, messages);
     return result.patches;
   }
 
-  /**
-   * AI Proxy(/api/ai/generate)를 통해 AI 응답을 생성합니다.
-   * 이제 클라이언트 사이드에서는 API 키를 직접 다루지 않습니다.
-   */
   async generatePatchWithSummary(
     prompt: string, 
     currentSchema: FormFactor,
+    messages: Message[] = [],
     onSummaryChunk?: (chunk: string) => void,
     retryCount = 0
   ): Promise<AIResponse> {
     try {
+      // Append the latest prompt to the messages if it's not already the last message
+      const latestMessages = [...messages];
+      if (latestMessages.length === 0 || latestMessages[latestMessages.length - 1].content !== prompt) {
+        latestMessages.push({ id: 'temp', role: 'user', content: prompt, timestamp: new Date().toISOString() });
+      }
+
       const response = await fetch('/api/ai/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt,
+          messages: latestMessages.map(m => ({ role: m.role.replace('system_error', 'system').replace('system_info', 'system'), content: m.content })),
           currentSchema,
           provider: 'gemini'
         })
@@ -47,14 +52,12 @@ export class GeminiProvider implements AIProvider {
       const data = await response.json();
       const patches = data.patches || [];
       
-      // Detailed validation
       const { validPatches, errors } = validatePatchesDetailed(patches, currentSchema);
       
-      // If there are validation errors and we haven't retried yet, try again with feedback
       if (errors.length > 0 && retryCount === 0) {
         console.warn('[Gemini] Validation failed, retrying with feedback:', errors);
         const feedbackPrompt = `${prompt}\n\nIMPORTANT: Your previous response had some issues. Please fix them:\n- ${errors.join('\n- ')}\n\nPlease try again and ensure all required fields (id, type, content, title, blocks, etc.) are included for new elements.`;
-        return this.generatePatchWithSummary(feedbackPrompt, currentSchema, onSummaryChunk, 1);
+        return this.generatePatchWithSummary(feedbackPrompt, currentSchema, messages, onSummaryChunk, 1);
       }
 
       if (onSummaryChunk && data.summary) {
@@ -71,4 +74,3 @@ export class GeminiProvider implements AIProvider {
     }
   }
 }
-

@@ -6,6 +6,7 @@ import { useAIPatch } from '@/hooks/useAIPatch';
 import styles from './AiPanel.module.css';
 import { Send, Trash2, Check, X, AlertCircle, RotateCcw } from 'lucide-react';
 import { convertOperationsToPatchItems } from '@/lib/utils/patchUtils';
+import { PatchDebugger } from '../viewer/PatchDebugger';
 
 // Typing Indicator Component
 const TypingIndicator = () => (
@@ -250,6 +251,9 @@ export const AiPanel = () => {
 
         {/* Proposed Changes Card */}
         <ProposedChanges />
+
+        {/* JSON Patch DevTools Debugger */}
+        <PatchDebugger />
         
         <div ref={messagesEndRef} />
       </div>
