@@ -54,72 +54,92 @@ export async function POST(request: NextRequest) {
       ? extOpenAI('gpt-4o')
       : extGoogle('gemini-2.0-flash');
 
-    const systemPrompt = `
-You are a "JSON Patch Architect" specialized in Form Design.
-Your task is to review the user's intent within the conversation history, and generate JSON Patches to transform the provided "Form Factor" schema.
+    // 4. Define Strict Block Schema for AI Response Enforcement
+    const BlockValueSchema = z.object({
+      id: z.string().describe("UUID or random string"),
+      type: z.enum(['text', 'textarea', 'choice', 'rating', 'date', 'file', 'info', 'statement']),
+      content: z.object({
+        label: z.string().describe("The primary question or title text. MANDATORY."),
+        placeholder: z.string().optional().describe("Input hint text"),
+        helpText: z.string().optional().describe("Small descriptive text below label"),
+        options: z.array(z.string()).optional().describe("Array of options for choice type ONLY"),
+        maxRating: z.number().optional().describe("Max value for rating type ONLY"),
+        body: z.string().optional().describe("Main Markdown body for info/statement types"),
+      }),
+      validation: z.object({
+        required: z.boolean().default(false)
+      }).optional(),
+      removable: z.boolean().default(true)
+    });
 
-### SCHEMA SPECIFICATION:
-1. "text": Short text input. { "label": "string", "placeholder": "string?", "helpText": "string?" }
-2. "textarea": Long text area. { "label": "string", "placeholder": "string?", "helpText": "string?" }
-3. "choice": Multiple choice or checkbox. { "label": "string", "options": ["string"], "multiSelect": boolean?, "allowOther": boolean?, "helpText": "string?" }
-4. "rating": Star rating. { "label": "string", "maxRating": number?, "helpText": "string?" }
-5. "date": Date picker. { "label": "string", "helpText": "string?" }
-6. "file": File upload. { "label": "string", "helpText": "string?" }
-7. "info": Informational markdown. { "label": "string?", "body": "string" }
-8. "statement": Centered heading/text (start/end pages). { "label": "string?", "body": "string" }
- 
-❗️ IMPORTANT SCHEMA CONSTRAINTS:
-- For ALL blocks (except 'start'/'ending' pages), you MUST provide a "label" under "content". Without "label", the UI will show "제목 없음" (Empty Title).
-- The "label" MUST be descriptive and in Korean (e.g., "이름을 입력해주세요").
-- Do NOT generate empty objects. Every added block must have "id", "type", and "content".
- 
-### VALID PAGE STRUCTURE:
+    const PageValueSchema = z.object({
+      id: z.string(),
+      type: z.enum(['start', 'default', 'ending']),
+      title: z.string(),
+      blocks: z.array(BlockValueSchema).default([])
+    });
+
+    const systemPrompt = `
+You are an expert AI Form Builder. You generate RFC 6902 JSON patches to modify a **Form Factor v2** schema.
+
+### SCHEMA ARCHITECTURE (v2):
 {
-  "id": "string",
-  "type": "start" | "default" | "ending",
-  "title": "string",
-  "blocks": []
+  "pages": {
+    "start": { "title": "시작 페이지", "blocks": [] },
+    "questions": [ { "title": "1페이지", "blocks": [] } ],
+    "endings": [ { "title": "종료 페이지", "blocks": [] } ]
+  }
 }
 
-### JSON PATCH RULES:
-- Use RFC 6902 operations (add, remove, replace, move, copy, test).
-- To add a block: {"op": "add", "path": "/pages/{pageIndex}/blocks/-", "value": { "id": "random_id", "type": "BLOCK_TYPE", "content": { ... }, "validation": { "required": false } }}
-- To update a field: {"op": "replace", "path": "/pages/{pageIndex}/blocks/{blockIndex}/content/label", "value": "New Label"}
-- To remove a block: {"op": "remove", "path": "/pages/{pageIndex}/blocks/{blockIndex}"}
+### BLOCK TYPE REQUIREMENTS:
+- 'text'/'textarea': Need 'label', 'placeholder'.
+- 'choice': Need 'label', 'options' (Array).
+- 'rating': Need 'label', 'maxRating' (Number).
+- 'statement'/'info': Need 'label' or 'body'.
 
-### CONSTRAINTS:
-- DO NOT use block types other than those listed above (e.g., NO "shortText", "email", etc. Use "text" instead).
-- Always generate unique "id" for new blocks.
-- Ensure the resulting schema remains valid.
+### PATH CONVENTIONS:
+- Add block to start page: /pages/start/blocks/-
+- Add block to first question page: /pages/questions/0/blocks/-
+- Update metadata: /metadata/title
+
+### RULES:
+1. Every "add" operation for a block MUST have a "value" matching the Block Schema.
+2. ❗️IMPORTANT: "content" is an OBJECT, not a string. "label" is INSIDE "content".
+3. Use Korean (한국어) for all user-facing strings (label, title, placeholder).
 
 ### CURRENT SCHEMA:
 ${JSON.stringify(currentSchema, null, 2)}
 `.trim();
 
-    // 4. Generate Object with memory context
     const { object } = await generateObject({
       model,
       system: systemPrompt,
       messages: chatMessages,
       schema: z.object({
-        summary: z.string().describe("한국어로 변경 내용을 간결하게 설명하는 메시지 (대화형 식 1-2문장) 또는 변경 불가 사유. 답변은 assistant로서 사용자와 소통하듯이 자연스럽게 작성하세요."),
+        reasoning: z.string().describe("Plan for the structural changes (In Korean)"),
+        summary: z.string().describe("User-facing summary of changes"),
         patches: z.array(
           z.object({
             op: z.enum(['add', 'remove', 'replace', 'move', 'copy', 'test']),
             path: z.string(),
-            value: z.any().optional()
+            value: z.union([BlockValueSchema, PageValueSchema, z.string(), z.number(), z.boolean()]).optional().describe('Patch value. For block additions, must include id, type, and content object.')
           })
-        ).describe("Array of RFC 6902 JSON patch operations corresponding to the fix. Return empty array if no change is needed."),
+        ),
       }),
       temperature: 0.1,
     });
 
-    // ⚠️ Security: Clear key from memory (best effort)
-    apiKey = "";
+    // [DEBUG]
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('\n--- 🤖 AI Agent Response ---');
+      console.log('🧠 Reasoning:', object.reasoning);
+      console.log('🛠️ Patches:', JSON.stringify(object.patches, null, 2));
+    }
 
     return NextResponse.json({
       patches: object.patches || [],
-      summary: object.summary || ''
+      summary: object.summary || '',
+      reasoning: object.reasoning
     });
   } catch (error: any) {
     console.error('[AI Proxy] Error:', error);
