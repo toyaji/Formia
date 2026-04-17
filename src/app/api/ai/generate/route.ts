@@ -54,78 +54,92 @@ export async function POST(request: NextRequest) {
       ? extOpenAI('gpt-4o')
       : extGoogle('gemini-2.0-flash');
 
-    const hasQuestions = currentSchema.pages?.questions?.length > 0;
-    const targetPath = hasQuestions ? "/pages/questions/0/blocks" : "/pages/start/blocks";
+    // 4. Define Strict Block Schema for AI Response Enforcement
+    const BlockValueSchema = z.object({
+      id: z.string().describe("UUID or random string"),
+      type: z.enum(['text', 'textarea', 'choice', 'rating', 'date', 'file', 'info', 'statement']),
+      content: z.object({
+        label: z.string().describe("The primary question or title text. MANDATORY."),
+        placeholder: z.string().optional().describe("Input hint text"),
+        helpText: z.string().optional().describe("Small descriptive text below label"),
+        options: z.array(z.string()).optional().describe("Array of options for choice type ONLY"),
+        maxRating: z.number().optional().describe("Max value for rating type ONLY"),
+        body: z.string().optional().describe("Main Markdown body for info/statement types"),
+      }),
+      validation: z.object({
+        required: z.boolean().default(false)
+      }).optional(),
+      removable: z.boolean().default(true)
+    });
+
+    const PageValueSchema = z.object({
+      id: z.string(),
+      type: z.enum(['start', 'default', 'ending']),
+      title: z.string(),
+      blocks: z.array(BlockValueSchema).default([])
+    });
 
     const systemPrompt = `
-You are a brilliant UI/UX web designer acting as an AI Form Builder.
-You generate RFC 6902 JSON patch operations to modify the form schema according to user requests.
-Always respond in Korean. Add emojis where appropriate in your summary.
+You are an expert AI Form Builder. You generate RFC 6902 JSON patches to modify a **Form Factor v2** schema.
 
-### BLOCK SCHEMA STRUCTURE:
-When you create a new block (using the "add" operation), its "value" MUST EXACTLY match this strict JSON structure:
+### SCHEMA ARCHITECTURE (v2):
 {
-  "id": "must_be_random_unique_string",
-  "type": "text", // (or "textarea", "choice", "rating", "date", "file", "info", "statement")
-  "content": {
-    "label": "이름을 입력해주세요", // ❗️CRITICAL: This is the actual question/title text! MUST be inside "content" object.
-    "placeholder": "예: 홍길동", // Optional.
-    "helpText": "정확한 실명을 입력해주세요.", // Optional.
-    "options": ["옵션1", "옵션2"] // ONLY for "choice" type!
-  },
-  "validation": {
-    "required": true // Boolean. Set to true if the user must fill this out.
+  "pages": {
+    "start": { "title": "시작 페이지", "blocks": [] },
+    "questions": [ { "title": "1페이지", "blocks": [] } ],
+    "endings": [ { "title": "종료 페이지", "blocks": [] } ]
   }
 }
 
-❗️ IMPORTANT SCHEMA CONSTRAINTS:
-- For ALL blocks (except 'start'/'ending' pages), you MUST provide a "label" under "content". Without "label", the UI will show "제목 없음" (Empty Title).
-- The "label" MUST be descriptive and in Korean. This serves as the title of the question.
-- "content" MUST ALWAYS be an object `{ ... }`, NEVER a string!
-- "validation" MUST ALWAYS be an object `{ ... }`, NEVER a string!
-- Do NOT generate empty objects. Every added block must have "id", "type", and "content" with "label".
+### BLOCK TYPE REQUIREMENTS:
+- 'text'/'textarea': Need 'label', 'placeholder'.
+- 'choice': Need 'label', 'options' (Array).
+- 'rating': Need 'label', 'maxRating' (Number).
+- 'statement'/'info': Need 'label' or 'body'.
 
-### JSON PATCH RULES:
-- Use RFC 6902 operations (add, remove, replace, move, copy, test).
-- ❗️CRITICAL: To add a new question/input block, you MUST generate an "add" patch aiming EXACTLY at:
-  {"op": "add", "path": "${targetPath}/-", "value": { "id": "random_id", "type": "BLOCK_TYPE", "content": { "label": "Descriptive Label" }, "validation": { "required": false } }}
-- To update a field: {"op": "replace", "path": "${targetPath}/{blockIndex}/content/label", "value": "New Label"}
-- To remove a block: {"op": "remove", "path": "${targetPath}/{blockIndex}"}
-- ❗️CRITICAL: Do NOT just update metadata. You MUST create the actual UI blocks necessary for the user's request. Generate multiple "add" patches if multiple fields are needed.
+### PATH CONVENTIONS:
+- Add block to start page: /pages/start/blocks/-
+- Add block to first question page: /pages/questions/0/blocks/-
+- Update metadata: /metadata/title
 
-### CONSTRAINTS:
-- DO NOT use block types other than those listed above (e.g., NO "shortText", "email", etc. Use "text" instead).
-- Always generate unique random strings for the "id" of new blocks.
-- Ensure the resulting schema remains valid.
+### RULES:
+1. Every "add" operation for a block MUST have a "value" matching the Block Schema.
+2. ❗️IMPORTANT: "content" is an OBJECT, not a string. "label" is INSIDE "content".
+3. Use Korean (한국어) for all user-facing strings (label, title, placeholder).
 
 ### CURRENT SCHEMA:
 ${JSON.stringify(currentSchema, null, 2)}
 `.trim();
 
-    // 4. Generate Object with memory context
     const { object } = await generateObject({
       model,
       system: systemPrompt,
       messages: chatMessages,
       schema: z.object({
-        summary: z.string().describe("한국어로 변경 내용을 간결하게 설명하는 메시지 (대화형 식 1-2문장) 또는 변경 불가 사유. 답변은 assistant로서 사용자와 소통하듯이 자연스럽게 작성하세요."),
+        reasoning: z.string().describe("Plan for the structural changes (In Korean)"),
+        summary: z.string().describe("User-facing summary of changes"),
         patches: z.array(
           z.object({
             op: z.enum(['add', 'remove', 'replace', 'move', 'copy', 'test']),
             path: z.string(),
-            value: z.any().optional().describe('If op is "add" or "replace", value must contain "content": { "label": "Text" }. Never omit the label for new UI blocks.')
+            value: z.union([BlockValueSchema, PageValueSchema, z.string(), z.number(), z.boolean()]).optional().describe('Patch value. For block additions, must include id, type, and content object.')
           })
-        ).describe("Array of RFC 6902 JSON patch operations corresponding to the fix. Return empty array if no change is needed."),
+        ),
       }),
       temperature: 0.1,
     });
 
-    // ⚠️ Security: Clear key from memory (best effort)
-    apiKey = "";
+    // [DEBUG]
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('\n--- 🤖 AI Agent Response ---');
+      console.log('🧠 Reasoning:', object.reasoning);
+      console.log('🛠️ Patches:', JSON.stringify(object.patches, null, 2));
+    }
 
     return NextResponse.json({
       patches: object.patches || [],
-      summary: object.summary || ''
+      summary: object.summary || '',
+      reasoning: object.reasoning
     });
   } catch (error: any) {
     console.error('[AI Proxy] Error:', error);

@@ -7,6 +7,7 @@ import { FormFactor, BlockTypeSchema } from '../core/schema';
 interface ValidationResult {
   validPatches: Operation[];
   errors: string[];
+  isValid: boolean;
 }
 
 /**
@@ -20,6 +21,7 @@ export function validatePatchesDetailed(patches: Operation[], schema: FormFactor
   const errors: string[] = [];
 
   const validPatches = patches.filter(patch => {
+    // ... (rest of the logic remains the same)
     // 1. Validate removal
     if (patch.op === 'remove') {
       const path = patch.path;
@@ -87,11 +89,33 @@ export function validatePatchesDetailed(patches: Operation[], schema: FormFactor
       if (blockAddMatch && patch.op === 'add') {
         const v = patch.value as any;
         if (!v || !v.id || !v.type || !v.content) {
-          errors.push(`Incomplete block structure at ${patch.path}. Missing id, type, or content.`);
+          errors.push(`Incomplete block structure. Missing id, type, or content at ${path}`);
           return false;
         }
         if (!validBlockTypes.includes(v.type as any)) {
-          errors.push(`Invalid block type: "${v.type}". Valid types are: ${validBlockTypes.join(', ')}`);
+          errors.push(`Invalid block type: "${v.type}" at ${path}. Valid types: ${validBlockTypes.join(', ')}`);
+          return false;
+        }
+
+        // Deep Content Validation
+        const content = v.content;
+        if (!content.label && v.type !== 'statement' && v.type !== 'info') {
+          errors.push(`Block type "${v.type}" requires "content.label" (the question title) at ${path}`);
+          return false;
+        }
+
+        if (v.type === 'choice' && (!content.options || !Array.isArray(content.options) || content.options.length === 0)) {
+          errors.push(`Block type "choice" requires a non-empty "content.options" array at ${path}`);
+          return false;
+        }
+
+        if (v.type === 'rating' && content.maxRating !== undefined && (typeof content.maxRating !== 'number' || content.maxRating < 1)) {
+          errors.push(`Block type "rating" requires a valid "content.maxRating" (number >= 1) at ${path}`);
+          return false;
+        }
+
+        if ((v.type === 'info' || v.type === 'statement') && !content.label && !content.body) {
+          errors.push(`Block type "${v.type}" requires at least "content.label" or "content.body" at ${path}`);
           return false;
         }
       }
@@ -134,7 +158,7 @@ export function validatePatchesDetailed(patches: Operation[], schema: FormFactor
     return true;
   });
 
-  return { validPatches, errors };
+  return { validPatches, errors, isValid: errors.length === 0 };
 }
 
 export function validatePatches(patches: Operation[], schema: FormFactor): Operation[] {
