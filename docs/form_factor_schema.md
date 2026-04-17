@@ -22,7 +22,11 @@ The "Form Factor" is the core JSON object that represents a form's lifecycle.
       "radius": "8px"
     }
   },
-  "pages": [],
+  "pages": {
+    "start": { "id": "start", "type": "start", "title": "시작 페이지", "blocks": [] },
+    "questions": [ { "id": "p1", "type": "default", "title": "1페이지", "blocks": [] } ],
+    "endings": [ { "id": "end", "type": "ending", "title": "종료 페이지", "blocks": [] } ]
+  },
   "settings": {
     "submitButtonLabel": "제출하기",
     "successMessage": "성공적으로 제출되었습니다."
@@ -92,10 +96,10 @@ Agents emit **RFC 6902 JSON Patches**.
 - **Editable Form Name**: The form's global name (metadata.title) is editable directly in the top header.
 - **Page Naming**: AI must generate mandatory `title` fields. It should use the default naming convention ("N페이지" or "N 종료 페이지") unless the user explicitly requests a specific title.
 
-### Example: "Add a Name Question"
+### Example: "Add a Name Question to start page"
 
 ```json
 [
-  { "op": "add", "path": "/pages/1/blocks/-", "value": { ... } }
+  { "op": "add", "path": "/pages/start/blocks/-", "value": { "id": "q1", "type": "text", "content": { "label": "성함" } } }
 ]
 ```

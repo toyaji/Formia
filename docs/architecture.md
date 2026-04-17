@@ -229,7 +229,7 @@ Service Layer는 **온라인 서비스 기능**을 담당합니다. 에디터와
 **Service Layer는 Form Factor의 내부 구조를 해석하지 않습니다.**
 
 ```
-에디터 → save({ pages: [...], theme: {...}, ... })
+에디터 → save({ pages: {...}, theme: {...}, ... })
                     │
           ┌─────────▼──────────┐
           │  Service Layer     │

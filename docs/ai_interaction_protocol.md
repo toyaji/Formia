@@ -9,16 +9,20 @@ The Formia Agent is not just a chatbot; it's a **Schema Co-Author**.
     - Current `form_factor.json`
     - Design System constraints (allowed tokens)
     - Available Block Types
-3.  **Agent Reasoning**: Determines which parts of the schema need to change.
+3.  **Agent Reasoning (Chain-of-Thought)**:
+    - The AI generates a `reasoning` field first to outline its structural plan in natural language.
+    - This improves logic for complex nested paths (v2).
 4.  **Schema Patch Generation**:
-    - Agent generates a sequence of **JSON Patches (RFC 6902)** instead of the full schema.
+    - Agent generates a sequence of **JSON Patches (RFC 6902)**.
     - **Mechanism**:
-      - **JSON Mode & Response Schema**: For models that support it (OpenAI, Gemini), we enforce a strict **Response Schema**. This guarantees the output is always a valid JSON array or object that follows the RFC 6902 structure.
-      - **Few-shot examples**: The prompt includes examples to ensure the path logic (e.g., `/blocks/-` for appending) is understood.
-    - **Validation**: Patches are validated against a local JSON Schema validator before being applied to the in-memory Factor.
-5.  **Draft Preview**: The UI reflects changes in a "Draft" state (e.g., glowing borders).
-6.  **Human Confirmation/Revert**: User accepts, adjusts, or **Undoes** the AI-generated patch.
-7.  **Commit to History**: Once accepted, the change is saved into the Form Factor History for full auditability.
+      - **Strict Zod Schema**: The Backend Proxy enforces a strict Zod schema for the patch `value`. This prevents common hallucinations like sending `"content": "string"` instead of an object.
+      - **Few-shot examples**: The prompt includes examples to ensure the path logic (e.g., `/pages/start/blocks/-` for appending) is understood.
+    - **Validation**: Patches are validated twice:
+      1. **Structural Validation (Zod)**: In the Backend Proxy during generation.
+      2. **Logical Validation (Custom)**: In the frontend `patchValidator.ts` before insertion into the store.
+5.  **Draft Preview (Review Mode)**: The UI reflects changes in a "Draft" state using a diff view.
+6.  **Human Confirmation/Revert**: User accepts, adjusts, or **Undoes** the AI-generated patch through the AI Panel.
+7.  **Commit to History**: Once accepted, the change is saved into the Form Factor History.
 
 ## 2. System Instructions (Prompt Principles)
 
