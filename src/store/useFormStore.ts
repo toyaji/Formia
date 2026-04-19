@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { FormFactor } from '@/lib/core/schema';
 import { applyPatch, Operation } from 'rfc6902';
-import { buildReviewModel, ReviewFormPage, sortPages } from '@/lib/utils/patchUtils';
+import { buildReviewModel, ReviewFormPage } from '@/lib/utils/patchUtils';
 import { CloudAPIRepository } from '@/lib/infrastructure/CloudAPIRepository';
 import { TauriFileRepository } from '@/lib/infrastructure/TauriFileRepository';
 import { LocalStorageRepository } from '@/lib/infrastructure/LocalStorageRepository';
@@ -26,7 +26,6 @@ export interface PatchItem {
   status: 'pending' | 'accepted' | 'rejected';
   targetBlockId?: string;
   changeType: 'add' | 'remove' | 'replace';
-  // Field-level targeting: 'label', 'options/0', 'options/1', 'block' (entire block)
   targetField?: string;
 }
 
@@ -41,7 +40,7 @@ interface FormState {
   isDraft: boolean;
   setDraft: (isDraft: boolean) => void;
   messages: Message[];
-  addMessage: (message: Omit<Message, 'id' | 'timestamp'>) => void;
+  addMessage: (message: Omit<Message, 'id' | 'timestamp'>) => Promise<void>;
   clearMessages: () => void;
   proposedPatches: Operation[] | null;
   setProposedPatches: (patches: Operation[] | null) => void;
@@ -81,6 +80,15 @@ interface FormState {
   saveSnapshot: () => void;
   restoreSnapshot: () => void;
   
+  // Chat Sessions
+  currentSessionId: string | null;
+  chatSessions: any[];
+  isLoadingSessions: boolean;
+  loadChatSessions: (formId: string) => Promise<void>;
+  startNewChat: () => Promise<void>;
+  switchChatSession: (sessionId: string) => Promise<void>;
+  deleteChatSession: (sessionId: string) => Promise<void>;
+  
   // Persistence State
   session: any;
   setSession: (session: any) => void;
@@ -117,14 +125,36 @@ function getRepository(session: any): FormRepository {
 export const useFormStore = create<FormState>()(
   persist(
     (set: any, get: any): FormState => ({
-      formFactor: null as FormFactor | null,
-      activePageId: null as string | null,
-      activeBlockId: null as string | null,
+      formFactor: null,
+      activePageId: null,
+      activeBlockId: null,
       isDraft: false,
       messages: [],
+      currentSessionId: null,
+      chatSessions: [],
+      isLoadingSessions: false,
+      saveStatus: 'idle',
+      lastSyncedAt: null,
+      session: null,
+      formsList: [],
+      isLoadingForms: false,
+      formId: null,
+      proposedPatches: null,
+      history: [],
+      future: [],
+      config: {},
+      aiKeyStatus: {},
+      viewport: 'desktop',
+      isReviewMode: false,
+      pendingPatches: [],
+      preReviewSnapshot: null,
 
+      setSession: (session: any) => set({ session }),
+      
       setActivePageId: (id: string | null) => set({ activePageId: id, activeBlockId: null }),
+      
       setActiveBlockId: (id: string | null) => set({ activeBlockId: id }),
+      
       setFormFactor: (factor: FormFactor) => {
         set({ formFactor: factor });
         if (!get().activePageId) {
@@ -138,41 +168,25 @@ export const useFormStore = create<FormState>()(
         }
       },
 
-      formId: null,
       setFormId: (id: string | null) => {
         const currentId = get().formId;
         if (id !== currentId) {
           set({ formId: id, formFactor: null, saveStatus: 'idle', lastSyncedAt: null });
         }
       },
-      saveStatus: 'idle',
-      lastSyncedAt: null,
-      session: null,
-      setSession: (session: any) => set({ session }),
-      formsList: [],
-      isLoadingForms: false,
 
       initApp: async (initSession: any) => {
         const currentSession = initSession || get().session;
         const repo = getRepository(currentSession);
         const { formId, formFactor } = get();
-
-        // If we already have the correct formId and factor, we are good
         if (formId && formFactor) return;
-
         try {
           let targetId = formId;
-
           if (!targetId) {
             const list = await repo.list();
-            if (list.length > 0) {
-              targetId = list[0].id;
-            }
+            if (list.length > 0) targetId = list[0].id;
           }
-
-          if (targetId) {
-            await get().loadFormById(targetId);
-          }
+          if (targetId) await get().loadFormById(targetId);
         } catch (e) {
           console.error('[initApp] Failed to load initial form:', e);
         }
@@ -180,7 +194,6 @@ export const useFormStore = create<FormState>()(
 
       loadFormById: async (id: string) => {
         if (!id || id === 'draft' || id === 'new') return;
-        
         const { session } = get();
         const repo = getRepository(session);
         try {
@@ -189,11 +202,68 @@ export const useFormStore = create<FormState>()(
             formFactor: factor, 
             formId: id,
             saveStatus: 'saved',
-            lastSyncedAt: factor.metadata.updatedAt || new Date().toISOString()
+            lastSyncedAt: factor.metadata.updatedAt || new Date().toISOString(),
+            currentSessionId: null,
+            messages: []
           });
+          if (session?.user?.id) get().loadChatSessions(id);
         } catch (e) {
           console.error(`[loadFormById] Failed to load form ${id}:`, e);
           throw e;
+        }
+      },
+
+      loadChatSessions: async (formId: string) => {
+        set({ isLoadingSessions: true });
+        try {
+          const res = await fetch(`/api/forms/${formId}/chat-sessions`);
+          if (res.ok) set({ chatSessions: await res.json() });
+        } catch (error) {
+          console.error('Failed to load chat sessions:', error);
+        } finally {
+          set({ isLoadingSessions: false });
+        }
+      },
+
+      startNewChat: async () => {
+        set({ currentSessionId: null, messages: [] });
+      },
+
+      switchChatSession: async (sessionId: string) => {
+        set({ isLoadingSessions: true });
+        try {
+          const res = await fetch(`/api/chat-sessions/${sessionId}`);
+          if (res.ok) {
+            const data = await res.json();
+            set({ 
+              currentSessionId: sessionId,
+              messages: data.messages.map((m: any) => ({
+                id: m.id,
+                role: m.role,
+                content: m.content,
+                timestamp: m.createdAt
+              }))
+            });
+          }
+        } catch (error) {
+          console.error('Failed to switch chat session:', error);
+        } finally {
+          set({ isLoadingSessions: false });
+        }
+      },
+
+      deleteChatSession: async (sessionId: string) => {
+        if (!confirm('대화 기록을 삭제하시겠습니까?')) return;
+        try {
+          const res = await fetch(`/api/chat-sessions/${sessionId}`, { method: 'DELETE' });
+          if (res.ok) {
+            const { chatSessions, currentSessionId } = get();
+            const newSessions = chatSessions.filter((s: any) => s.id !== sessionId);
+            set({ chatSessions: newSessions });
+            if (currentSessionId === sessionId) set({ currentSessionId: null, messages: [] });
+          }
+        } catch (error) {
+          console.error('Failed to delete chat session:', error);
         }
       },
 
@@ -202,8 +272,7 @@ export const useFormStore = create<FormState>()(
         const { session } = get();
         try {
           const repo = getRepository(session);
-          const forms = await repo.list();
-          set({ formsList: forms });
+          set({ formsList: await repo.list() });
         } catch (e) {
           console.error('Failed to load forms list:', e);
         } finally {
@@ -215,7 +284,6 @@ export const useFormStore = create<FormState>()(
         const { formFactor, formId, session } = get();
         const effectiveSession = customSession || session;
         if (!formFactor || !formId) return;
-        
         set({ saveStatus: 'saving' });
         try {
           const repo = getRepository(effectiveSession);
@@ -228,7 +296,7 @@ export const useFormStore = create<FormState>()(
       },
 
       exportCurrentForm: async () => {
-        const { formFactor, formId } = get();
+        const { formFactor } = get();
         if (!formFactor) return;
         const data = JSON.stringify(formFactor, null, 2);
         const blob = new Blob([data], { type: 'application/json' });
@@ -285,7 +353,6 @@ export const useFormStore = create<FormState>()(
       deleteForm: async (id: string) => {
         const { session, loadAllForms } = get();
         if (!confirm('정말 삭제하시겠습니까?')) return;
-        
         try {
           const repo = getRepository(session);
           await repo.delete(id);
@@ -296,361 +363,245 @@ export const useFormStore = create<FormState>()(
         }
       },
 
-  applyJsonPatch: (patches: Operation[]) => {
-    get().recordAction();
-    const current = get().formFactor;
-    if (!current) return;
+      applyJsonPatch: (patches: Operation[]) => {
+        get().recordAction();
+        const current = get().formFactor;
+        if (!current) return;
+        const next = JSON.parse(JSON.stringify(current));
+        const results = applyPatch(next, patches);
+        if (results.every((r: any) => r === null)) {
+          set({ formFactor: next });
+          const timeoutId = (window as any)._formiaSaveTimeout;
+          if (timeoutId) clearTimeout(timeoutId);
+          (window as any)._formiaSaveTimeout = setTimeout(() => {
+            get().syncWithPersistence();
+          }, 1000);
+        } else {
+          console.error('Failed to apply some patches:', results);
+        }
+      },
 
-    // We clone the state to avoid direct mutation
-    const next = JSON.parse(JSON.stringify(current));
-    const results = applyPatch(next, patches);
+      setDraft: (isDraft: boolean) => set({ isDraft }),
 
-    // Check if all patches were applied successfully
-    const allSuccessful = results.every((r: any) => r === null);
+      addMessage: async (message: Omit<Message, 'id' | 'timestamp'>) => {
+        const { currentSessionId, formId, session } = get();
+        const newMessage: Message = {
+          ...message,
+          id: Math.random().toString(36).substring(7),
+          timestamp: new Date().toISOString(),
+        };
+        set((state: FormState) => ({
+          messages: [...state.messages, newMessage],
+        }));
+        if (session?.user?.id && formId) {
+          try {
+            let sessionId = currentSessionId;
+            if (!sessionId) {
+              const res = await fetch(`/api/forms/${formId}/chat-sessions`, {
+                method: 'POST',
+                body: JSON.stringify({ title: message.content.substring(0, 30) }),
+              });
+              if (res.ok) {
+                const newSession = await res.json();
+                sessionId = newSession.id;
+                set({ currentSessionId: sessionId });
+                get().loadChatSessions(formId);
+              }
+            }
+            if (sessionId) {
+              await fetch(`/api/chat-sessions/${sessionId}/messages`, {
+                method: 'POST',
+                body: JSON.stringify({ role: message.role, content: message.content }),
+              });
+              if (!currentSessionId) get().loadChatSessions(formId);
+            }
+          } catch (error) {
+            console.error('Failed to persist message:', error);
+          }
+        }
+      },
 
-    if (allSuccessful) {
-      set({ formFactor: next });
-      
-      // Auto-save logic
-      const timeoutId = (window as any)._formiaSaveTimeout;
-      if (timeoutId) clearTimeout(timeoutId);
-      
-      (window as any)._formiaSaveTimeout = setTimeout(() => {
-        get().syncWithPersistence();
-      }, 1000); // 1s debounce
-    } else {
-      console.error('Failed to apply some patches:', results);
-    }
-  },
+      clearMessages: () => set({ messages: [], currentSessionId: null }),
 
-  setDraft: (isDraft: boolean) => set({ isDraft }),
+      setProposedPatches: (patches: Operation[] | null) => set({ proposedPatches: patches }),
 
-  addMessage: (message: Omit<Message, 'id' | 'timestamp'>) => {
-    const newMessage: Message = {
-      ...message,
-      id: Math.random().toString(36).substring(7),
-      timestamp: new Date().toISOString(),
-    };
-    set((state: FormState) => ({
-      messages: [...state.messages, newMessage],
-    }));
-  },
+      getEffectiveFactor: () => {
+        const { formFactor, pendingPatches } = get();
+        if (!formFactor) return null;
+        const activePatches = pendingPatches.filter((p: PatchItem) => p.status === 'pending');
+        if (activePatches.length === 0) return formFactor;
+        const preview = JSON.parse(JSON.stringify(formFactor));
+        applyPatch(preview, activePatches.map((p: PatchItem) => p.patch));
+        return preview;
+      },
 
-  clearMessages: () => set({ messages: [] }),
+      getReviewViewModel: () => {
+        const { preReviewSnapshot, pendingPatches } = get();
+        const effective = get().getEffectiveFactor();
+        return buildReviewModel(preReviewSnapshot, effective, pendingPatches);
+      },
 
-  proposedPatches: null,
-  setProposedPatches: (patches: Operation[] | null) => set({ proposedPatches: patches }),
+      recordAction: () => {
+        const { formFactor, history } = get();
+        if (!formFactor) return;
+        const nextHistory = [JSON.parse(JSON.stringify(formFactor)), ...history].slice(0, 50);
+        set({ history: nextHistory, future: [] });
+      },
 
-  getEffectiveFactor: () => {
-    const { formFactor, pendingPatches } = get();
-    if (!formFactor) return null;
-    
-    // Use pending patches instead of proposedPatches
-    // Filter only patches that are still pending
-    const activePatches = pendingPatches.filter((p: PatchItem) => p.status === 'pending');
-    
-    if (activePatches.length === 0) return formFactor;
+      undo: () => {
+        const { history, future, formFactor } = get();
+        if (history.length === 0 || !formFactor) return;
+        const previous = history[0];
+        set({
+          formFactor: previous,
+          history: history.slice(1),
+          future: [JSON.parse(JSON.stringify(formFactor)), ...future]
+        });
+      },
 
-    // Create a temporary clone and apply pending patches for preview
-    // Note: Patches must be applied in order, but we filter out accepted/rejected.
-    // If patches were generated sequentially, applying later patches on top of (accepted + pending) state should work
-    // IF the accepted patches didn't change the path structure in a way that invalidates pending patches.
-    // Given AI usually generates a sequence of operations, this is the best effort preview logic.
-    const preview = JSON.parse(JSON.stringify(formFactor));
-    const ops = activePatches.map((p: PatchItem) => p.patch);
-    
-    // Apply patches safely - if one fails, try to continue or just log
-    // rfc6902 applyPatch modifies in place and returns results.
-    applyPatch(preview, ops);
-    
-    return preview;
-  },
+      redo: () => {
+        const { history, future, formFactor } = get();
+        if (future.length === 0 || !formFactor) return;
+        set({
+          formFactor: future[0],
+          history: [JSON.parse(JSON.stringify(formFactor)), ...history],
+          future: future.slice(1)
+        });
+      },
 
-  getReviewViewModel: () => {
-    const { preReviewSnapshot, pendingPatches } = get();
-    const effective = get().getEffectiveFactor();
-    return buildReviewModel(preReviewSnapshot, effective, pendingPatches);
-  },
-
-  // History Implementation
-  history: [],
-  future: [],
-
-  recordAction: () => {
-    const { formFactor, history } = get();
-    if (!formFactor) return;
-    
-    // Max history size 50
-    const nextHistory = [JSON.parse(JSON.stringify(formFactor)), ...history].slice(0, 50);
-    set({ history: nextHistory, future: [] });
-  },
-
-  undo: () => {
-    const { history, future, formFactor } = get();
-    if (history.length === 0 || !formFactor) return;
-
-    const previous = history[0];
-    const newHistory = history.slice(1);
-    const newFuture = [JSON.parse(JSON.stringify(formFactor)), ...future];
-
-    set({
-      formFactor: previous,
-      history: newHistory,
-      future: newFuture
-    });
-  },
-
-  redo: () => {
-    const { history, future, formFactor } = get();
-    if (future.length === 0 || !formFactor) return;
-
-    const next = future[0];
-    const newFuture = future.slice(1);
-    const newHistory = [JSON.parse(JSON.stringify(formFactor)), ...history];
-
-      set({
-        formFactor: next,
-        history: newHistory,
-        future: newFuture
-      });
-    },
-
-    // Settings
-    config: {},
-    setConfig: (newConfig: Partial<AppConfig>) => set((state: FormState) => ({
-      config: { ...state.config, ...newConfig }
-    })),
-    aiKeyStatus: {},
-    setAiKeyStatus: (provider: string, status: { active: boolean; masked: string }) => 
-      set((state: FormState) => ({
-        aiKeyStatus: { ...state.aiKeyStatus, [provider]: status }
+      setConfig: (newConfig: Partial<AppConfig>) => set((state: FormState) => ({
+        config: { ...state.config, ...newConfig }
       })),
 
-    // Viewport
-    viewport: 'desktop',
-    setViewport: (viewport: 'desktop' | 'mobile') => set({ viewport }),
+      setAiKeyStatus: (provider: string, status: { active: boolean; masked: string }) => 
+        set((state: FormState) => ({
+          aiKeyStatus: { ...state.aiKeyStatus, [provider]: status }
+        })),
 
-    // Phase 13: Review Mode
-    isReviewMode: false,
-    pendingPatches: [],
-    preReviewSnapshot: null,
+      setViewport: (viewport: 'desktop' | 'mobile') => set({ viewport }),
 
-    setReviewMode: (mode: boolean) => set({ isReviewMode: mode }),
-    
-    setPendingPatches: (patches: PatchItem[]) => set({ pendingPatches: patches }),
-    
-    acceptPatch: (patchId: string) => {
-      const { pendingPatches, formFactor, preReviewSnapshot } = get();
-      const patch = pendingPatches.find((p: PatchItem) => p.id === patchId);
-      if (!patch || !preReviewSnapshot) return;
+      setReviewMode: (mode: boolean) => set({ isReviewMode: mode }),
       
-      // Apply this single patch to preReviewSnapshot and update formFactor
-      const updated = JSON.parse(JSON.stringify(preReviewSnapshot));
-      applyPatch(updated, [patch.patch]);
+      setPendingPatches: (patches: PatchItem[]) => set({ pendingPatches: patches }),
       
-      // Update pending patches status
-      const newPatches = pendingPatches.map((p: PatchItem) => 
-        p.id === patchId ? { ...p, status: 'accepted' as const } : p
-      );
-      
-      // Check if all patches are processed
-      const allProcessed = newPatches.every((p: PatchItem) => p.status !== 'pending');
-      
-      set({ 
-        formFactor: updated,
-        preReviewSnapshot: updated, // Update snapshot for next patch
-        pendingPatches: newPatches,
-        isReviewMode: !allProcessed
-      });
-    },
-    
-    rejectPatch: (patchId: string) => {
-      const { pendingPatches } = get();
-      
-      const newPatches = pendingPatches.map((p: PatchItem) => 
-        p.id === patchId ? { ...p, status: 'rejected' as const } : p
-      );
-      
-      const allProcessed = newPatches.every((p: PatchItem) => p.status !== 'pending');
-      
-      set({ 
-        pendingPatches: newPatches,
-        isReviewMode: !allProcessed
-      });
-    },
-    
-    // Resolve a page-level patch (accept/reject) and all its child patches (e.g. blocks inside)
-    resolvePagePatch: (patchId: string, action: 'accept' | 'reject') => {
-      const { pendingPatches, preReviewSnapshot } = get();
-      const mainPatch = pendingPatches.find((p: PatchItem) => p.id === patchId);
-      
-      if (!mainPatch || !preReviewSnapshot) return;
-
-      // Identify child patches: any patch where path starts with the page path
-      // e.g. main path: /pages/0 -> child path: /pages/0/blocks/1
-      const mainPath = mainPatch.patch.path;
-      const childPatches = pendingPatches.filter((p: PatchItem) => 
-        p.id !== patchId && 
-        p.status === 'pending' && 
-        p.patch.path.startsWith(mainPath + '/')
-      );
-      
-      const allTargetPatches = [mainPatch, ...childPatches];
-      
-      // Update statuses
-      const newStatus = action === 'accept' ? 'accepted' : 'rejected';
-      const targetIds = new Set(allTargetPatches.map(p => p.id));
-      
-      const newPendingPatches = pendingPatches.map((p: PatchItem) => 
-        targetIds.has(p.id) ? { ...p, status: newStatus } : p
-      );
-
-      // If accepting, apply changes to snapshot
-      let updatedSnapshot = preReviewSnapshot;
-      if (action === 'accept') {
-        updatedSnapshot = JSON.parse(JSON.stringify(preReviewSnapshot));
-        
-        // Strategy:
-        // - If main op is 'remove', only apply main patch. (Children are gone with parent).
-        // - If main op is 'add' or 'replace', apply main + children.
-        const opsToApply = [];
-        if (mainPatch.patch.op === 'remove') {
-          opsToApply.push(mainPatch.patch);
-        } else {
-          // Sort patches might be needed if children depend on order?
-          // Usually pendingPatches are in order.
-          // We filter them from pendingPatches list which preserves order.
-          opsToApply.push(mainPatch.patch, ...childPatches.map((p: PatchItem) => p.patch));
-        }
-        
-        // check for errors when applying
-        applyPatch(updatedSnapshot, opsToApply);
-      }
-
-      const allProcessed = newPendingPatches.every((p: PatchItem) => p.status !== 'pending'); 
-      
-      set({
-        formFactor: action === 'accept' ? updatedSnapshot : get().formFactor, // Only update effective formFactor if accepted (actually formFactor should match snapshot if accepted)
-        // Wait, normally formFactor tracks snapshot in review mode?
-        // Yes, acceptPatch updates formFactor AND preReviewSnapshot.
-        preReviewSnapshot: updatedSnapshot,
-        pendingPatches: newPendingPatches,
-        isReviewMode: !allProcessed
-      });
-    },
-    
-    // Accept all patches for a specific block at once
-    acceptPatchesByBlockId: (blockId: string) => {
-      const { pendingPatches, preReviewSnapshot } = get();
-      if (!preReviewSnapshot) return;
-      
-      // Get all pending patches for this block
-      const blockPatches = pendingPatches.filter(
-        (p: PatchItem) => p.targetBlockId === blockId && p.status === 'pending'
-      );
-      
-      if (blockPatches.length === 0) return;
-      
-      // Apply all patches for this block
-      const updated = JSON.parse(JSON.stringify(preReviewSnapshot));
-      blockPatches.forEach((p: PatchItem) => {
-        applyPatch(updated, [p.patch]);
-      });
-      
-      // Mark all these patches as accepted
-      const newPatches = pendingPatches.map((p: PatchItem) => 
-        p.targetBlockId === blockId && p.status === 'pending' 
-          ? { ...p, status: 'accepted' as const } 
-          : p
-      );
-      
-      const allProcessed = newPatches.every((p: PatchItem) => p.status !== 'pending');
-      
-      set({ 
-        formFactor: updated,
-        preReviewSnapshot: updated,
-        pendingPatches: newPatches,
-        isReviewMode: !allProcessed
-      });
-    },
-    
-    // Reject all patches for a specific block at once
-    rejectPatchesByBlockId: (blockId: string) => {
-      const { pendingPatches } = get();
-      
-      const newPatches = pendingPatches.map((p: PatchItem) => 
-        p.targetBlockId === blockId && p.status === 'pending' 
-          ? { ...p, status: 'rejected' as const } 
-          : p
-      );
-      
-      const allProcessed = newPatches.every((p: PatchItem) => p.status !== 'pending');
-      
-      set({ 
-        pendingPatches: newPatches,
-        isReviewMode: !allProcessed
-      });
-    },
-    
-    acceptAllPatches: () => {
-      const { pendingPatches, preReviewSnapshot } = get();
-      if (!preReviewSnapshot) return;
-      
-      // Apply all pending patches
-      const pendingOps = pendingPatches
-        .filter((p: PatchItem) => p.status === 'pending')
-        .map((p: PatchItem) => p.patch);
-      
-      const updated = JSON.parse(JSON.stringify(preReviewSnapshot));
-      applyPatch(updated, pendingOps);
-      
-      const newPatches = pendingPatches.map((p: PatchItem) => 
-        p.status === 'pending' ? { ...p, status: 'accepted' as const } : p
-      );
-      
-      set({ 
-        formFactor: updated,
-        pendingPatches: newPatches,
-        isReviewMode: false,
-        preReviewSnapshot: null
-      });
-    },
-    
-    rejectAllPatches: () => {
-      set({ 
-        pendingPatches: [],
-        isReviewMode: false,
-        preReviewSnapshot: null
-      });
-    },
-    
-    saveSnapshot: () => {
-      const { formFactor } = get();
-      if (formFactor) {
-        set({ preReviewSnapshot: JSON.parse(JSON.stringify(formFactor)) });
-      }
-    },
-    
-    restoreSnapshot: () => {
-      const { preReviewSnapshot } = get();
-      if (preReviewSnapshot) {
+      acceptPatch: (patchId: string) => {
+        const { pendingPatches, preReviewSnapshot } = get();
+        const patch = pendingPatches.find((p: PatchItem) => p.id === patchId);
+        if (!patch || !preReviewSnapshot) return;
+        const updated = JSON.parse(JSON.stringify(preReviewSnapshot));
+        applyPatch(updated, [patch.patch]);
+        const newPatches = pendingPatches.map((p: PatchItem) => 
+          p.id === patchId ? { ...p, status: 'accepted' as const } : p
+        );
+        const allProcessed = newPatches.every((p: PatchItem) => p.status !== 'pending');
         set({ 
-          formFactor: preReviewSnapshot,
-          preReviewSnapshot: null,
-          pendingPatches: [],
-          isReviewMode: false
+          formFactor: updated,
+          preReviewSnapshot: updated,
+          pendingPatches: newPatches,
+          isReviewMode: !allProcessed
         });
-      }
-    },
-  }),
-  {
-    name: 'formia-storage',
-    partialize: (state) => ({ 
-      config: state.config,
-      aiKeyStatus: state.aiKeyStatus,
-      formId: state.formId, // Persist last edited form ID
-      formFactor: state.formFactor, // Persist current form factor for session recovery
+      },
+      
+      rejectPatch: (patchId: string) => {
+        const { pendingPatches } = get();
+        const newPatches = pendingPatches.map((p: PatchItem) => 
+          p.id === patchId ? { ...p, status: 'rejected' as const } : p
+        );
+        const allProcessed = newPatches.every((p: PatchItem) => p.status !== 'pending');
+        set({ pendingPatches: newPatches, isReviewMode: !allProcessed });
+      },
+      
+      resolvePagePatch: (patchId: string, action: 'accept' | 'reject') => {
+        const { pendingPatches, preReviewSnapshot } = get();
+        const mainPatch = pendingPatches.find((p: PatchItem) => p.id === patchId);
+        if (!mainPatch || !preReviewSnapshot) return;
+        const mainPath = mainPatch.patch.path;
+        const childPatches = pendingPatches.filter((p: PatchItem) => 
+          p.id !== patchId && p.status === 'pending' && p.patch.path.startsWith(mainPath + '/')
+        );
+        const newStatus = action === 'accept' ? 'accepted' : 'rejected';
+        const targetIds = new Set([patchId, ...childPatches.map((p: PatchItem) => p.id)]);
+        const newPendingPatches = pendingPatches.map((p: PatchItem) => 
+          targetIds.has(p.id) ? { ...p, status: newStatus } : p
+        );
+        let updatedSnapshot = preReviewSnapshot;
+        if (action === 'accept') {
+          updatedSnapshot = JSON.parse(JSON.stringify(preReviewSnapshot));
+          applyPatch(updatedSnapshot, [mainPatch.patch, ...childPatches.map((p: PatchItem) => p.patch)]);
+        }
+        const allProcessed = newPendingPatches.every((p: PatchItem) => p.status !== 'pending'); 
+        set({
+          formFactor: action === 'accept' ? updatedSnapshot : get().formFactor,
+          preReviewSnapshot: updatedSnapshot,
+          pendingPatches: newPendingPatches,
+          isReviewMode: !allProcessed
+        });
+      },
+      
+      acceptPatchesByBlockId: (blockId: string) => {
+        const { pendingPatches, preReviewSnapshot } = get();
+        if (!preReviewSnapshot) return;
+        const blockPatches = pendingPatches.filter((p: PatchItem) => p.targetBlockId === blockId && p.status === 'pending');
+        if (blockPatches.length === 0) return;
+        const updated = JSON.parse(JSON.stringify(preReviewSnapshot));
+        blockPatches.forEach((p: PatchItem) => applyPatch(updated, [p.patch]));
+        const newPatches = pendingPatches.map((p: PatchItem) => 
+          p.targetBlockId === blockId && p.status === 'pending' ? { ...p, status: 'accepted' as const } : p
+        );
+        const allProcessed = newPatches.every((p: PatchItem) => p.status !== 'pending');
+        set({ 
+          formFactor: updated,
+          preReviewSnapshot: updated,
+          pendingPatches: newPatches,
+          isReviewMode: !allProcessed
+        });
+      },
+      
+      rejectPatchesByBlockId: (blockId: string) => {
+        const { pendingPatches } = get();
+        const newPatches = pendingPatches.map((p: PatchItem) => 
+          p.targetBlockId === blockId && p.status === 'pending' ? { ...p, status: 'rejected' as const } : p
+        );
+        const allProcessed = newPatches.every((p: PatchItem) => p.status !== 'pending');
+        set({ pendingPatches: newPatches, isReviewMode: !allProcessed });
+      },
+      
+      acceptAllPatches: () => {
+        const { pendingPatches, preReviewSnapshot } = get();
+        if (!preReviewSnapshot) return;
+        const pendingOps = pendingPatches.filter((p: PatchItem) => p.status === 'pending').map((p: PatchItem) => p.patch);
+        const updated = JSON.parse(JSON.stringify(preReviewSnapshot));
+        applyPatch(updated, pendingOps);
+        set({ 
+          formFactor: updated,
+          pendingPatches: pendingPatches.map((p: PatchItem) => p.status === 'pending' ? { ...p, status: 'accepted' as const } : p),
+          isReviewMode: false,
+          preReviewSnapshot: null
+        });
+      },
+      
+      rejectAllPatches: () => set({ pendingPatches: [], isReviewMode: false, preReviewSnapshot: null }),
+      
+      saveSnapshot: () => {
+        const { formFactor } = get();
+        if (formFactor) set({ preReviewSnapshot: JSON.parse(JSON.stringify(formFactor)) });
+      },
+      
+      restoreSnapshot: () => {
+        const { preReviewSnapshot } = get();
+        if (preReviewSnapshot) {
+          set({ formFactor: preReviewSnapshot, preReviewSnapshot: null, pendingPatches: [], isReviewMode: false });
+        }
+      },
     }),
-  }
-)
+    {
+      name: 'formia-storage',
+      partialize: (state) => ({ 
+        config: state.config,
+        aiKeyStatus: state.aiKeyStatus,
+        formId: state.formId,
+        formFactor: state.formFactor,
+      }),
+    }
+  )
 );

@@ -4,7 +4,9 @@ import { useState, useRef, useEffect } from 'react';
 import { useFormStore, Message, PatchItem } from '@/store/useFormStore';
 import { useAIPatch } from '@/hooks/useAIPatch';
 import styles from './AiPanel.module.css';
-import { Send, Trash2, Check, X, AlertCircle, RotateCcw } from 'lucide-react';
+import { Send, Trash2, Check, X, AlertCircle, RotateCcw, History, Plus, ArrowLeft } from 'lucide-react';
+import { format } from 'date-fns';
+import { ko } from 'date-fns/locale';
 import { convertOperationsToPatchItems } from '@/lib/utils/patchUtils';
 import { PatchDebugger } from '../viewer/PatchDebugger';
 
@@ -85,7 +87,13 @@ export const AiPanel = () => {
   const { generatePatchWithSummary, isLoading, streamingText } = useAIPatch();
   const [input, setInput] = useState('');
   const [isValidating, setIsValidating] = useState(true);
+  const [showHistory, setShowHistory] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  const { 
+    currentSessionId, chatSessions, isLoadingSessions,
+    loadChatSessions, startNewChat, switchChatSession, deleteChatSession
+  } = useFormStore();
 
 
   useEffect(() => {
@@ -176,10 +184,78 @@ export const AiPanel = () => {
         <div className={styles.titleGroup}>
           <span className={styles.title}>Formia AI</span>
         </div>
-        <button className={styles.clearBtn} onClick={clearMessages} title="대화 초기화">
-          <Trash2 size={18} />
-        </button>
+        <div className={styles.headerActions}>
+          <button 
+            className={styles.clearBtn} 
+            onClick={() => setShowHistory(true)} 
+            title="대화 히스토리"
+            style={{ position: 'relative' }}
+          >
+            <History size={18} />
+            {chatSessions.length > 0 && <div className={styles.historyBadge} />}
+          </button>
+          <button className={styles.clearBtn} onClick={startNewChat} title="새 대화 시작">
+            <Plus size={18} />
+          </button>
+        </div>
       </div>
+
+      {/* History Panel */}
+      {showHistory && (
+        <div className={styles.historyPanel}>
+          <div className={styles.historyHeader}>
+            <button className={styles.backBtn} onClick={() => setShowHistory(false)}>
+              <ArrowLeft size={20} />
+            </button>
+            <span className={styles.historyTitle}>대화 히스토리</span>
+          </div>
+
+          <button 
+            className={styles.newChatBtn} 
+            onClick={() => {
+              startNewChat();
+              setShowHistory(false);
+            }}
+          >
+            <Plus size={18} /> 새로운 채팅 시작
+          </button>
+
+          <div className={styles.sessionList}>
+            {chatSessions.length === 0 ? (
+              <div className={styles.emptyHistory}>
+                저장된 대화 기록이 없어요.
+              </div>
+            ) : (
+              chatSessions.map((session) => (
+                <div 
+                  key={session.id} 
+                  className={`${styles.sessionItem} ${currentSessionId === session.id ? styles.active : ''}`}
+                  onClick={() => {
+                    switchChatSession(session.id);
+                    setShowHistory(false);
+                  }}
+                >
+                  <div className={styles.sessionInfo}>
+                    <div className={styles.sessionName}>{session.title || 'Untitled Chat'}</div>
+                    <div className={styles.sessionDate}>
+                      {format(new Date(session.createdAt), 'PPP p', { locale: ko })}
+                    </div>
+                  </div>
+                  <button 
+                    className={styles.deleteSessionBtn}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteChatSession(session.id);
+                    }}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Message List - Modern Style */}
       <div className={styles.messageList}>

@@ -81,10 +81,34 @@ model Form {
   ownerId String
 
   deployment Deployment?
-  responses  Response[]
+  responses    Response[]
+  chatSessions ChatSession[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model ChatSession {
+  id        String    @id @default(cuid())
+  title     String?
+  form      Form      @relation(fields: [formId], references: [id], onDelete: Cascade)
+  formId    String
+  messages  ChatMessage[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([formId, createdAt])
+}
+
+model ChatMessage {
+  id        String      @id @default(cuid())
+  role      String      // "user" | "assistant" | "system_error" | "system_info"
+  content   String
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionId String
+  createdAt DateTime    @default(now())
+
+  @@index([sessionId, createdAt])
 }
 
 model Deployment {
