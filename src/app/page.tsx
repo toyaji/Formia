@@ -26,6 +26,9 @@ export default function Home() {
     acceptPatch, rejectPatch, resolvePagePatch,
     getReviewViewModel, setSession, initApp, formId
   } = useFormStore();
+  
+  const [aiPanelWidth, setAiPanelWidth] = useState(340);
+  const [isResizing, setIsResizing] = useState(false);
 
   const mounted = useHydrated();
 
@@ -97,7 +100,6 @@ export default function Home() {
   
 
 
-  // Scroll to active page
   useEffect(() => {
     if (activePageId) {
       const element = document.getElementById(`page-${activePageId}`);
@@ -106,6 +108,50 @@ export default function Home() {
       }
     }
   }, [activePageId]);
+
+  // Resizing logic
+  const startResizing = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+      
+      // Calculate new width: viewport width - mouse X
+      const newWidth = window.innerWidth - e.clientX;
+      
+      // Constraints: Min 300px, Max 800px or 50% of screen
+      const minWidth = 300;
+      const maxWidth = Math.min(800, window.innerWidth * 0.5);
+      
+      if (newWidth >= minWidth && newWidth <= maxWidth) {
+        setAiPanelWidth(newWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    } else {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'default';
+      document.body.style.userSelect = 'auto';
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
 
   if (!mounted) {
     return (
@@ -309,7 +355,18 @@ export default function Home() {
       </section>
 
       {/* Right Sidebar: AI Agent Panel */}
-      <aside className={styles.rightPanel}>
+      <aside 
+        className={styles.rightPanel} 
+        style={{ 
+          width: `${aiPanelWidth}px`,
+          position: 'relative'
+        }}
+      >
+        {/* Resize Handle */}
+        <div 
+          onMouseDown={startResizing}
+          className={`${styles.resizer} ${isResizing ? styles.resizerActive : ''}`}
+        />
         <AiPanel />
       </aside>
       </main>

@@ -198,3 +198,22 @@
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
 }
+
+.resizer {
+  position: absolute;
+  left: -4px;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: col-resize;
+  z-index: 10;
+  transition: background-color 0.2s;
+}
+
+.resizer:hover {
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+.resizerActive {
+  background-color: var(--f-primary) !important;
+}
