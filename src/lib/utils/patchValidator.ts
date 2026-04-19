@@ -39,11 +39,16 @@ export function validatePatchesDetailed(patches: Operation[], schema: FormFactor
 
       // Special cases for start
       if (path === '/pages/start') {
-        const page = schema.pages.start;
-        if (page && page.removable === false) {
-          errors.push(`Cannot remove non-removable page: ${page?.id || 'start'}`);
-          return false;
-        }
+        errors.push(`Cannot remove the start page structure.`);
+        return false;
+      }
+      if (path === '/pages/start/title') {
+        errors.push(`Cannot remove the start page title property.`);
+        return false;
+      }
+      if (path === '/pages/start/blocks/0') {
+        errors.push(`The primary title block on the first page cannot be removed.`);
+        return false;
       }
 
       // Endings removal: /pages/endings/0
@@ -118,6 +123,21 @@ export function validatePatchesDetailed(patches: Operation[], schema: FormFactor
           errors.push(`Block type "${v.type}" requires at least "content.label" or "content.body" at ${path}`);
           return false;
         }
+
+        // Strict: No additional titles on start page
+        if (v.type === 'statement' && blockAddMatch[1] === 'start') {
+          const hasStatement = schema.pages.start.blocks.some(b => b.type === 'statement');
+          if (hasStatement) {
+            errors.push(`Cannot add multiple statement (title) blocks to the start page.`);
+            return false;
+          }
+        }
+
+        // Strict: No statement blocks on questions pages
+        if (v.type === 'statement' && blockAddMatch[1].startsWith('questions/')) {
+          errors.push(`Statement (title) blocks cannot be used on question pages.`);
+          return false;
+        }
       }
 
       // Block type replacement: /pages/(start|questions\/\d+|endings\/\d+)/blocks/\d+/type
@@ -126,6 +146,12 @@ export function validatePatchesDetailed(patches: Operation[], schema: FormFactor
         const type = patch.value as string;
         if (!validBlockTypes.includes(type as any)) {
           errors.push(`Invalid block type replacement: "${type}". Valid types are: ${validBlockTypes.join(', ')}`);
+          return false;
+        }
+
+        // Strict: No statement blocks on questions pages via type replacement
+        if (type === 'statement' && blockTypeMatch[1].startsWith('questions/')) {
+          errors.push(`Cannot change block type to "statement" on question pages.`);
           return false;
         }
       }

@@ -367,8 +367,17 @@ export const useFormStore = create<FormState>()(
         get().recordAction();
         const current = get().formFactor;
         if (!current) return;
+        
+        const { validatePatches } = require('@/lib/utils/patchValidator');
+        const validPatches = validatePatches(patches, current);
+        
+        if (validPatches.length === 0 && patches.length > 0) {
+          console.warn('[useFormStore] All patches were rejected by validator');
+          return;
+        }
+
         const next = JSON.parse(JSON.stringify(current));
-        const results = applyPatch(next, patches);
+        const results = applyPatch(next, validPatches);
         if (results.every((r: any) => r === null)) {
           set({ formFactor: next });
           const timeoutId = (window as any)._formiaSaveTimeout;

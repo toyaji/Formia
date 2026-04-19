@@ -119,4 +119,62 @@ describe('PatchValidator', () => {
     expect(validated).toHaveLength(1);
     expect(validated[0].op).toBe('add');
   });
+
+  describe('Strict Rules', () => {
+    it('should reject removal of start page title property', () => {
+      const patches: any[] = [{ op: 'remove', path: '/pages/start/title' }];
+      const validated = validatePatches(patches, mockSchema);
+      expect(validated).toHaveLength(0);
+    });
+
+    it('should reject removal of start page blocks[0]', () => {
+      const patches: any[] = [{ op: 'remove', path: '/pages/start/blocks/0' }];
+      const validated = validatePatches(patches, mockSchema);
+      expect(validated).toHaveLength(0);
+    });
+
+    it('should reject adding multiple statement blocks to start page', () => {
+      const patches: any[] = [
+        { 
+          op: 'add', 
+          path: '/pages/start/blocks/-', 
+          value: { id: 'new-title', type: 'statement', content: { label: 'Title 2' } } 
+        }
+      ];
+      const validated = validatePatches(patches, mockSchema);
+      expect(validated).toHaveLength(0);
+    });
+
+    it('should reject statement blocks on questions pages', () => {
+      const patches: any[] = [
+        { 
+          op: 'add', 
+          path: '/pages/questions/0/blocks/-', 
+          value: { id: 'bad-title', type: 'statement', content: { label: 'Bad Title' } } 
+        }
+      ];
+      const validated = validatePatches(patches, mockSchema);
+      expect(validated).toHaveLength(0);
+    });
+
+    it('should reject changing block type to statement on questions pages', () => {
+      const patches: any[] = [
+        { op: 'replace', path: '/pages/questions/0/blocks/0/type', value: 'statement' }
+      ];
+      const validated = validatePatches(patches, mockSchema);
+      expect(validated).toHaveLength(0);
+    });
+
+    it('should allow statement blocks on ending pages', () => {
+      const patches: any[] = [
+        { 
+          op: 'add', 
+          path: '/pages/endings/0/blocks/-', 
+          value: { id: 'end-title', type: 'statement', content: { label: 'Bye' } } 
+        }
+      ];
+      const validated = validatePatches(patches, mockSchema);
+      expect(validated).toHaveLength(1);
+    });
+  });
 });

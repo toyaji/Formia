@@ -754,20 +754,25 @@ export const BlockRenderer = ({ block, previewBlockId, isParentChange }: BlockRe
             <div className={styles.flexSpacer} />
 
             <div className={styles.actionButtons}>
-              <button 
-                className={styles.iconBtn} 
-                onClick={copyBlock}
-                title="복제"
-              >
-                <Copy size={18} />
-              </button>
-              <button 
-                className={styles.iconBtn} 
-                onClick={deleteBlock}
-                title="삭제"
-              >
-                <Trash2 size={18} />
-              </button>
+              {/* Only show duplicate/delete if block is removable */}
+              {block.removable !== false && (
+                <>
+                  <button 
+                    className={styles.iconBtn} 
+                    onClick={copyBlock}
+                    title="복제"
+                  >
+                    <Copy size={18} />
+                  </button>
+                  <button 
+                    className={styles.iconBtn} 
+                    onClick={deleteBlock}
+                    title="삭제"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </>
+              )}
             </div>
           </div>
 
@@ -776,9 +781,12 @@ export const BlockRenderer = ({ block, previewBlockId, isParentChange }: BlockRe
               <Plus size={16} /> 항목 추가
             </button>
             <div className={styles.separator} />
-            <button className={styles.floatingSplitBtn} onClick={addPage}>
-              <FilePlus size={16} /> 페이지 추가
-            </button>
+            {/* Don't show page split/add on start page if it's the title block area */}
+            {activePageId !== formFactor?.pages.start?.id && (
+              <button className={styles.floatingSplitBtn} onClick={addPage}>
+                <FilePlus size={16} /> 페이지 추가
+              </button>
+            )}
           </div>
         </>
       )}

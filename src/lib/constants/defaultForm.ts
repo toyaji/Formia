@@ -26,7 +26,7 @@ export const getDefaultForm = (): FormFactor => ({
             label: 'Formia 설문지',
             body: '앞으로 AI Agent가 당신의 설문을 만들어 드립니다.',
           },
-          removable: true
+          removable: false
         },
         {
           id: 'q1',
