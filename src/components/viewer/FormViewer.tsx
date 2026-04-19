@@ -9,14 +9,16 @@ import { useRouter } from 'next/navigation';
 interface FormViewerProps {
   formFactor: FormFactor;
   onClose?: () => void;
+  onSubmit?: (responses: Record<string, any>) => Promise<boolean> | void;
   isPreview?: boolean;
 }
 
-export const FormViewer = ({ formFactor, onClose, isPreview = false }: FormViewerProps) => {
+export const FormViewer = ({ formFactor, onClose, onSubmit, isPreview = false }: FormViewerProps) => {
   const router = useRouter();
   const [currentPageType, setCurrentPageType] = useState<'start' | 'question' | 'ending'>('start');
   const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
   const [responses, setResponses] = useState<Record<string, any>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { pages, metadata } = formFactor;
   const questionPages = pages.questions;
@@ -30,11 +32,24 @@ export const FormViewer = ({ formFactor, onClose, isPreview = false }: FormViewe
     }
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentQuestionIdx < questionPages.length - 1) {
       setCurrentQuestionIdx(prev => prev + 1);
     } else {
-      setCurrentPageType('ending');
+      if (onSubmit) {
+        setIsSubmitting(true);
+        try {
+          await onSubmit(responses);
+          setCurrentPageType('ending');
+        } catch (error) {
+          console.error('Failed to submit responses:', error);
+          alert('제출 중 오류가 발생했습니다. 다시 시도해 주세요.');
+        } finally {
+          setIsSubmitting(false);
+        }
+      } else {
+        setCurrentPageType('ending');
+      }
     }
     window.scrollTo(0, 0);
   };
@@ -243,10 +258,13 @@ export const FormViewer = ({ formFactor, onClose, isPreview = false }: FormViewe
               <button 
                 className={`${styles.btn} ${styles.btnPrimary}`}
                 onClick={currentPageType === 'start' ? handleStart : handleNext}
+                disabled={isSubmitting}
               >
-                {currentPageType === 'question' && currentQuestionIdx === questionPages.length - 1 
-                  ? '제출하기' 
-                  : '다음'}
+                {isSubmitting ? '처리 중...' : (
+                  currentPageType === 'question' && currentQuestionIdx === questionPages.length - 1 
+                    ? '제출하기' 
+                    : '다음'
+                )}
               </button>
             ) : (
               <button 

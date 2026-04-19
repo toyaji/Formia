@@ -12,9 +12,9 @@ describe('JSON Patch Resolution Unit Tests', () => {
     },
     theme: { mode: "light", tokens: {} },
     pages: {
-      start: { id: "page-start", type: "start", title: "Start", blocks: [] },
+      start: { id: "page-start", type: "start", title: "Start", blocks: [], removable: false },
       questions: [
-        { id: "page-q", type: "default", title: "Questions", blocks: [] }
+        { id: "page-q", type: "default", title: "Questions", blocks: [], removable: true }
       ],
       endings: []
     }

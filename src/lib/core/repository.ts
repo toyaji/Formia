@@ -4,6 +4,10 @@ export interface FormInfo {
   id: string;
   title: string;
   updatedAt: string;
+  deployment?: {
+    status: string;
+    shortId: string | null;
+  };
 }
 
 export interface FormRepository {

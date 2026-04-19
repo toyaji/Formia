@@ -19,6 +19,7 @@
 | **security.md**                | ~24KB | BYOK 키 보안, 크로스플랫폼 동기화, Analytics 키        | AI 키, 보안, Analytics 연동 시 |
 | **product_requirements.md**    | ~1KB  | 제품 요구사항                                          | 기능 기획 시                   |
 | **design_system.md**           | ~2KB  | UX/UI 규칙, 커스텀 툴팁 사용법                         | UI/UX 및 디자인 가이드 필요 시 |
+| **zero_cost_publishing_architecture.md** | ~3KB | $0 비용 배포 및 응답 수집 전략                       | 배포 기능 구현 시작 시         |
 
 ---
 
@@ -55,7 +56,7 @@
 ### 5. 인프라/배포
 
 ```
-필수: infrastructure.md
+필수: infrastructure.md, zero_cost_publishing_architecture.md
 선택: cloud_architecture.md
 ```
 

@@ -170,12 +170,29 @@
 
 .statusBadge {
   display: inline-flex;
-  padding: 2px 8px;
+  padding: 4px 10px;
   border-radius: 99px;
   font-size: 0.75rem;
-  font-weight: 600;
-  background-color: #ebf8ff;
-  color: #3182ce;
+  font-weight: 700;
+  background-color: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+
+.statusBadge.published {
+  background-color: #ecfdf5;
+  color: #059669;
+  border-color: #d1fae5;
+}
+
+.shareBtn {
+  color: #2563eb;
+}
+
+.shareBtn:hover {
+  background-color: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
 }
 
 .actions {

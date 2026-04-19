@@ -14,12 +14,13 @@ export async function GET() {
 
   const forms = await prisma.form.findMany({
     where: { ownerId: session.user.id },
-    select: {
-      id: true,
-      title: true,
-      version: true,
-      createdAt: true,
-      updatedAt: true,
+    include: {
+      deployment: {
+        select: {
+          status: true,
+          shortId: true,
+        }
+      }
     },
     orderBy: { updatedAt: 'desc' },
   });

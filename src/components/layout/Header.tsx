@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { useFormStore } from '@/store/useFormStore';
 import { useHydrated } from '@/hooks/useHydrated';
 import styles from './Header.module.css';
-import { Undo2, Redo2, Save, Play, Settings, Monitor, Smartphone, Cloud, FileCode, Check, RefreshCw, AlertCircle, Info } from 'lucide-react';
+import { Undo2, Redo2, Save, Play, Settings, Monitor, Smartphone, Cloud, FileCode, Check, RefreshCw, AlertCircle, Info, Send } from 'lucide-react';
 import { SettingsModal } from './SettingsModal';
+import { PublishModal } from './PublishModal';
 
 import { UserAvatar } from './UserAvatar';
 import Link from 'next/link';
@@ -18,6 +19,8 @@ export const Header = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editTitle, setEditTitle] = useState(formFactor?.metadata.title || '');
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [publishedShortId, setPublishedShortId] = useState<string | null>(null);
 
   const isTauri = typeof window !== 'undefined' && ((window as any).__TAURI_INTERNALS__ !== undefined || (window as any).__TAURI__ !== undefined);
 
@@ -30,6 +33,31 @@ export const Header = () => {
     }]);
     setEditTitle(newTitle);
     setIsEditingTitle(false);
+  };
+
+  const handlePublish = async () => {
+    if (!formId || formId === 'draft' || formId === 'new') {
+      alert('먼저 설문을 저장해 주세요.');
+      return;
+    }
+
+    setIsPublishing(true);
+    try {
+      const res = await fetch(`/api/forms/${formId}/publish`, { method: 'POST' });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Publish failed');
+      }
+      const data = await res.json();
+      setPublishedShortId(data.shortId);
+      // Optional: Refresh sync status
+      syncWithPersistence();
+    } catch (err) {
+      console.error(err);
+      alert('배포 중 오류가 발생했습니다: ' + (err instanceof Error ? err.message : '알 수 없는 오류'));
+    } finally {
+      setIsPublishing(false);
+    }
   };
 
   const renderSaveStatus = () => {
@@ -159,6 +187,14 @@ export const Header = () => {
           <Link href={`/preview/${formId || 'draft'}`} className={styles.secondaryLinkBtn}>
             <Play size={16} /> Preview
           </Link>
+          <button 
+            className={styles.primaryBtn} 
+            onClick={handlePublish}
+            disabled={isPublishing}
+          >
+            {isPublishing ? <RefreshCw size={16} className={styles.rotating} /> : <Send size={16} />}
+            {isPublishing ? 'Publishing...' : '배포하기'}
+          </button>
           <div className={styles.divider} />
           <UserAvatar />
         </div>
@@ -166,6 +202,13 @@ export const Header = () => {
 
       {isSettingsOpen && (
         <SettingsModal onClose={() => setIsSettingsOpen(false)} />
+      )}
+
+      {publishedShortId && (
+        <PublishModal 
+          shortId={publishedShortId} 
+          onClose={() => setPublishedShortId(null)} 
+        />
       )}
     </>
   );

@@ -15,7 +15,10 @@ import {
   User,
   ExternalLink,
   Trash2,
-  FileText
+  FileText,
+  Globe,
+  Copy,
+  Check
 } from 'lucide-react';
 import styles from './Dashboard.module.css';
 import { format } from 'date-fns';
@@ -272,8 +275,17 @@ export default function DashboardPage() {
                   <tr key={form.id} className={styles.formRow} onClick={() => handleLoadForm(form.id)}>
                     <td>
                       <div className={styles.formTitleCell}>
-                        <span className={styles.formTitle}>{form.title}</span>
-                        <span className={styles.formMeta}>{form.id}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span className={styles.formTitle}>{form.title}</span>
+                          {form.deployment?.status === 'published' && (
+                            <span className={`${styles.statusBadge} ${styles.published}`}>
+                              <Globe size={12} /> Published
+                            </span>
+                          )}
+                        </div>
+                        <span className={styles.formMeta}>
+                          {form.id} {form.deployment?.shortId && ` • ${form.deployment.shortId}`}
+                        </span>
                       </div>
                     </td>
                     <td>
@@ -290,6 +302,20 @@ export default function DashboardPage() {
                     </td>
                     <td onClick={(e) => e.stopPropagation()}>
                       <div className={styles.actions}>
+                        {form.deployment?.status === 'published' && (
+                          <button 
+                            className={`${styles.actionBtn} ${styles.shareBtn}`} 
+                            title="배포 링크 복사"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const url = `${window.location.protocol}//${window.location.host}/p/${form.deployment?.shortId}`;
+                              navigator.clipboard.writeText(url);
+                              alert('배포 링크가 클립보드에 복사되었습니다.');
+                            }}
+                          >
+                            <Copy size={16} />
+                          </button>
+                        )}
                         <button 
                           className={styles.actionBtn} 
                           title="내보내기"
@@ -313,18 +339,31 @@ export default function DashboardPage() {
 
                         {activeMenuId === form.id && (
                           <div className={styles.dropdownMenu}>
-                            {/* TODO: 게시하기 기능 구현 (추후 개발 예정) */}
-                            <button 
-                              className={styles.dropdownItem}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                alert('준비 중인 기능입니다.');
-                                setActiveMenuId(null);
-                              }}
-                            >
-                              <ExternalLink size={16} />
-                              <span>게시하기</span>
-                            </button>
+                            {form.deployment?.status === 'published' ? (
+                              <button 
+                                className={styles.dropdownItem}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  window.open(`/p/${form.deployment?.shortId}`, '_blank');
+                                  setActiveMenuId(null);
+                                }}
+                              >
+                                <ExternalLink size={16} />
+                                <span>배포 페이지 보기</span>
+                              </button>
+                            ) : (
+                              <button 
+                                className={styles.dropdownItem}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleLoadForm(form.id);
+                                  setActiveMenuId(null);
+                                }}
+                              >
+                                <Globe size={16} />
+                                <span>배포하기 (에디터)</span>
+                              </button>
+                            )}
                             <button 
                               className={`${styles.dropdownItem} ${styles.delete}`}
                               onClick={(e) => {

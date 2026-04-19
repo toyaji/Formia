@@ -90,6 +90,7 @@ model Form {
 model Deployment {
   id           String    @id @default(cuid())
   status       String    @default("draft") // draft | published | archived
+  shortId      String?   @unique           // 배포용 짧은 고유 ID
   publishedUrl String?
   publishedAt  DateTime?
   settings     String? // JSON string
