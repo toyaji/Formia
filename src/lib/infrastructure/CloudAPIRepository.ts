@@ -52,6 +52,7 @@ export class CloudAPIRepository implements FormRepository {
       id: form.id,
       title: form.title,
       updatedAt: form.updatedAt,
+      deployment: form.deployment,
     }));
   }
 

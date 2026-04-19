@@ -257,6 +257,7 @@ export default function DashboardPage() {
                 <th>제목</th>
                 <th>수정된 날짜</th>
                 <th>마지막 편집한 사람</th>
+                <th>상태</th>
                 <th style={{ textAlign: 'right' }}>관리</th>
               </tr>
             </thead>
@@ -275,14 +276,7 @@ export default function DashboardPage() {
                   <tr key={form.id} className={styles.formRow} onClick={() => handleLoadForm(form.id)}>
                     <td>
                       <div className={styles.formTitleCell}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span className={styles.formTitle}>{form.title}</span>
-                          {form.deployment?.status === 'published' && (
-                            <span className={`${styles.statusBadge} ${styles.published}`}>
-                              <Globe size={12} /> Published
-                            </span>
-                          )}
-                        </div>
+                        <span className={styles.formTitle}>{form.title}</span>
                         <span className={styles.formMeta}>
                           {form.id} {form.deployment?.shortId && ` • ${form.deployment.shortId}`}
                         </span>
@@ -299,6 +293,17 @@ export default function DashboardPage() {
                         <User size={14} />
                         {session?.user?.name || (typeof window !== 'undefined' && (window as any).__TAURI__ ? 'Local User' : 'Guest')}
                       </div>
+                    </td>
+                    <td>
+                      {form.deployment?.status === 'published' ? (
+                        <span className={`${styles.statusBadge} ${styles.published}`}>
+                          Published
+                        </span>
+                      ) : (
+                        <span className={styles.statusBadge}>
+                          Draft
+                        </span>
+                      )}
                     </td>
                     <td onClick={(e) => e.stopPropagation()}>
                       <div className={styles.actions}>
