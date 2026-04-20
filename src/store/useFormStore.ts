@@ -179,7 +179,15 @@ export const useFormStore = create<FormState>()(
         const currentSession = initSession || get().session;
         const repo = getRepository(currentSession);
         const { formId, formFactor } = get();
-        if (formId && formFactor) return;
+        
+        // If we already have a form, just sync sessions and return
+        if (formId && formFactor) {
+          if (currentSession?.user?.id) {
+            get().loadChatSessions(formId);
+          }
+          return;
+        }
+
         try {
           let targetId = formId;
           if (!targetId) {
@@ -196,15 +204,20 @@ export const useFormStore = create<FormState>()(
         if (!id || id === 'draft' || id === 'new') return;
         const { session } = get();
         const repo = getRepository(session);
+        const { formId: currentFormId, messages: currentMessages, currentSessionId: currentSid } = get();
         try {
           const factor = await repo.load(id);
+          
+          const isSameForm = currentFormId === id;
+          
           set({ 
             formFactor: factor, 
             formId: id,
             saveStatus: 'saved',
             lastSyncedAt: factor.metadata.updatedAt || new Date().toISOString(),
-            currentSessionId: null,
-            messages: []
+            // Only reset if it's a different form
+            currentSessionId: isSameForm ? currentSid : null,
+            messages: isSameForm ? currentMessages : []
           });
           if (session?.user?.id) get().loadChatSessions(id);
         } catch (e) {
@@ -610,6 +623,8 @@ export const useFormStore = create<FormState>()(
         aiKeyStatus: state.aiKeyStatus,
         formId: state.formId,
         formFactor: state.formFactor,
+        messages: state.messages,
+        currentSessionId: state.currentSessionId,
       }),
     }
   )

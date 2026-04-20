@@ -480,15 +480,18 @@
   color: white;
 }
 
-.diffBadge[data-change-type="add"] {
+.diffBadge[data-change-type="add"],
+.diffBadge[data-change-type="added"] {
   background-color: #22C55E;
 }
 
-.diffBadge[data-change-type="remove"] {
+.diffBadge[data-change-type="remove"],
+.diffBadge[data-change-type="removed"] {
   background-color: #EF4444;
 }
 
-.diffBadge[data-change-type="replace"] {
+.diffBadge[data-change-type="replace"],
+.diffBadge[data-change-type="modified"] {
   background-color: #EAB308;
 }
 
@@ -537,17 +540,20 @@
   box-shadow: 0 1px 4px rgba(0,0,0,0.15);
 }
 
-.fieldDiffBadge[data-change-type="add"] {
+.fieldDiffBadge[data-change-type="add"],
+.fieldDiffBadge[data-change-type="added"] {
   background-color: #22C55E;
   color: white;
 }
 
-.fieldDiffBadge[data-change-type="remove"] {
+.fieldDiffBadge[data-change-type="remove"],
+.fieldDiffBadge[data-change-type="removed"] {
   background-color: #EF4444;
   color: white;
 }
 
-.fieldDiffBadge[data-change-type="replace"] {
+.fieldDiffBadge[data-change-type="replace"],
+.fieldDiffBadge[data-change-type="modified"] {
   background-color: #EAB308;
   color: white;
 }

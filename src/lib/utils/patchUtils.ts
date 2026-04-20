@@ -439,7 +439,7 @@ function mergeReviewBlocks(
     // Resolve field-level patches for this block
     const fieldPatches: Record<string, PatchItem> = {};
     pending
-      .filter(p => p.targetBlockId === block.id && p.targetField !== 'block')
+      .filter(p => p.targetBlockId === block.id && p.targetField !== 'block' && p.status === 'pending')
       .forEach(p => {
         if (p.targetField) fieldPatches[p.targetField] = p;
       });
@@ -451,7 +451,7 @@ function mergeReviewBlocks(
 
     // Find block-level patch (for added blocks)
     const blockPatch = isNew 
-      ? pending.find(p => p.targetBlockId === block.id && p.targetField === 'block' && p.changeType === 'add')
+      ? pending.find(p => p.targetBlockId === block.id && p.targetField === 'block' && p.changeType === 'add' && p.status === 'pending')
       : undefined;
 
     return {
@@ -469,8 +469,18 @@ function mergeReviewBlocks(
     const targetBlockIds = new Set(targetBlocks.map(b => b.id));
     originalBlocks.forEach((originalBlock, index) => {
       if (!targetBlockIds.has(originalBlock.id)) {
-        // Find removal patch for this specific block
-        const patch = pending.find(p => p.targetBlockId === originalBlock.id && p.changeType === 'remove');
+        // Find removal patch for this specific block: only if it's PENDING
+        const patch = pending.find(p => 
+          p.targetBlockId === originalBlock.id && 
+          p.changeType === 'remove' && 
+          p.status === 'pending'
+        );
+        
+        // If it was removed but there's no pending patch (maybe it was rejected),
+        // we shouldn't show it as a "removed" block diff in the UI if it's already gone from effective.
+        // Actually, if it's in original but not in effective, it IS a removal.
+        // But if the user rejected the removal, effectiveFactor (getEffectiveFactor) should have it back!
+        if (!patch) return;
         
         const reviewBlock: ReviewFormBlock = {
           ...originalBlock,
