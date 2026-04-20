@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { FormFactor, FormPage, FormBlock } from '@/lib/core/schema';
 import styles from './FormViewer.module.css';
-import { ChevronLeft, ChevronRight, Calendar, Star, Send, X, Clock, Monitor, Smartphone } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar, Star, Send, X, Clock, Monitor, Smartphone, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { useFormStore } from '@/store/useFormStore';
@@ -23,22 +23,79 @@ export const FormViewer = ({ formFactor, onClose, onSubmit, isPreview = false }:
   const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
   const [responses, setResponses] = useState<Record<string, any>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, boolean>>({});
+  const [toast, setToast] = useState<{ message: string; visible: boolean }>({ message: '', visible: false });
 
   const { pages, metadata } = formFactor;
   const questionPages = pages.questions;
 
+  const showToast = (message: string) => {
+    setToast({ message, visible: true });
+    setTimeout(() => setToast(prev => ({ ...prev, visible: false })), 3000);
+  };
+
+  const validatePage = (page: FormPage) => {
+    const newErrors: Record<string, boolean> = {};
+    let firstErrorId: string | null = null;
+    let firstErrorLabel: string = '';
+
+    for (const block of page.blocks) {
+      const value = responses[block.id];
+      const isEmpty = (
+        value === undefined || 
+        value === null || 
+        value === '' || 
+        (Array.isArray(value) && value.length === 0) ||
+        (block.type === 'rating' && value === 0)
+      );
+      
+      if (block.validation?.required && isEmpty) {
+        newErrors[block.id] = true;
+        if (!firstErrorId) {
+          firstErrorId = block.id;
+          firstErrorLabel = block.content.label || '필수 문항';
+        }
+      }
+    }
+
+    setErrors(newErrors);
+
+    if (firstErrorId) {
+      showToast(`'${firstErrorLabel}' 문항을 입력해 주세요.`);
+      const element = document.getElementById(`viewer-block-${firstErrorId}`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      return { isValid: false };
+    }
+
+    return { isValid: true };
+  };
+
   const handleStart = () => {
+    const validation = validatePage(pages.start);
+    if (!validation.isValid) return;
+
     if (questionPages.length > 0) {
       setCurrentPageType('question');
       setCurrentQuestionIdx(0);
+      setErrors({});
     } else if (pages.endings.length > 0) {
       setCurrentPageType('ending');
+      setErrors({});
     }
   };
 
   const handleNext = async () => {
+    if (currentPageType === 'question') {
+      const currentPage = questionPages[currentQuestionIdx];
+      const validation = validatePage(currentPage);
+      if (!validation.isValid) return;
+    }
+
     if (currentQuestionIdx < questionPages.length - 1) {
       setCurrentQuestionIdx(prev => prev + 1);
+      setErrors({});
     } else {
       if (onSubmit) {
         setIsSubmitting(true);
@@ -47,7 +104,7 @@ export const FormViewer = ({ formFactor, onClose, onSubmit, isPreview = false }:
           setCurrentPageType('ending');
         } catch (error) {
           console.error('Failed to submit responses:', error);
-          alert('제출 중 오류가 발생했습니다. 다시 시도해 주세요.');
+          showToast('제출 중 오류가 발생했습니다. 다시 시도해 주세요.');
         } finally {
           setIsSubmitting(false);
         }
@@ -57,6 +114,8 @@ export const FormViewer = ({ formFactor, onClose, onSubmit, isPreview = false }:
     }
     window.scrollTo(0, 0);
   };
+
+
 
   const handlePrev = () => {
     if (currentQuestionIdx > 0) {
@@ -69,11 +128,20 @@ export const FormViewer = ({ formFactor, onClose, onSubmit, isPreview = false }:
 
   const handleResponseChange = (blockId: string, value: any) => {
     setResponses(prev => ({ ...prev, [blockId]: value }));
+    if (errors[blockId]) {
+      setErrors(prev => {
+        const next = { ...prev };
+        delete next[blockId];
+        return next;
+      });
+    }
   };
+
 
   const renderBlock = (block: FormBlock) => {
     const { type, content, id } = block;
     const value = responses[id];
+    const isError = errors[id];
 
     switch (type) {
       case 'text':
@@ -81,14 +149,14 @@ export const FormViewer = ({ formFactor, onClose, onSubmit, isPreview = false }:
         return type === 'text' ? (
           <input
             type="text"
-            className={styles.input}
+            className={`${styles.input} ${isError ? styles.inputError : ''}`}
             placeholder={content.placeholder || '응답을 입력해 주세요.'}
             value={value || ''}
             onChange={(e) => handleResponseChange(id, e.target.value)}
           />
         ) : (
           <textarea
-            className={styles.textarea}
+            className={`${styles.textarea} ${isError ? styles.inputError : ''}`}
             placeholder={content.placeholder || '응답을 입력해 주세요.'}
             value={value || ''}
             onChange={(e) => handleResponseChange(id, e.target.value)}
@@ -118,7 +186,7 @@ export const FormViewer = ({ formFactor, onClose, onSubmit, isPreview = false }:
               return (
                 <div 
                   key={i} 
-                  className={`${styles.option} ${isSelected ? styles.optionActive : ''}`}
+                  className={`${styles.option} ${isSelected ? styles.optionActive : ''} ${isError ? styles.optionError : ''}`}
                   onClick={handleClick}
                 >
                   <div className={styles.optionControl}>
@@ -135,7 +203,7 @@ export const FormViewer = ({ formFactor, onClose, onSubmit, isPreview = false }:
             })}
             {content.allowOther && (
               <div 
-                className={`${styles.option} ${value === '__other__' ? styles.optionActive : ''}`}
+                className={`${styles.option} ${value === '__other__' ? styles.optionActive : ''} ${isError ? styles.optionError : ''}`}
                 onClick={() => handleResponseChange(id, '__other__')}
               >
                 <div className={styles.optionControl}>
@@ -147,7 +215,7 @@ export const FormViewer = ({ formFactor, onClose, onSubmit, isPreview = false }:
             {value === '__other__' && (
               <input 
                 type="text" 
-                className={styles.input} 
+                className={`${styles.input} ${isError ? styles.inputError : ''}`} 
                 style={{ marginTop: '8px' }}
                 placeholder="내용을 입력해 주세요."
                 onChange={(e) => handleResponseChange(`${id}_other`, e.target.value)}
@@ -158,7 +226,7 @@ export const FormViewer = ({ formFactor, onClose, onSubmit, isPreview = false }:
 
       case 'rating':
         return (
-          <div className={styles.ratingWrapper} style={{ display: 'flex', gap: '8px' }}>
+          <div className={`${styles.ratingWrapper} ${isError ? styles.ratingError : ''}`} style={{ display: 'flex', gap: '8px', padding: isError ? '8px' : '0', borderRadius: '8px' }}>
             {[...Array(content.maxRating || 5)].map((_, i) => (
               <Star 
                 key={i} 
@@ -177,12 +245,13 @@ export const FormViewer = ({ formFactor, onClose, onSubmit, isPreview = false }:
           <div style={{ position: 'relative' }}>
             <input 
               type="date" 
-              className={styles.input}
+              className={`${styles.input} ${isError ? styles.inputError : ''}`}
               value={value || ''}
               onChange={(e) => handleResponseChange(id, e.target.value)}
             />
           </div>
         );
+
 
       case 'statement':
         return (
@@ -205,10 +274,10 @@ export const FormViewer = ({ formFactor, onClose, onSubmit, isPreview = false }:
         </div>
       )}
       {page.blocks.map(block => (
-        <div key={block.id} className={styles.questionItem}>
+        <div key={block.id} id={`viewer-block-${block.id}`} className={styles.questionItem}>
           {block.type !== 'statement' && (
             <>
-              <label className={styles.questionLabel}>
+              <label className={`${styles.questionLabel} ${errors[block.id] ? styles.labelError : ''}`}>
                 {block.validation?.required && <span className={styles.required}>*</span>}
                 {block.content.label}
               </label>
@@ -220,6 +289,7 @@ export const FormViewer = ({ formFactor, onClose, onSubmit, isPreview = false }:
       ))}
     </div>
   );
+
 
   return (
     <div className={styles.viewerContainer} data-viewport={isPreview ? viewport : 'desktop'}>
@@ -300,6 +370,16 @@ export const FormViewer = ({ formFactor, onClose, onSubmit, isPreview = false }:
           </div>
         </div>
       </div>
+
+      {toast.visible && (
+        <div className={styles.toast}>
+          <div className={styles.toastContent}>
+            <AlertCircle size={16} color="#fbbf24" />
+            <span>{toast.message}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+
