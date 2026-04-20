@@ -108,6 +108,12 @@ interface FormState {
   importForm: (factor: FormFactor) => Promise<void>;
   deleteForm: (id: string) => Promise<void>;
   loadFormById: (id: string) => Promise<void>;
+
+  // Hybrid Persistence Helpers
+  hasDraftOnStartup: boolean;
+  isDraftRestored: boolean;
+  restoreLastDraft: () => void;
+  discardDraft: () => void;
 }
 
 const isTauri = typeof window !== 'undefined' && ((window as any).__TAURI_INTERNALS__ !== undefined || (window as any).__TAURI__ !== undefined);
@@ -148,6 +154,8 @@ export const useFormStore = create<FormState>()(
       isReviewMode: false,
       pendingPatches: [],
       preReviewSnapshot: null,
+      hasDraftOnStartup: false,
+      isDraftRestored: false,
 
       setSession: (session: any) => set({ session }),
       
@@ -178,9 +186,21 @@ export const useFormStore = create<FormState>()(
       initApp: async (initSession: any) => {
         const currentSession = initSession || get().session;
         const repo = getRepository(currentSession);
-        const { formId, formFactor } = get();
+        const { formId, formFactor, isDraftRestored } = get();
         
-        // If we already have a form, just sync sessions and return
+        const isGuest = !currentSession?.user?.id;
+
+        // Guest logic: Check if we have a hydrated draft that needs confirmation
+        if (isGuest && formFactor && !formId && !isDraftRestored) {
+          // Check if formFactor is significantly different from default
+          const isNotEmpty = formFactor.pages.questions.length > 0 || formFactor.metadata.title !== 'Untitled Form';
+          if (isNotEmpty) {
+            set({ hasDraftOnStartup: true });
+            // We don't return here yet, we let it stay in "pending restoration" state
+          }
+        }
+
+        // If we already have a synced form, just sync sessions and return
         if (formId && formFactor) {
           if (currentSession?.user?.id) {
             get().loadChatSessions(formId);
@@ -188,16 +208,39 @@ export const useFormStore = create<FormState>()(
           return;
         }
 
+        // Auto-load logic for logged-in users who don't have a local draft
         try {
-          let targetId = formId;
-          if (!targetId) {
+          if (!isGuest && !formId) {
             const list = await repo.list();
-            if (list.length > 0) targetId = list[0].id;
+            if (list.length > 0) {
+              await get().loadFormById(list[0].id);
+            } else {
+              // Create a brand new form on the server immediately on entry
+              // This ensures we have a formId from the start
+              await get().syncWithPersistence(currentSession);
+            }
+          } else if (!isGuest && formId && formFactor) {
+            // Already have a form, sync sessions
+            get().loadChatSessions(formId);
           }
-          if (targetId) await get().loadFormById(targetId);
         } catch (e) {
           console.error('[initApp] Failed to load initial form:', e);
         }
+      },
+
+      restoreLastDraft: () => {
+        set({ hasDraftOnStartup: false, isDraftRestored: true });
+      },
+
+      discardDraft: () => {
+        set({ 
+          formFactor: null, 
+          formId: null, 
+          hasDraftOnStartup: false, 
+          isDraftRestored: false,
+          messages: [],
+          currentSessionId: null
+        });
       },
 
       loadFormById: async (id: string) => {
@@ -296,12 +339,25 @@ export const useFormStore = create<FormState>()(
       syncWithPersistence: async (customSession?: any) => {
         const { formFactor, formId, session } = get();
         const effectiveSession = customSession || session;
-        if (!formFactor || !formId) return;
+        if (!formFactor) return;
+
         set({ saveStatus: 'saving' });
         try {
           const repo = getRepository(effectiveSession);
-          await repo.save(formId, formFactor);
-          set({ saveStatus: 'saved', lastSyncedAt: new Date().toISOString() });
+          
+          if (!formId) {
+            // New form: call create and update ID
+            const newId = await repo.create(formFactor);
+            set({ 
+              formId: newId, 
+              saveStatus: 'saved', 
+              lastSyncedAt: new Date().toISOString() 
+            });
+          } else {
+            // Existing form: standard save
+            await repo.save(formId, formFactor);
+            set({ saveStatus: 'saved', lastSyncedAt: new Date().toISOString() });
+          }
         } catch (error) {
           console.error('Persistence sync failed:', error);
           set({ saveStatus: 'error' });

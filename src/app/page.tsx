@@ -9,6 +9,7 @@ import { BlockRenderer } from '@/components/builder/BlockRenderer';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { AiPanel } from '@/components/ai/AiPanel';
 import { Header } from '@/components/layout/Header';
+import { RestoreDraftPrompt } from '@/components/builder/RestoreDraftPrompt';
 import { Undo2, Redo2, Check, X } from 'lucide-react';
 import { ReviewFormPage, sortPages } from '@/lib/utils/patchUtils';
 import { FormPage } from '@/lib/core/schema';
@@ -370,6 +371,8 @@ export default function Home() {
         <AiPanel />
       </aside>
       </main>
+      {/* Restore Draft Prompt for Guests */}
+      <RestoreDraftPrompt />
     </div>
   );
 }

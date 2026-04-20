@@ -6,7 +6,11 @@ import { FormInfo, FormRepository } from '../core/repository';
  * Saves forms to the browser's localStorage.
  */
 export class LocalStorageRepository implements FormRepository {
-  private prefix = 'formia_draft_';
+  async create(content: FormFactor): Promise<string> {
+    const id = crypto.randomUUID();
+    await this.save(id, content);
+    return id;
+  }
 
   async save(id: string, content: FormFactor): Promise<void> {
     const key = `${this.prefix}${id}`;

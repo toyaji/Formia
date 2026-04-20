@@ -10,8 +10,23 @@ import { FormInfo, FormRepository } from '../core/repository';
 export class CloudAPIRepository implements FormRepository {
   private baseUrl: string;
 
-  constructor(baseUrl: string = '/api/forms') {
-    this.baseUrl = baseUrl;
+  async create(content: FormFactor): Promise<string> {
+    const response = await fetch(this.baseUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        title: content.metadata.title || 'Untitled Form',
+        factor: content 
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || `Failed to create form: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.id;
   }
 
   async save(id: string, content: FormFactor): Promise<void> {
