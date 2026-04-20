@@ -361,7 +361,7 @@ export const Sidebar = () => {
              <button 
                className={styles.actionBtn} 
                onClick={(e) => addBlock(e, page.id)}
-               title="질문 추가"
+               title="문항 추가"
              >
                <Plus size={14} />
              </button>
@@ -513,7 +513,7 @@ export const Sidebar = () => {
             <button 
               className={styles.actionBtn} 
               onClick={(e) => addBlock(e, page.id)}
-              title="질문 추가"
+              title="문항 추가"
             >
               <Plus size={14} />
             </button>

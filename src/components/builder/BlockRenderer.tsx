@@ -96,7 +96,6 @@ export const BlockRenderer = ({ block, previewBlockId, isParentChange }: BlockRe
   const getActivePageInfo = () => {
     if (!formFactor || !activePageId) return null;
     if (formFactor.pages.start?.id === activePageId) return { section: 'start', path: '/pages/start', page: formFactor.pages.start };
-    if (formFactor.pages.start?.id === activePageId) return { section: 'start', path: '/pages/start', page: formFactor.pages.start };
     const eIndex = formFactor.pages.endings.findIndex(p => p.id === activePageId);
     if (eIndex !== -1) return { section: 'ending', path: `/pages/endings/${eIndex}`, page: formFactor.pages.endings[eIndex] };
     const qIndex = formFactor.pages.questions.findIndex(p => p.id === activePageId);
@@ -326,7 +325,7 @@ export const BlockRenderer = ({ block, previewBlockId, isParentChange }: BlockRe
         const newBlock = {
           id: Math.random().toString(36).substring(7),
           type: 'text' as const,
-          content: { label: '', placeholder: '응답을 입력해 주세요.' },
+          content: { label: '새로운 질문', placeholder: '응답을 입력해 주세요.' },
           validation: { required: false },
           removable: true
         };
@@ -778,7 +777,7 @@ export const BlockRenderer = ({ block, previewBlockId, isParentChange }: BlockRe
 
           <div className={styles.floatingActions}>
             <button className={styles.floatingAddBtn} onClick={addNewBlock}>
-              <Plus size={16} /> 항목 추가
+              <Plus size={16} /> 문항 추가
             </button>
             <div className={styles.separator} />
             {/* Don't show page split/add on start page if it's the title block area */}

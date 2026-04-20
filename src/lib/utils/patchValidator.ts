@@ -104,7 +104,7 @@ export function validatePatchesDetailed(patches: Operation[], schema: FormFactor
 
         // Deep Content Validation
         const content = v.content;
-        if (!content.label && v.type !== 'statement' && v.type !== 'info') {
+        if (content.label === undefined && v.type !== 'statement' && v.type !== 'info') {
           errors.push(`Block type "${v.type}" requires "content.label" (the question title) at ${path}`);
           return false;
         }
