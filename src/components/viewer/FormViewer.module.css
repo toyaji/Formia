@@ -6,7 +6,13 @@
   align-items: center;
   padding: 40px 20px;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  transition: padding 0.3s ease;
 }
+
+.viewerContainer[data-viewport="mobile"] {
+  padding: 20px 10px;
+}
+
 
 .card {
   width: 100%;
@@ -17,7 +23,26 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  transition: max-width 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
+
+.viewerContainer[data-viewport="mobile"] .card {
+  max-width: 375px;
+  border-radius: 24px;
+}
+
+.viewerContainer[data-viewport="mobile"] .content,
+.viewerContainer[data-viewport="mobile"] .footer {
+  padding-left: 20px;
+  padding-right: 20px;
+}
+
+.viewerContainer[data-viewport="mobile"] .content {
+  padding-top: 32px;
+  padding-bottom: 32px;
+}
+
+
 
 .content {
   padding: 40px;
@@ -209,6 +234,45 @@
 .exitBtn:hover {
   background: #f8fafc;
 }
+
+.previewToggle {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  display: flex;
+  background: white;
+  padding: 4px;
+  border-radius: 9999px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+  gap: 4px;
+}
+
+.toggleBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 9999px;
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.toggleBtn:hover {
+  color: #64748b;
+  background: #f8fafc;
+}
+
+.toggleBtnActive {
+  background: #f1f5f9 !important;
+  color: #2563eb !important;
+}
+
 
 /* Branding */
 .branding {

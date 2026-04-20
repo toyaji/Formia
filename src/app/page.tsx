@@ -21,7 +21,7 @@ export default function Home() {
   const { data: session } = useSession();
   const { 
     formFactor, setFormFactor, getEffectiveFactor, 
-    activePageId, setActivePageId, viewport, undo, redo, history, future, 
+    activePageId, setActivePageId, undo, redo, history, future, 
     activeBlockId, setActiveBlockId, applyJsonPatch,
     isReviewMode, pendingPatches, preReviewSnapshot,
     acceptPatch, rejectPatch, resolvePagePatch,
@@ -187,19 +187,19 @@ export default function Home() {
       {/* Center Canvas: WYSIWYG Builder */}
       <section 
         className={styles.centerCanvas}
-        data-viewport={viewport}
+        data-viewport="desktop"
         style={{
-          padding: viewport === 'mobile' ? '40px 16px' : '80px 40px',
+          padding: '80px 40px',
         }}
       >
         <div style={{ 
-          width: viewport === 'mobile' ? '375px' : '800px', 
+          width: '800px', 
           flexShrink: 0,
           transition: 'width 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
           margin: '0 auto',
           display: 'flex',
           flexDirection: 'column',
-          gap: viewport === 'mobile' ? '16px' : '24px'
+          gap: '24px'
         }}>
           {isReviewMode && (
              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
@@ -236,13 +236,13 @@ export default function Home() {
                 onClick={() => { if (activePageId !== page.id) setActivePageId(page.id); }}
                 style={{ 
                   background: 'var(--f-surface)', 
-                  padding: viewport === 'mobile' ? '20px 12px' : '32px', 
+                  padding: '32px', 
                   borderRadius: 'var(--f-radius-xl)',
                   boxShadow: 'var(--f-shadow-premium)',
                   border: '1px solid var(--f-border)',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: viewport === 'mobile' ? '16px' : '20px',
+                  gap: '20px',
                   opacity: activePageId === page.id ? 1 : 0.7,
                   cursor: activePageId === page.id ? 'default' : 'pointer'
                 }}
@@ -277,13 +277,13 @@ export default function Home() {
                   onClick={() => { if (!isRemoved && activePageId !== page.id) setActivePageId(page.id); }}
                   style={{ 
                     background: 'var(--f-surface)', 
-                    padding: viewport === 'mobile' ? '20px 12px' : '32px', 
+                    padding: '32px', 
                     borderRadius: 'var(--f-radius-xl)',
                     boxShadow: 'var(--f-shadow-premium)',
                     minHeight: '160px',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: viewport === 'mobile' ? '16px' : '20px',
+                    gap: '20px',
                     border: isRemoved ? '2px dashed #EF4444' : (isAdded ? '2px solid #22C55E' : (isReviewMode ? '2px solid #e2e8f0' : '1px solid var(--f-border)')),
                     opacity: isRemoved ? 0.6 : (isActive ? 1 : 0.7),
                     pointerEvents: isRemoved ? 'none' : 'auto'
@@ -323,12 +323,12 @@ export default function Home() {
                   onClick={() => { if (!isRemoved && activePageId !== page.id) setActivePageId(page.id); }}
                   style={{ 
                     background: 'var(--f-surface)', 
-                    padding: viewport === 'mobile' ? '16px 12px' : '24px', 
+                    padding: '24px', 
                     borderRadius: 'var(--f-radius-xl)',
                     boxShadow: 'var(--f-shadow-premium)',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: viewport === 'mobile' ? '16px' : '20px',
+                    gap: '20px',
                     border: isRemoved ? '2px dashed #EF4444' : (isAdded ? '2px solid #22C55E' : (isReviewMode ? '2px solid #e2e8f0' : '1px solid var(--f-border)')),
                     opacity: isRemoved ? 0.6 : (activePageId === page.id ? 1 : 0.7),
                     cursor: (isRemoved || activePageId === page.id) ? 'default' : 'pointer'

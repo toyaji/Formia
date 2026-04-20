@@ -3,8 +3,10 @@
 import { useState } from 'react';
 import { FormFactor, FormPage, FormBlock } from '@/lib/core/schema';
 import styles from './FormViewer.module.css';
-import { ChevronLeft, ChevronRight, Calendar, Star, Send, X, Clock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar, Star, Send, X, Clock, Monitor, Smartphone } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+
+import { useFormStore } from '@/store/useFormStore';
 
 interface FormViewerProps {
   formFactor: FormFactor;
@@ -14,7 +16,9 @@ interface FormViewerProps {
 }
 
 export const FormViewer = ({ formFactor, onClose, onSubmit, isPreview = false }: FormViewerProps) => {
+  const { viewport, setViewport } = useFormStore();
   const router = useRouter();
+
   const [currentPageType, setCurrentPageType] = useState<'start' | 'question' | 'ending'>('start');
   const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
   const [responses, setResponses] = useState<Record<string, any>>({});
@@ -218,11 +222,30 @@ export const FormViewer = ({ formFactor, onClose, onSubmit, isPreview = false }:
   );
 
   return (
-    <div className={styles.viewerContainer}>
+    <div className={styles.viewerContainer} data-viewport={isPreview ? viewport : 'desktop'}>
       {isPreview && (
-        <button className={styles.exitBtn} onClick={onClose}>
-          <X size={16} /> 종료하기
-        </button>
+        <>
+          <button className={styles.exitBtn} onClick={onClose}>
+            <X size={16} /> 종료하기
+          </button>
+          
+          <div className={styles.previewToggle}>
+            <button 
+              className={`${styles.toggleBtn} ${viewport === 'desktop' ? styles.toggleBtnActive : ''}`}
+              onClick={() => setViewport('desktop')}
+            >
+              <Monitor size={16} />
+              <span>Desktop</span>
+            </button>
+            <button 
+              className={`${styles.toggleBtn} ${viewport === 'mobile' ? styles.toggleBtnActive : ''}`}
+              onClick={() => setViewport('mobile')}
+            >
+              <Smartphone size={16} />
+              <span>Mobile</span>
+            </button>
+          </div>
+        </>
       )}
 
       <div className={styles.card}>

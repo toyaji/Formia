@@ -5,9 +5,10 @@ import { FormViewer } from '@/components/viewer/FormViewer';
 import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { getDefaultForm } from '@/lib/constants/defaultForm';
+import { Monitor, Smartphone, ChevronLeft } from 'lucide-react';
 
 export default function PreviewPage() {
-  const { formFactor, formId, loadFormById, initApp, setFormFactor } = useFormStore();
+  const { formFactor, formId, loadFormById, initApp, setFormFactor, viewport, setViewport } = useFormStore();
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
@@ -126,3 +127,5 @@ export default function PreviewPage() {
     />
   );
 }
+
+
