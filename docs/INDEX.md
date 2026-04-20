@@ -7,7 +7,7 @@
 
 | 문서                           | 크기  | 핵심 내용                                              | 언제 읽어야 하나?              |
 | ------------------------------ | ----- | ------------------------------------------------------ | ------------------------------ |
-| **architecture.md**            | ~10KB | Editor/Service 레이어 분리, AI Port, 시스템 다이어그램 | 전체 구조 이해 필요 시         |
+| **architecture.md**            | ~19KB | 레이어 분리, AI Port, 하이브리드 지속성 전략           | 전체 구조 및 세션 로직 이해 필요 시 |
 | **cloud_architecture.md**      | ~17KB | 클라우드/인증/배포 설계                                | 백엔드, 인증, 배포 작업 시     |
 | **infrastructure.md**          | ~26KB | 인프라, DB, 서버 배포                                  | 인프라, DevOps 작업 시         |
 | **form_factor_schema.md**      | ~3KB  | Form Factor JSON 스키마                                | 폼 구조/블록 수정 시           |
@@ -16,7 +16,7 @@
 | **design_tokens.md**           | ~2KB  | 폰트, 색상, 스타일                                     | UI 스타일 수정 시              |
 | **ui_ux_design.md**            | ~2KB  | 3-패널 레이아웃, UX                                    | UI 컴포넌트 수정 시            |
 | **testing_strategy.md**        | ~2KB  | 테스트 전략                                            | 테스트 작성 시                 |
-| **security.md**                | ~24KB | BYOK 키 보안, 크로스플랫폼 동기화, Analytics 키        | AI 키, 보안, Analytics 연동 시 |
+| **security.md**                | ~40KB | BYOK 보안, 공용 PC 보호, 휘발성 세션 설계              | AI 키, 보안, 세션 관리 작업 시 |
 | **product_requirements.md**    | ~1KB  | 제품 요구사항                                          | 기능 기획 시                   |
 | **design_system.md**           | ~2KB  | UX/UI 규칙, 커스텀 툴팁 사용법                         | UI/UX 및 디자인 가이드 필요 시 |
 | **zero_cost_publishing_architecture.md** | ~3KB | $0 비용 배포 및 응답 수집 전략                       | 배포 기능 구현 시작 시         |
@@ -144,4 +144,4 @@ tokens.md  design.md  strategy.md
 
 ---
 
-_마지막 업데이트: 2026-02-11_
+_마지막 업데이트: 2026-04-20_

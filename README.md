@@ -37,6 +37,12 @@ A rich set of form blocks designed for maximum conversion.
 - **Web App**: Seamlessly build and publish from your browser (Next.js).
 - **Desktop Client**: Native performance and offline-first capabilities powered by **Tauri**.
 
+### 💾 Hybrid Persistence & Privacy
+
+- **Cloud Sync (Logged-in)**: Real-time, automatic cloud synchronization for authenticated users. Your work is saved to the database as you type.
+- **Local Draft Recovery (Guest)**: For unauthenticated users, edits are saved to `localStorage`. A privacy-first **Restoration Prompt** ensures previous work is only recovered upon explicit request, protecting data on shared/public PCs.
+- **Session-based Chat**: AI chat history is scoped to the current session and cleared upon logout or refresh to ensure privacy and a fresh starting point.
+
 ---
 
 ## 🛠 Tech Stack
