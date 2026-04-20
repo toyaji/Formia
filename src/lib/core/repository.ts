@@ -10,6 +10,7 @@ export interface FormInfo {
   };
 }
 
+export interface FormRepository {
   /**
    * Creates a new Form Factor and returns the generated special ID.
    */

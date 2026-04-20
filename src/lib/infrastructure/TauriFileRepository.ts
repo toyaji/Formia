@@ -21,6 +21,12 @@ export class TauriFileRepository implements FormRepository {
     return await join(docDir, 'Formia');
   }
 
+  async create(content: FormFactor): Promise<string> {
+    const id = crypto.randomUUID();
+    await this.save(id, content);
+    return id;
+  }
+
   private async ensureDir() {
     if (!await exists('Formia', { baseDir: BaseDirectory.Document })) {
       await mkdir('Formia', { baseDir: BaseDirectory.Document });

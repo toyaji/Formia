@@ -10,7 +10,7 @@ import { Sidebar } from '@/components/layout/Sidebar';
 import { AiPanel } from '@/components/ai/AiPanel';
 import { Header } from '@/components/layout/Header';
 import { RestoreDraftPrompt } from '@/components/builder/RestoreDraftPrompt';
-import { Undo2, Redo2, Check, X } from 'lucide-react';
+import { Undo2, Redo2, Check, X, Eye } from 'lucide-react';
 import { ReviewFormPage, sortPages } from '@/lib/utils/patchUtils';
 import { FormPage } from '@/lib/core/schema';
 import { useSession } from 'next-auth/react';
@@ -39,19 +39,11 @@ export default function Home() {
     initApp(session);
   }, [session, setSession, initApp]);
 
-  // If after initialization we still have no formFactor, set a default one
-  useEffect(() => {
-    if (!formFactor) {
-      if (!formId || formId === 'draft' || formId === 'new') {
-        setFormFactor(getDefaultForm());
-      }
-    }
-  }, [formFactor, formId, setFormFactor]);
-
   const effectiveFactor = getEffectiveFactor();
 
   // Compute pages to render (Normal vs Review)
   const pagesToRender = useMemo(() => {
+    // If we're not mounted, we show the global spinner, so this empty array is fine
     if (!mounted || !effectiveFactor) return [] as ReviewFormPage[];
     
     if (isReviewMode) {
@@ -60,33 +52,36 @@ export default function Home() {
 
     const result: ReviewFormPage[] = [];
     
-    if (effectiveFactor.pages.start) {
+    const pages = effectiveFactor.pages;
+    if (!pages) return [] as ReviewFormPage[];
+
+    if (pages.start) {
       result.push({ 
-        ...effectiveFactor.pages.start, 
+        ...pages.start, 
         reviewMetadata: { status: 'kept' as const, patchId: undefined, fieldPatches: {} },
-        blocks: effectiveFactor.pages.start.blocks.map(b => ({ 
+        blocks: (pages.start.blocks || []).map(b => ({ 
           ...b, 
           reviewMetadata: { status: 'kept' as const, patchId: undefined, fieldPatches: {} } 
         }))
       });
     }
 
-    effectiveFactor.pages.questions.forEach(p => {
+    (pages.questions || []).forEach(p => {
       result.push({ 
         ...p, 
         reviewMetadata: { status: 'kept' as const, patchId: undefined, fieldPatches: {} },
-        blocks: p.blocks.map(b => ({ 
+        blocks: (p.blocks || []).map(b => ({ 
           ...b, 
           reviewMetadata: { status: 'kept' as const, patchId: undefined, fieldPatches: {} } 
         }))
       });
     });
 
-    effectiveFactor.pages.endings.forEach((p) => {
+    (pages.endings || []).forEach((p) => {
       result.push({ 
         ...p, 
         reviewMetadata: { status: 'kept' as const, patchId: undefined, fieldPatches: {} },
-        blocks: p.blocks.map(b => ({ 
+        blocks: (p.blocks || []).map(b => ({ 
           ...b, 
           reviewMetadata: { status: 'kept' as const, patchId: undefined, fieldPatches: {} } 
         }))
@@ -94,10 +89,13 @@ export default function Home() {
     });
 
     return result;
-  }, [isReviewMode, effectiveFactor, getReviewViewModel]);
+  }, [mounted, isReviewMode, effectiveFactor, getReviewViewModel]);
 
-  // Find current active page
-  const activePage = pagesToRender.find(p => p.id === activePageId) || pagesToRender[0];
+  // Find current active page with robust fallback
+  // If activePageId is null or not found, always try to grab the first page
+  const activePage = useMemo(() => {
+    return pagesToRender.find(p => p.id === activePageId) || pagesToRender[0];
+  }, [pagesToRender, activePageId]);
   
 
 

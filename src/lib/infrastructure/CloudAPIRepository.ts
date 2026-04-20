@@ -8,7 +8,7 @@ import { FormInfo, FormRepository } from '../core/repository';
  * 인증은 NextAuth 세션 쿠키가 자동으로 포함됩니다.
  */
 export class CloudAPIRepository implements FormRepository {
-  private baseUrl: string;
+  private baseUrl = '/api/forms';
 
   async create(content: FormFactor): Promise<string> {
     const response = await fetch(this.baseUrl, {

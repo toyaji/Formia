@@ -7,6 +7,7 @@ import { CloudAPIRepository } from '@/lib/infrastructure/CloudAPIRepository';
 import { TauriFileRepository } from '@/lib/infrastructure/TauriFileRepository';
 import { LocalStorageRepository } from '@/lib/infrastructure/LocalStorageRepository';
 import { FormInfo, FormRepository } from '@/lib/core/repository';
+import { getDefaultForm } from '@/lib/constants/defaultForm';
 
 export interface Message {
   id: string;
@@ -187,44 +188,52 @@ export const useFormStore = create<FormState>()(
         const currentSession = initSession || get().session;
         const repo = getRepository(currentSession);
         const { formId, formFactor, isDraftRestored } = get();
-        
         const isGuest = !currentSession?.user?.id;
 
-        // Guest logic: Check if we have a hydrated draft that needs confirmation
-        if (isGuest && formFactor && !formId && !isDraftRestored) {
-          // Check if formFactor is significantly different from default
-          const isNotEmpty = formFactor.pages.questions.length > 0 || formFactor.metadata.title !== 'Untitled Form';
+        // 1. If we have a formFactor (hydrated), decide if we need a restoration prompt
+        if (formFactor && !isDraftRestored && isGuest) {
+          const isDefaultTitle = formFactor.metadata.title === 'Formia 설문지' || formFactor.metadata.title === 'Untitled Form';
+          const hasQuestions = formFactor.pages.questions.length > 0;
+          const isNotEmpty = hasQuestions || !isDefaultTitle;
+          
           if (isNotEmpty) {
             set({ hasDraftOnStartup: true });
-            // We don't return here yet, we let it stay in "pending restoration" state
+            // Do NOT return here. Continue to select active page etc.
           }
         }
 
-        // If we already have a synced form, just sync sessions and return
-        if (formId && formFactor) {
-          if (currentSession?.user?.id) {
-            get().loadChatSessions(formId);
-          }
-          return;
-        }
-
-        // Auto-load logic for logged-in users who don't have a local draft
-        try {
-          if (!isGuest && !formId) {
-            const list = await repo.list();
-            if (list.length > 0) {
-              await get().loadFormById(list[0].id);
+        // 2. Scenario-based loading
+        if (!formFactor) {
+          try {
+            if (!isGuest) {
+              const list = await repo.list();
+              if (list.length > 0) {
+                await get().loadFormById(list[0].id);
+              } else {
+                // Brand new user: Create their first form immediately
+                await get().syncWithPersistence(currentSession);
+              }
             } else {
-              // Create a brand new form on the server immediately on entry
-              // This ensures we have a formId from the start
-              await get().syncWithPersistence(currentSession);
+              // Guest with no draft: Default Form
+              set({ formFactor: getDefaultForm() });
             }
-          } else if (!isGuest && formId && formFactor) {
-            // Already have a form, sync sessions
-            get().loadChatSessions(formId);
+          } catch (e) {
+            console.error('[initApp] Failed to load initial state:', e);
+            set({ formFactor: getDefaultForm() });
           }
-        } catch (e) {
-          console.error('[initApp] Failed to load initial form:', e);
+        } else {
+          // Already have formFactor (hydrated or loaded)
+          if (!get().activePageId && formFactor.pages) {
+            if (formFactor.pages.start) set({ activePageId: formFactor.pages.start.id });
+            else if (formFactor.pages.questions?.[0]) set({ activePageId: formFactor.pages.questions[0].id });
+          }
+
+          if (!isGuest && formId) {
+            get().loadChatSessions(formId);
+          } else if (!isGuest && !formId) {
+            // Logged in with a local draft: Promotion to cloud
+            await get().syncWithPersistence(currentSession);
+          }
         }
       },
 
@@ -679,8 +688,9 @@ export const useFormStore = create<FormState>()(
         aiKeyStatus: state.aiKeyStatus,
         formId: state.formId,
         formFactor: state.formFactor,
-        messages: state.messages,
-        currentSessionId: state.currentSessionId,
+        activePageId: state.activePageId,
+        activeBlockId: state.activeBlockId,
+        isDraftRestored: state.isDraftRestored,
       }),
     }
   )
