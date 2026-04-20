@@ -99,14 +99,6 @@ export default function Home() {
   
 
 
-  useEffect(() => {
-    if (activePageId) {
-      const element = document.getElementById(`page-${activePageId}`);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }
-  }, [activePageId]);
 
   // Resizing logic
   const startResizing = (e: React.MouseEvent) => {
@@ -241,6 +233,7 @@ export default function Home() {
               />
               <div 
                 id={`page-${page.id}`}
+                onClick={() => { if (activePageId !== page.id) setActivePageId(page.id); }}
                 style={{ 
                   background: 'var(--f-surface)', 
                   padding: viewport === 'mobile' ? '20px 12px' : '32px', 
@@ -249,7 +242,9 @@ export default function Home() {
                   border: '1px solid var(--f-border)',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: viewport === 'mobile' ? '16px' : '20px'
+                  gap: viewport === 'mobile' ? '16px' : '20px',
+                  opacity: activePageId === page.id ? 1 : 0.7,
+                  cursor: activePageId === page.id ? 'default' : 'pointer'
                 }}
               >
                 {page.blocks.map((block: any) => (
@@ -325,6 +320,7 @@ export default function Home() {
                 />
                 <div 
                   id={`page-${page.id}`}
+                  onClick={() => { if (!isRemoved && activePageId !== page.id) setActivePageId(page.id); }}
                   style={{ 
                     background: 'var(--f-surface)', 
                     padding: viewport === 'mobile' ? '16px 12px' : '24px', 
@@ -334,7 +330,8 @@ export default function Home() {
                     flexDirection: 'column',
                     gap: viewport === 'mobile' ? '16px' : '20px',
                     border: isRemoved ? '2px dashed #EF4444' : (isAdded ? '2px solid #22C55E' : (isReviewMode ? '2px solid #e2e8f0' : '1px solid var(--f-border)')),
-                    opacity: isRemoved ? 0.6 : 0.7
+                    opacity: isRemoved ? 0.6 : (activePageId === page.id ? 1 : 0.7),
+                    cursor: (isRemoved || activePageId === page.id) ? 'default' : 'pointer'
                   }}
                 >
                   {page.blocks.map((block: any) => (

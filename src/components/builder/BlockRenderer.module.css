@@ -20,6 +20,7 @@
   border-color: #3B82F6;
   box-shadow: 0 4px 20px rgba(59, 130, 246, 0.08);
   z-index: 10;
+  margin-bottom: 64px;
 }
 
 /* Top Bar */
