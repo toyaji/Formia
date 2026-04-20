@@ -1,15 +1,15 @@
 .blockContainer {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   width: 100%;
-  padding: 24px;
+  padding: 20px;
   border-radius: 12px;
   background-color: white;
   border: 1px solid #E5E7EB;
   transition: all 0.2s ease-in-out;
   position: relative;
-  margin-bottom: 40px;
+  margin-bottom: 12px;
 }
 
 .blockContainer:hover {
@@ -186,7 +186,7 @@
 .helpText {
   font-size: 0.9rem;
   color: #6B7280;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 .helpTextInput {
@@ -196,7 +196,7 @@
   border: none;
   width: 100%;
   padding: 4px 0;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 .helpTextInput:focus {
@@ -226,14 +226,14 @@
 .options {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
 .optionItem {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 8px 0;
+  padding: 4px 0;
   border-radius: 6px;
   transition: all 0.2s;
 }
@@ -345,9 +345,9 @@
   display: flex;
   align-items: center;
   gap: 24px;
-  padding-top: 16px;
+  padding-top: 12px;
   border-top: 1px solid #F3F4F6;
-  margin-top: 8px;
+  margin-top: 4px;
 }
 
 .toggleGroup {
@@ -651,7 +651,7 @@
   border: none !important;
   box-shadow: none !important;
   background: transparent !important;
-  margin-bottom: 16px !important;
+  margin-bottom: 8px !important;
 }
 
 .statementBlock:hover {

@@ -244,13 +244,13 @@ export default function Home() {
                 id={`page-${page.id}`}
                 style={{ 
                   background: 'var(--f-surface)', 
-                  padding: viewport === 'mobile' ? '24px 16px' : '40px', 
+                  padding: viewport === 'mobile' ? '20px 12px' : '32px', 
                   borderRadius: 'var(--f-radius-xl)',
                   boxShadow: 'var(--f-shadow-premium)',
                   border: '1px solid var(--f-border)',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: viewport === 'mobile' ? '24px' : '32px'
+                  gap: viewport === 'mobile' ? '16px' : '20px'
                 }}
               >
                 {page.blocks.map((block: any) => (
@@ -283,13 +283,13 @@ export default function Home() {
                   onClick={() => { if (!isRemoved && activePageId !== page.id) setActivePageId(page.id); }}
                   style={{ 
                     background: 'var(--f-surface)', 
-                    padding: viewport === 'mobile' ? '24px 16px' : '40px', 
+                    padding: viewport === 'mobile' ? '20px 12px' : '32px', 
                     borderRadius: 'var(--f-radius-xl)',
                     boxShadow: 'var(--f-shadow-premium)',
-                    minHeight: '200px',
+                    minHeight: '160px',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: viewport === 'mobile' ? '24px' : '32px',
+                    gap: viewport === 'mobile' ? '16px' : '20px',
                     border: isRemoved ? '2px dashed #EF4444' : (isAdded ? '2px solid #22C55E' : (isReviewMode ? '2px solid #e2e8f0' : '1px solid var(--f-border)')),
                     opacity: isRemoved ? 0.6 : (isActive ? 1 : 0.7),
                     pointerEvents: isRemoved ? 'none' : 'auto'
@@ -328,12 +328,12 @@ export default function Home() {
                   id={`page-${page.id}`}
                   style={{ 
                     background: 'var(--f-surface)', 
-                    padding: viewport === 'mobile' ? '24px 16px' : '40px', 
+                    padding: viewport === 'mobile' ? '16px 12px' : '24px', 
                     borderRadius: 'var(--f-radius-xl)',
                     boxShadow: 'var(--f-shadow-premium)',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: viewport === 'mobile' ? '24px' : '32px',
+                    gap: viewport === 'mobile' ? '16px' : '20px',
                     border: isRemoved ? '2px dashed #EF4444' : (isAdded ? '2px solid #22C55E' : (isReviewMode ? '2px solid #e2e8f0' : '1px solid var(--f-border)')),
                     opacity: isRemoved ? 0.6 : 0.7
                   }}
