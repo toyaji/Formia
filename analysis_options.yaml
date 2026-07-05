@@ -1,0 +1,24 @@
+include: package:flutter_lints/flutter.yaml
+
+linter:
+  rules:
+    # House-style: keep default flutter_lints ruleset for now.
+    # Individual packages/apps may add package-local overrides.
+
+analyzer:
+  exclude:
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+    - build/**
+
+# Plugins can only be declared at the pub-workspace root (Dart 3.12 native
+# workspaces). jaspr_lints is used by apps/public_form; declared here so it
+# applies workspace-wide without erroring in the nested package's own
+# analysis_options.yaml.
+plugins:
+  jaspr_lints:
+    version: ^0.7.1
+    diagnostics:
+      prefer_html_components: true
+      sort_children_last: true
+      styles_ordering: true

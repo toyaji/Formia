@@ -1,0 +1,50 @@
+name: Dart / Flutter CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "packages/**"
+      - "apps/**"
+      - "pubspec.yaml"
+      - "analysis_options.yaml"
+      - ".github/workflows/dart_ci.yml"
+  pull_request:
+    paths:
+      - "packages/**"
+      - "apps/**"
+      - "pubspec.yaml"
+      - "analysis_options.yaml"
+      - ".github/workflows/dart_ci.yml"
+
+jobs:
+  analyze-and-test:
+    name: Analyze & test (melos)
+    # analyze/test/web build은 macOS 불필요 → ubuntu로 CI 절약.
+    # macOS 데스크톱 build 검증은 릴리스 단계(Phase 7)에서 별도 job으로 추가.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.44.1
+
+      - name: Activate Melos
+        run: dart pub global activate melos 8.1.0
+
+      - name: Add pub cache bin to PATH
+        run: echo "$HOME/.pub-cache/bin" >> "$GITHUB_PATH"
+
+      - name: melos bootstrap
+        run: melos bootstrap
+
+      - name: melos run analyze
+        run: melos run analyze --no-select
+
+      - name: melos run test (pure Dart packages)
+        run: melos run test --no-select
+
+      - name: melos run test:flutter (Flutter apps)
+        run: melos run test:flutter --no-select

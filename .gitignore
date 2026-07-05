@@ -45,3 +45,15 @@ next-env.d.ts
 /src/generated/prisma/
 *.db
 *.db-journal
+
+# Dart / Flutter / Melos monorepo (packages/, apps/)
+.dart_tool/
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock
+pubspec_overrides.yaml
+.idea/
+*.iml
+**/build/
+.melos_tool/

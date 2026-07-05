@@ -1,0 +1,39 @@
+name: formia_workspace
+publish_to: none
+
+environment:
+  sdk: ^3.12.0
+
+workspace:
+  - packages/formia_core
+  - packages/form_factor
+  - packages/formia_data
+  - apps/editor
+  - apps/public_form
+
+dev_dependencies:
+  melos: ^8.1.0
+
+melos:
+  scripts:
+    analyze:
+      description: Run static analysis across all packages and apps.
+      exec: dart analyze --fatal-infos .
+      packageFilters:
+        dirExists: lib
+
+    test:
+      description: >-
+        Run tests for pure-Dart packages that have a test directory.
+      exec: dart test
+      packageFilters:
+        dirExists: test
+        flutter: false
+
+    test:flutter:
+      description: >-
+        Run tests for Flutter packages/apps that have a test directory.
+      exec: flutter test
+      packageFilters:
+        dirExists: test
+        flutter: true
