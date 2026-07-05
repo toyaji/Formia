@@ -1,0 +1,22 @@
+name: form_factor
+description: >-
+  Pure Dart domain package for the Formia Form Factor model, validation,
+  migration, commands, and logic evaluation. No Flutter/DB/network deps.
+version: 0.0.1
+publish_to: none
+
+environment:
+  sdk: ^3.12.0
+
+resolution: workspace
+
+dependencies:
+  formia_core:
+    path: ../formia_core
+  meta: ^1.15.0
+  collection: ^1.19.0
+  uuid: ^4.5.0
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.25.0
