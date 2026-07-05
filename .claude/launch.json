@@ -1,0 +1,14 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "editor-web",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "export PATH=\"/Users/paul/projects/flutter/bin:$HOME/.pub-cache/bin:$PATH\" && cd apps/editor && flutter run -d chrome --web-port 5173"
+      ],
+      "port": 5173
+    }
+  ]
+}

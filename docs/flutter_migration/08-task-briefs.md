@@ -97,3 +97,13 @@
   - 1.4 무손실 마이그레이터: migration/migrator.dart. v2→v3, options→ChoiceOption, 미매핑 필드→`MigrationWarning` 격리(무손실), 실 v2 defaultForm 라운드트립. 테스트 4.
   - 견고화: `FormFactor.fromJson`이 `Map<dynamic,dynamic>`(hive 로컬 draft 경로) 정규화.
   - ⚠️ 이 세션 백그라운드 서브에이전트는 정확히 600s 스트리밍 워치독으로 반복 중단(인프라). 직접 구현으로 진행 중.
+- **Phase 4: ✅ 완료·검증(2026-07-05)**. 로그인→대시보드→빌더 최소 루프(02 문서대로 provider 분리, God-Store 없음). 커밋 안 함(로컬).
+  - `apps/editor` 의존성: `flutter_riverpod`·`go_router`·`supabase_flutter`·`hive`/`hive_flutter`·`uuid`·`google_fonts`(+ `flutter_localizations`/`intl` l10n).
+  - Providers: `authControllerProvider`(Supabase 세션, plain Notifier) · `formRepositoryProvider`(로그인→`SupabaseFormRepository`, 게스트→신규 `LocalDraftRepository`) · `formDocumentControllerProvider`(family, `DocHistory` 래핑 execute/undo/redo) · `persistenceControllerProvider`(family, 900ms 디바운스 저장 + saveStatus) · `editorSelectionProvider`(activePageId/activeBlockId/viewport/previewMode, 이력에 안 들어감) · `formsListControllerProvider`(AsyncNotifier, 대시보드 CRUD).
+  - `LocalDraftRepository`(`apps/editor/lib/repository/`): Hive(웹 IndexedDB) 기반 게스트 `FormRepository` 구현. 데스크톱 `DesktopFileRepository`/`HybridRepository`는 아직 미구현(Phase 3에서 넘어온 잔여 항목, 데스크톱 타깃 착수 시 추가 필요).
+  - UI: `ui/auth`(로그인, 게스트 진입) · `ui/dashboard`(목록/생성/삭제 + 게스트 복원 프롬프트) · `ui/builder`(페이지 네비·`BlockView(mode:edit|preview)` 8블록 타입·ReorderableListView DnD·undo/redo·뷰포트 토글·라이브 프리뷰) · `ui/shared/restore_draft_prompt.dart`.
+  - i18n: `l10n.yaml` + `lib/l10n/app_{ko,en}.arb`(UI 문구, 기본 로케일 ko) + `domain_messages.dart`(도메인 `code`+`params` → 한국어 매핑, UI 소유 원칙 01 §7).
+  - AddPageCommand 등 페이지 CRUD는 범위 밖(05 문서에 "페이지 네비"만 명시, 페이지 추가/삭제는 없음) — `blank_form.dart`가 시작/질문 1/종료 3페이지로 새 폼을 생성.
+  - **디자인**: 처음엔 기본 Material 테마로 구현했으나 사용자 피드백으로 레거시 React 앱(`src/styles/tokens.css`, `Dashboard.module.css`, `login.module.css`)의 색상·타이포·형태 토큰을 확인 후 `theme.dart`에 Flutter-네이티브 방식(ColorScheme/컴포넌트 테마)으로 이식(CSS 그대로 베끼지 않음). Primary `#3B82F6`, 배경 `#F6F9FF`, 텍스트 `#1E293B`/`#64748B`, 보더 `#E2E8F0`, 버튼 radius 8/카드 12, `google_fonts` Noto Sans KR(Pretendard 대체), 그라디언트 "Formia" 워드마크(`FormiaWordmark`).
+  - 검증: `melos run analyze` 전패키지 0 이슈, `melos run test`/`test:flutter` 통과. `flutter run -d chrome`로 실제 골든 패스 수동 확인 — 게스트 대시보드→새 폼 생성→빌더(페이지 네비·블록 추가·인라인 편집 카드 렌더)→새로고침 시 복원 프롬프트 표시→"이어서 편집"으로 동일 폼 재진입(Hive 영속 확인). 자동화 한계: CanvasKit 텍스트필드에 대한 DOM 레벨 키 입력 시뮬레이션은 preview 툴 환경에서 안정적으로 재현되지 않아(hidden input 값은 갱신되나 캔버스 리페인트 미확인) 실제 타이핑 결과는 수동 확인 권장. undo/redo·페이지 불변식은 `form_factor` 유닛 테스트(43개)로 별도 검증됨.
+  - **다음: Phase 5(에이전틱 AI 폼 빌더) 또는 데스크톱 리포지토리 보강.**
