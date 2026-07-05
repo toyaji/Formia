@@ -92,6 +92,25 @@ create table public.user_secrets (
   primary key (user_id, provider)
 );
 
+-- ═══ Ownership helpers (security definer to avoid cross-table RLS grants) ══
+-- Policies that reference other tables would otherwise require the caller to
+-- hold privileges on those tables. These definer helpers check ownership as
+-- the owner, so policies stay simple and don't leak grants.
+create or replace function public.owns_form(p_form_id uuid)
+returns boolean language sql security definer stable set search_path = '' as $$
+  select exists (
+    select 1 from public.forms f
+    where f.id = p_form_id and f.owner_id = auth.uid());
+$$;
+
+create or replace function public.owns_session(p_session_id uuid)
+returns boolean language sql security definer stable set search_path = '' as $$
+  select exists (
+    select 1 from public.chat_sessions s
+    join public.forms f on f.id = s.form_id
+    where s.id = p_session_id and f.owner_id = auth.uid());
+$$;
+
 -- ═══ Row Level Security ════════════════════════════════════════════════════
 alter table public.profiles      enable row level security;
 alter table public.forms         enable row level security;
@@ -111,13 +130,8 @@ create policy forms_owner_rw on public.forms
 
 -- deployments: owner manages; anyone may read a published deployment row
 create policy deployments_owner_rw on public.deployments
-  for all using (
-    exists (select 1 from public.forms f
-            where f.id = deployments.form_id and f.owner_id = auth.uid())
-  ) with check (
-    exists (select 1 from public.forms f
-            where f.id = deployments.form_id and f.owner_id = auth.uid())
-  );
+  for all using (public.owns_form(form_id))
+  with check (public.owns_form(form_id));
 create policy deployments_public_read on public.deployments
   for select using (status = 'published');
 
@@ -125,32 +139,15 @@ create policy deployments_public_read on public.deployments
 -- Public submissions go through the `submit-response` edge function
 -- (service role) which adds rate limiting / size / bot checks (03 §2, §5).
 create policy responses_owner_read on public.responses
-  for select using (
-    exists (select 1 from public.forms f
-            where f.id = responses.form_id and f.owner_id = auth.uid())
-  );
+  for select using (public.owns_form(form_id));
 
 -- chat: owner of the parent form only
 create policy chat_sessions_owner on public.chat_sessions
-  for all using (
-    exists (select 1 from public.forms f
-            where f.id = chat_sessions.form_id and f.owner_id = auth.uid())
-  ) with check (
-    exists (select 1 from public.forms f
-            where f.id = chat_sessions.form_id and f.owner_id = auth.uid())
-  );
+  for all using (public.owns_form(form_id))
+  with check (public.owns_form(form_id));
 create policy chat_messages_owner on public.chat_messages
-  for all using (
-    exists (select 1
-            from public.chat_sessions s
-            join public.forms f on f.id = s.form_id
-            where s.id = chat_messages.session_id and f.owner_id = auth.uid())
-  ) with check (
-    exists (select 1
-            from public.chat_sessions s
-            join public.forms f on f.id = s.form_id
-            where s.id = chat_messages.session_id and f.owner_id = auth.uid())
-  );
+  for all using (public.owns_session(session_id))
+  with check (public.owns_session(session_id));
 
 -- user_secrets: self only (plaintext never stored here anyway)
 create policy user_secrets_self on public.user_secrets
@@ -159,7 +156,13 @@ create policy user_secrets_self on public.user_secrets
 -- ═══ Table privileges (RLS filters rows; GRANT enables access at all) ══════
 -- RLS without a matching GRANT denies everything, so grant the base privileges
 -- to the API roles and let the policies above do row-level filtering.
-grant usage on schema public to anon, authenticated;
+grant usage on schema public to anon, authenticated, service_role;
+
+-- service_role (edge functions) bypasses RLS but still needs base table grants.
+grant select, insert, update, delete on
+  public.forms, public.deployments, public.responses,
+  public.chat_sessions, public.chat_messages, public.profiles, public.user_secrets
+  to service_role;
 
 grant select, insert, update, delete on public.forms         to authenticated;
 grant select, insert, update, delete on public.deployments   to authenticated;
