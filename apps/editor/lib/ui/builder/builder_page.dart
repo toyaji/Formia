@@ -6,9 +6,12 @@ import 'package:uuid/uuid.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../l10n/domain_messages.dart';
+import '../../providers/agent_controller.dart';
 import '../../providers/editor_selection_provider.dart';
 import '../../providers/form_document_controller.dart';
 import '../../providers/persistence_controller.dart';
+import '../../theme.dart';
+import '../ai_panel/ai_chat_panel.dart';
 import 'block_view.dart';
 
 const _uuid = Uuid();
@@ -36,19 +39,29 @@ BlockContent _defaultContentFor(String type) => switch (type) {
       _ => const TextContent(label: '질문'),
     };
 
-class BuilderPage extends ConsumerWidget {
+class BuilderPage extends ConsumerStatefulWidget {
   const BuilderPage({super.key, required this.formId});
 
   final String formId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<BuilderPage> createState() => _BuilderPageState();
+}
+
+class _BuilderPageState extends ConsumerState<BuilderPage> {
+  bool _aiPanelOpen = false;
+
+  String get formId => widget.formId;
+
+  @override
+  Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
     final docState = ref.watch(formDocumentControllerProvider(formId));
     final controller = ref.read(formDocumentControllerProvider(formId).notifier);
     final selection = ref.watch(editorSelectionProvider);
     final selectionController = ref.read(editorSelectionProvider.notifier);
     final saveStatus = ref.watch(persistenceControllerProvider(formId));
+    final agentLocked = ref.watch(agentControllerProvider(formId).select((s) => s.isLocked));
 
     if (docState.loading || docState.doc == null) {
       if (docState.error != null) {
@@ -87,6 +100,11 @@ class BuilderPage extends ConsumerWidget {
             icon: Icon(selection.previewMode ? Icons.edit : Icons.visibility),
             onPressed: selectionController.togglePreview,
           ),
+          IconButton(
+            tooltip: t.aiPanelTitle,
+            icon: Icon(Icons.auto_awesome, color: _aiPanelOpen ? Theme.of(context).colorScheme.primary : null),
+            onPressed: () => setState(() => _aiPanelOpen = !_aiPanelOpen),
+          ),
           const SizedBox(width: 8),
         ],
       ),
@@ -109,28 +127,54 @@ class BuilderPage extends ConsumerWidget {
                     content: Text(_errorMessage(docState.error)),
                     actions: [TextButton(onPressed: () {}, child: const Text('OK'))],
                   ),
+                if (agentLocked)
+                  Container(
+                    width: double.infinity,
+                    color: const Color(0xFFF6F9FF),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Center(
+                      child: Text(t.aiTurnLocked, style: const TextStyle(fontSize: 12, color: FormiaColors.primary)),
+                    ),
+                  ),
                 Expanded(
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        maxWidth: selection.viewport == EditorViewport.mobile ? 390 : 720,
+                  child: IgnorePointer(
+                    ignoring: agentLocked,
+                    child: Opacity(
+                      opacity: agentLocked ? 0.6 : 1,
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: selection.viewport == EditorViewport.mobile ? 390 : 720,
+                          ),
+                          child: selection.previewMode
+                              ? _PreviewCanvas(page: activePage)
+                              : _EditCanvas(
+                                  formId: formId,
+                                  page: activePage,
+                                  selectedBlockId: selection.activeBlockId,
+                                  controller: controller,
+                                  selectionController: selectionController,
+                                ),
+                        ),
                       ),
-                      child: selection.previewMode
-                          ? _PreviewCanvas(page: activePage)
-                          : _EditCanvas(
-                              formId: formId,
-                              page: activePage,
-                              selectedBlockId: selection.activeBlockId,
-                              controller: controller,
-                              selectionController: selectionController,
-                            ),
                     ),
                   ),
                 ),
-                if (!selection.previewMode) _AddBlockToolbar(pageId: activePage.id, controller: controller),
+                if (!selection.previewMode)
+                  IgnorePointer(
+                    ignoring: agentLocked,
+                    child: Opacity(
+                      opacity: agentLocked ? 0.6 : 1,
+                      child: _AddBlockToolbar(pageId: activePage.id, controller: controller),
+                    ),
+                  ),
               ],
             ),
           ),
+          if (_aiPanelOpen) ...[
+            const VerticalDivider(width: 1),
+            SizedBox(width: 340, child: AiChatPanel(formId: formId)),
+          ],
         ],
       ),
     );

@@ -6,6 +6,7 @@
 library;
 
 export 'src/agent/client_dartantic_agent.dart';
+export 'src/agent/tool_catalog.dart';
 export 'src/exceptions.dart';
 export 'src/ports/agent_port.dart';
 export 'src/ports/form_repository.dart';

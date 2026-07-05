@@ -409,6 +409,90 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'오류가 발생했습니다'**
   String get genericError;
+
+  /// No description provided for @aiPanelTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'AI 도우미'**
+  String get aiPanelTitle;
+
+  /// No description provided for @aiKeySettings.
+  ///
+  /// In ko, this message translates to:
+  /// **'AI 키 설정'**
+  String get aiKeySettings;
+
+  /// No description provided for @aiKeyDialogTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'Gemini API 키'**
+  String get aiKeyDialogTitle;
+
+  /// No description provided for @aiKeyDialogBody.
+  ///
+  /// In ko, this message translates to:
+  /// **'게스트 키는 저희 서버를 거치지 않고 Gemini에 직접 전달됩니다.'**
+  String get aiKeyDialogBody;
+
+  /// No description provided for @aiKeyHint.
+  ///
+  /// In ko, this message translates to:
+  /// **'API 키를 입력하세요'**
+  String get aiKeyHint;
+
+  /// No description provided for @aiKeySave.
+  ///
+  /// In ko, this message translates to:
+  /// **'저장'**
+  String get aiKeySave;
+
+  /// No description provided for @aiKeyClear.
+  ///
+  /// In ko, this message translates to:
+  /// **'키 삭제'**
+  String get aiKeyClear;
+
+  /// No description provided for @aiSend.
+  ///
+  /// In ko, this message translates to:
+  /// **'보내기'**
+  String get aiSend;
+
+  /// No description provided for @aiInputHint.
+  ///
+  /// In ko, this message translates to:
+  /// **'무엇을 만들고 싶으세요?'**
+  String get aiInputHint;
+
+  /// No description provided for @aiPendingReviewTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'AI가 제안한 변경'**
+  String get aiPendingReviewTitle;
+
+  /// No description provided for @aiAccept.
+  ///
+  /// In ko, this message translates to:
+  /// **'적용'**
+  String get aiAccept;
+
+  /// No description provided for @aiReject.
+  ///
+  /// In ko, this message translates to:
+  /// **'거절'**
+  String get aiReject;
+
+  /// No description provided for @aiTurnLocked.
+  ///
+  /// In ko, this message translates to:
+  /// **'AI가 작업 중입니다…'**
+  String get aiTurnLocked;
+
+  /// No description provided for @aiEmptyState.
+  ///
+  /// In ko, this message translates to:
+  /// **'AI에게 폼 만들기를 요청해 보세요.'**
+  String get aiEmptyState;
 }
 
 class _AppLocalizationsDelegate

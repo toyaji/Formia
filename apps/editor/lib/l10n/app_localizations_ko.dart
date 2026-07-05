@@ -163,4 +163,46 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get genericError => '오류가 발생했습니다';
+
+  @override
+  String get aiPanelTitle => 'AI 도우미';
+
+  @override
+  String get aiKeySettings => 'AI 키 설정';
+
+  @override
+  String get aiKeyDialogTitle => 'Gemini API 키';
+
+  @override
+  String get aiKeyDialogBody => '게스트 키는 저희 서버를 거치지 않고 Gemini에 직접 전달됩니다.';
+
+  @override
+  String get aiKeyHint => 'API 키를 입력하세요';
+
+  @override
+  String get aiKeySave => '저장';
+
+  @override
+  String get aiKeyClear => '키 삭제';
+
+  @override
+  String get aiSend => '보내기';
+
+  @override
+  String get aiInputHint => '무엇을 만들고 싶으세요?';
+
+  @override
+  String get aiPendingReviewTitle => 'AI가 제안한 변경';
+
+  @override
+  String get aiAccept => '적용';
+
+  @override
+  String get aiReject => '거절';
+
+  @override
+  String get aiTurnLocked => 'AI가 작업 중입니다…';
+
+  @override
+  String get aiEmptyState => 'AI에게 폼 만들기를 요청해 보세요.';
 }

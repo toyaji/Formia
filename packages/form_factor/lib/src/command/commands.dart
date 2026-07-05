@@ -10,6 +10,7 @@ import '../model/block.dart';
 import '../model/block_content.dart';
 import '../model/form_factor.dart';
 import '../model/exceptions.dart';
+import '../model/page.dart';
 import '../model/theme.dart';
 
 enum CommandAuthor { human, ai }
@@ -209,6 +210,50 @@ final class ReorderPageCommand extends FormCommand {
     final page = pages.removeAt(from);
     pages.insert(toIndex.clamp(0, pages.length), page);
     // FormFactor constructor re-checks invariants (start first / ending last).
+    return doc.copyWith(pages: pages);
+  }
+}
+
+final class AddPageCommand extends FormCommand {
+  const AddPageCommand({
+    required this.page,
+    this.index,
+    required super.meta,
+  });
+
+  final FormPage page;
+
+  /// Insertion index; defaults to just before the trailing ending page(s)
+  /// (i.e. `pages.length - 1`), since appending after the last page would
+  /// violate the "last page is an ending" invariant.
+  final int? index;
+
+  @override
+  FormFactor apply(FormFactor doc) {
+    final pages = [...doc.pages];
+    final at = (index ?? pages.length - 1).clamp(0, pages.length);
+    pages.insert(at, page);
+    // FormFactor constructor re-checks invariants (unique ids, role ordering).
+    return doc.copyWith(pages: pages);
+  }
+}
+
+final class RemovePageCommand extends FormCommand {
+  const RemovePageCommand({required this.pageId, required super.meta});
+
+  final String pageId;
+
+  @override
+  FormFactor apply(FormFactor doc) {
+    final index = doc.pages.indexWhere((p) => p.id == pageId);
+    if (index < 0) {
+      throw FormFactorViolation('page.notFound', {'pageId': pageId});
+    }
+    if (doc.pages[index].locked) {
+      throw FormFactorViolation('page.locked', {'pageId': pageId});
+    }
+    final pages = [...doc.pages]..removeAt(index);
+    // FormFactor constructor re-checks invariants (e.g. at least one ending).
     return doc.copyWith(pages: pages);
   }
 }

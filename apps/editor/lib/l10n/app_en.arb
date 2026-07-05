@@ -51,5 +51,19 @@
   "acceptedTypes": "Accepted file types (comma-separated)",
   "infoBody": "Body",
   "loadError": "Failed to load form",
-  "genericError": "Something went wrong"
+  "genericError": "Something went wrong",
+  "aiPanelTitle": "AI assistant",
+  "aiKeySettings": "AI key settings",
+  "aiKeyDialogTitle": "Gemini API key",
+  "aiKeyDialogBody": "Your guest key goes directly to Gemini — it never passes through our servers.",
+  "aiKeyHint": "Enter your API key",
+  "aiKeySave": "Save",
+  "aiKeyClear": "Clear key",
+  "aiSend": "Send",
+  "aiInputHint": "What do you want to build?",
+  "aiPendingReviewTitle": "AI-proposed changes",
+  "aiAccept": "Accept",
+  "aiReject": "Reject",
+  "aiTurnLocked": "AI is working…",
+  "aiEmptyState": "Ask the AI to help build your form."
 }

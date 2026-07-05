@@ -164,4 +164,47 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get genericError => 'Something went wrong';
+
+  @override
+  String get aiPanelTitle => 'AI assistant';
+
+  @override
+  String get aiKeySettings => 'AI key settings';
+
+  @override
+  String get aiKeyDialogTitle => 'Gemini API key';
+
+  @override
+  String get aiKeyDialogBody =>
+      'Your guest key goes directly to Gemini — it never passes through our servers.';
+
+  @override
+  String get aiKeyHint => 'Enter your API key';
+
+  @override
+  String get aiKeySave => 'Save';
+
+  @override
+  String get aiKeyClear => 'Clear key';
+
+  @override
+  String get aiSend => 'Send';
+
+  @override
+  String get aiInputHint => 'What do you want to build?';
+
+  @override
+  String get aiPendingReviewTitle => 'AI-proposed changes';
+
+  @override
+  String get aiAccept => 'Accept';
+
+  @override
+  String get aiReject => 'Reject';
+
+  @override
+  String get aiTurnLocked => 'AI is working…';
+
+  @override
+  String get aiEmptyState => 'Ask the AI to help build your form.';
 }

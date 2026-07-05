@@ -4,6 +4,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app.dart';
+import 'providers/byok_key_provider.dart';
 
 /// Local-dev defaults for `supabase start` (see `supabase/config.toml`).
 /// Override with `--dart-define=SUPABASE_URL=...` / `SUPABASE_ANON_KEY=...`
@@ -24,6 +25,7 @@ const supabaseAnonKey = String.fromEnvironment(
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
+  await Hive.openBox<String>(ByokKeyController.boxName);
   await Supabase.initialize(url: supabaseUrl, publishableKey: supabaseAnonKey);
   runApp(const ProviderScope(child: FormiaEditorApp()));
 }

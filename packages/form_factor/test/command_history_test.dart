@@ -128,4 +128,52 @@ void main() {
     expect(h.canUndo, isFalse);
     expect(h.doc.toJson(), original);
   });
+
+  test('AddPageCommand inserts before the trailing ending; undo reverts', () {
+    var h = DocHistory(doc: baseFactor());
+    final before = h.doc.pages.length;
+
+    h = h.execute(AddPageCommand(
+      page: const FormPage(id: 'q2', role: PageRole.question, title: '2'),
+      meta: _meta,
+    ));
+    expect(h.doc.pages.length, before + 1);
+    expect(h.doc.pages[h.doc.pages.length - 2].id, 'q2');
+    expect(h.doc.pages.last.role, PageRole.ending); // invariant still holds
+
+    h = h.undo();
+    expect(h.doc.pages.length, before);
+  });
+
+  test('RemovePageCommand removes a question page; undo reverts', () {
+    var h = DocHistory(doc: baseFactor());
+    h = h.execute(RemovePageCommand(pageId: 'q1', meta: _meta));
+    expect(h.doc.pages.any((p) => p.id == 'q1'), isFalse);
+
+    h = h.undo();
+    expect(h.doc.pages.any((p) => p.id == 'q1'), isTrue);
+  });
+
+  test('RemovePageCommand refuses a locked page', () {
+    final h = DocHistory(doc: baseFactor());
+    expect(
+      () => h.execute(RemovePageCommand(pageId: 's', meta: _meta)),
+      throwsA(isA<FormFactorViolation>()),
+    );
+  });
+
+  test('RemovePageCommand refuses removing the only ending page', () {
+    final onlyEnding = FormFactor(
+      metadata: baseFactor().metadata,
+      pages: const [
+        FormPage(id: 's', role: PageRole.start, title: '시작', locked: true),
+        FormPage(id: 'e', role: PageRole.ending, title: '종료', locked: false),
+      ],
+    );
+    final h = DocHistory(doc: onlyEnding);
+    expect(
+      () => h.execute(RemovePageCommand(pageId: 'e', meta: _meta)),
+      throwsA(isA<FormFactorViolation>()),
+    );
+  });
 }
