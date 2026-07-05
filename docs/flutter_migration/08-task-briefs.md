@@ -72,8 +72,11 @@
 ## 실행 로그
 
 - **작업 브랜치**: `refactor/flutter-migration` (단계별 커밋, push는 아직 안 함 → CI 미트리거).
-- **Phase 2 DB 계층: ✅ 완료·검증·커밋(2026-07-05)**. `supabase init` + `migrations/*_init_schema.sql`(스키마·RLS·GRANT·`get_public_form` RPC). 로컬 `supabase start`(Docker) 적용 성공 + `supabase/tests/rls_test.sql` **RLS TESTS PASSED**(비소유자 차단·anon forms 직접읽기 차단·anon 응답 insert 차단·공개폼 RPC 접근). 로컬 스택 실행 중.
-  - 다음(Phase 2 잔여): Edge Functions `llm-proxy`(provider-aware, gemini-2.5-flash native, allowlist·쿼터) + `submit-response`(published 검증·크기상한·IP 레이트리밋). `supabase functions serve`로 로컬 테스트.
+- **Phase 2 전체: ✅ 완료·검증·커밋·푸시(2026-07-05)**.
+  - DB: `init_schema`(스키마·RLS·GRANT·`get_public_form` RPC) + `rate_limits`(hit_rate_limit RPC). RLS는 `owns_form()`/`owns_session()` security-definer 헬퍼로 cross-table 참조 제거, service_role GRANT 포함. `rls_test.sql` 통과.
+  - Edge Functions: `submit-response`(크기상한·per-IP 레이트리밋·published 검증·service_role insert) + `llm-proxy`(모델 allowlist·per-caller 쿼터·Gemini native 포워딩·키 서버전용). 로컬 검증: 제출 200+row, 미발행 404, 레이트리밋 429, llm-proxy 200(candidates)·미허용모델 403.
+  - 브랜치 `refactor/flutter-migration` 커밋 8개 push 완료.
+  - **다음: Phase 3(formia_data — Ports + Supabase/AgentPort Dart 구현).**
 
 - **0.1 스캐폴딩: ✅ 완료(2026-07-05)**. Melos 8 + pub workspaces. `packages/formia_core`(Result), `form_factor`, `formia_data` + `apps/editor`(flutter web+macos), `apps/public_form`(jaspr). `melos run analyze` 이슈 0, 테스트 통과, `flutter build web`·`jaspr build` 성공. 커밋 안 함(로컬).
   - 주의(Melos 8): `melos.yaml` 없음 → 설정은 root `pubspec.yaml`의 `melos:` 키. `test`(dart)/`test:flutter`(flutter) 분리. `melos run <s>`는 `--no-select` 필요(비대화형). CI는 ubuntu-latest.
