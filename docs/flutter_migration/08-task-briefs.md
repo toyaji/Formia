@@ -76,7 +76,11 @@
   - DB: `init_schema`(스키마·RLS·GRANT·`get_public_form` RPC) + `rate_limits`(hit_rate_limit RPC). RLS는 `owns_form()`/`owns_session()` security-definer 헬퍼로 cross-table 참조 제거, service_role GRANT 포함. `rls_test.sql` 통과.
   - Edge Functions: `submit-response`(크기상한·per-IP 레이트리밋·published 검증·service_role insert) + `llm-proxy`(모델 allowlist·per-caller 쿼터·Gemini native 포워딩·키 서버전용). 로컬 검증: 제출 200+row, 미발행 404, 레이트리밋 429, llm-proxy 200(candidates)·미허용모델 403.
   - 브랜치 `refactor/flutter-migration` 커밋 8개 push 완료.
-  - **다음: Phase 3(formia_data — Ports + Supabase/AgentPort Dart 구현).**
+- **Phase 3: ✅ 대부분 완료·검증(2026-07-05)**.
+  - Port 인터페이스(FormRepository/ResponseRepository/AgentPort, Result 반환) + `SupabaseFormRepository`(로컬 통합 테스트 통과)·`SupabaseResponseRepository`(submit-response 경유)·`ClientDartanticAgent`(dartantic, 툴↔AgentEvent 스트림).
+  - **AI 발견**: dartantic Google 구현이 절대 URL이라 커스텀 baseUrl 프록시 라우팅 불가(→ 07 §2 노트). **게스트/클라이언트-키**는 직결로 검증됨(테스트 통과). **로그인/Vault 키**는 서버측 AgentPort 루프로 이관(Phase 후속).
+  - 남은 것: 게스트 `LocalDraftRepository`(hive)·데스크톱 `DesktopFileRepository`(dart:io)·`HybridRepository`는 플랫폼 특화라 Phase 4(에디터)에서 구현.
+  - **다음: Phase 4(에디터 앱 핵심 — 인증·대시보드·빌더·영속성).**
 
 - **0.1 스캐폴딩: ✅ 완료(2026-07-05)**. Melos 8 + pub workspaces. `packages/formia_core`(Result), `form_factor`, `formia_data` + `apps/editor`(flutter web+macos), `apps/public_form`(jaspr). `melos run analyze` 이슈 0, 테스트 통과, `flutter build web`·`jaspr build` 성공. 커밋 안 함(로컬).
   - 주의(Melos 8): `melos.yaml` 없음 → 설정은 root `pubspec.yaml`의 `melos:` 키. `test`(dart)/`test:flutter`(flutter) 분리. `melos run <s>`는 `--no-select` 필요(비대화형). CI는 ubuntu-latest.

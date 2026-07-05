@@ -5,6 +5,7 @@
 /// form_factor + formia_core (no UI). See docs/flutter_migration/02, 03, 07.
 library;
 
+export 'src/agent/client_dartantic_agent.dart';
 export 'src/exceptions.dart';
 export 'src/ports/agent_port.dart';
 export 'src/ports/form_repository.dart';

@@ -17,6 +17,7 @@ dependencies:
     path: ../form_factor
   supabase: ^2.6.0
   dartantic_ai: ^2.2.2
+  json_schema: ^5.2.0
 
 dev_dependencies:
   lints: ^6.0.0

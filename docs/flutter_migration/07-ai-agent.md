@@ -45,7 +45,12 @@
 - **최소 인프라**: 별도 상시 에이전트 서버 불필요. ADK류 회피.
 - **UX**: 클라이언트 루프라 툴 결과를 캔버스에 즉시 반영·스트리밍(인라인 생성 UI).
 
-> **⚠️ provider-aware 프록시 (dumb passthrough 아님)**: 초기 설계는 "OpenAI 호환 패스스루"였으나, **Gemini의 OpenAI 호환 엔드포인트는 스트리밍+툴콜 동시 사용 시 알려진 버그**가 있다([근거](https://discuss.ai.google.dev/t/gemini-openai-compatibility-issue-with-tool-call-streaming/59886)). 따라서 프록시는 provider별 **native function-calling API**(Gemini native, OpenAI, Anthropic)로 변환·호출한다. dartantic는 provider별 native 구현을 제공하므로, 프록시는 dartantic가 만든 요청을 받아 키를 주입하고 해당 provider native 엔드포인트로 포워딩한다. "얇으니 안전"이 아니라 **적대적 클라이언트를 가정하고 검증하는** 게이트웨이다(§6).
+> **⚠️ provider-aware 프록시 (dumb passthrough 아님)**: 초기 설계는 "OpenAI 호환 패스스루"였으나, **Gemini의 OpenAI 호환 엔드포인트는 스트리밍+툴콜 동시 사용 시 알려진 버그**가 있다([근거](https://discuss.ai.google.dev/t/gemini-openai-compatibility-issue-with-tool-call-streaming/59886)). 따라서 프록시는 provider별 **native function-calling API**(Gemini native, OpenAI, Anthropic)로 변환·호출한다. "얇으니 안전"이 아니라 **적대적 클라이언트를 가정하고 검증하는** 게이트웨이다(§6).
+
+> **⚠️ 구현 발견(2026-07-05, Phase 3b): 로그인 사용자는 클라이언트 루프를 프록시로 못 돌린다.** dartantic의 Google 구현이 내부적으로 **절대 URL**로 요청을 만들어(`baseUrl.resolveUri(absoluteUrl)=absoluteUrl`), GoogleProvider에 커스텀 `baseUrl`을 줘도 무시되고 Gemini로 직행한다(키는 `x-goog-api-key` 헤더). 커스텀 http.Client 주입 구멍도 공개 API에 없음. **결론**:
+> - **게스트 / 클라이언트-보유 키**: `ClientDartanticAgent`가 자기 키로 Gemini 직결(프록시 불필요). ✅ 검증됨(Phase 0.3 스파이크 + Phase 3b 테스트).
+> - **로그인 / Vault 키(서버 전용)**: 클라이언트 루프 프록시화 불가 → **서버측 AgentPort 루프**(Dart Frog/Cloud Run에서 dartantic 실행, §7 fallback)로 처리. 별도 구현으로 이관.
+> `llm-proxy`(모델 allowlist·쿼터·키주입 게이트)는 유효하며, 서버측 루프 또는 향후 방식에서 재사용한다.
 
 ## 3. AgentPort 추상화 (루프 위치 교체 가능)
 

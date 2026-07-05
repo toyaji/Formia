@@ -70,8 +70,12 @@ Deno.serve(async (req) => {
   const key = Deno.env.get("GEMINI_API_KEY");
   if (!key) return err("no_api_key", 401);
 
-  // Forward to Gemini's NATIVE endpoint with the key injected.
-  const target = `${GEMINI_BASE}${path}${url.search ? url.search + "&" : "?"}key=${key}`;
+  // Forward to Gemini's NATIVE endpoint with the key injected. Strip any
+  // client-supplied `key` (a placeholder from dartantic) and set the real one.
+  const params = new URLSearchParams(url.search);
+  params.delete("key");
+  params.set("key", key);
+  const target = `${GEMINI_BASE}${path}?${params.toString()}`;
   const upstream = await fetch(target, {
     method: "POST",
     headers: { "content-type": "application/json" },
