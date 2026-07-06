@@ -57,3 +57,10 @@ pubspec_overrides.yaml
 *.iml
 **/build/
 .melos_tool/
+
+# One-time legacy import script output (may contain user emails)
+supabase/scripts/import_report_*.json
+
+# Code-signing private keys — never commit
+*.p12
+*.pfx

@@ -10,6 +10,7 @@ workspace:
   - packages/formia_data
   - apps/editor
   - apps/public_form
+  - supabase/scripts
 
 dev_dependencies:
   melos: ^8.1.0

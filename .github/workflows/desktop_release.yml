@@ -1,0 +1,156 @@
+name: Desktop release build
+
+# Phase 7 (docs/flutter_migration/05-migration-plan.md): produce macOS/Windows
+# desktop artifacts. Manual/tag-triggered only (not on every push) — desktop
+# builds are heavy and this repo avoids triggering CI per-commit.
+#
+# Unsigned by default. Signing/notarization steps only run once the secrets
+# below are configured — see docs/flutter_migration/09-desktop-release.md for
+# how to obtain and set them. Until then this workflow still produces working
+# (but Gatekeeper/SmartScreen-warned) artifacts.
+on:
+  workflow_dispatch: {}
+  push:
+    tags:
+      - "v*.*.*"
+
+env:
+  FLUTTER_VERSION: 3.44.1
+
+jobs:
+  build-macos:
+    name: macOS (.app)
+    runs-on: macos-latest
+    env:
+      APPLE_CERTIFICATE_P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
+      APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+      APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+
+      - name: Activate Melos
+        run: dart pub global activate melos 8.1.0
+      - name: Add pub cache bin to PATH
+        run: echo "$HOME/.pub-cache/bin" >> "$GITHUB_PATH"
+      - name: melos bootstrap
+        run: melos bootstrap
+
+      - name: flutter build macos
+        working-directory: apps/editor
+        run: flutter build macos --release
+
+      # ── Signing + notarization (skipped until secrets exist) ─────────────
+      - name: Import signing certificate
+        if: ${{ env.APPLE_CERTIFICATE_P12 != '' }}
+        run: |
+          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain"
+          KEYCHAIN_PASSWORD=$(uuidgen)
+          echo "$APPLE_CERTIFICATE_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN_PATH" -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH" login.keychain
+
+      - name: Codesign (Developer ID)
+        if: ${{ env.APPLE_CERTIFICATE_P12 != '' }}
+        run: |
+          codesign --deep --force --options runtime \
+            --entitlements apps/editor/macos/Runner/Release.entitlements \
+            --sign "$APPLE_SIGNING_IDENTITY" \
+            apps/editor/build/macos/Build/Products/Release/editor.app
+
+      - name: Notarize
+        if: ${{ env.APPLE_CERTIFICATE_P12 != '' }}
+        run: |
+          ditto -c -k --keepParent \
+            apps/editor/build/macos/Build/Products/Release/editor.app \
+            "$RUNNER_TEMP/editor-notarize.zip"
+          xcrun notarytool submit "$RUNNER_TEMP/editor-notarize.zip" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait
+          xcrun stapler staple apps/editor/build/macos/Build/Products/Release/editor.app
+
+      - name: Zip artifact
+        run: |
+          cd apps/editor/build/macos/Build/Products/Release
+          ditto -c -k --keepParent editor.app editor-macos.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: editor-macos
+          path: apps/editor/build/macos/Build/Products/Release/editor-macos.zip
+
+  build-windows:
+    name: Windows (.exe)
+    runs-on: windows-latest
+    env:
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+
+      - name: Activate Melos
+        run: dart pub global activate melos 8.1.0
+      - name: Add pub cache bin to PATH
+        run: echo "$env:USERPROFILE\AppData\Local\Pub\Cache\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      - name: melos bootstrap
+        run: melos bootstrap
+
+      - name: flutter build windows
+        working-directory: apps/editor
+        run: flutter build windows --release
+
+      # ── Signing (skipped until secrets exist) ─────────────────────────────
+      # Azure Trusted Signing (recommended: no physical HSM/token, cheap,
+      # Microsoft-hosted) — see docs/flutter_migration/09-desktop-release.md.
+      - name: Azure Trusted Signing
+        if: ${{ env.AZURE_TENANT_ID != '' }}
+        uses: azure/trusted-signing-action@v0.5.1
+        with:
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          endpoint: ${{ secrets.AZURE_TRUSTED_SIGNING_ENDPOINT }}
+          trusted-signing-account-name: ${{ secrets.AZURE_TRUSTED_SIGNING_ACCOUNT }}
+          certificate-profile-name: ${{ secrets.AZURE_CERT_PROFILE }}
+          files-folder: apps/editor/build/windows/x64/runner/Release
+          files-folder-filter: exe
+
+      - name: Zip artifact
+        run: Compress-Archive -Path apps\editor\build\windows\x64\runner\Release\* -DestinationPath editor-windows.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: editor-windows
+          path: editor-windows.zip
+
+  attach-to-release:
+    name: Attach artifacts to GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build-macos, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/editor-macos/editor-macos.zip
+            artifacts/editor-windows/editor-windows.zip
