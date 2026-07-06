@@ -6,7 +6,6 @@
 
 import 'package:jaspr/server.dart';
 import 'package:public_form/constants/theme.dart' as _theme;
-import 'package:public_form/pages/about.dart' as _about;
 import 'package:public_form/app.dart' as _app;
 
 /// Default [ServerOptions] for use with your Jaspr project.
@@ -28,9 +27,5 @@ import 'package:public_form/app.dart' as _app;
 ServerOptions get defaultServerOptions => ServerOptions(
   clientId: 'main.client.dart.js',
   clients: {_app.App: ClientTarget<_app.App>('app')},
-  styles: () => [
-    ..._theme.styles,
-    ..._app.AppState.styles,
-    ..._about.About.styles,
-  ],
+  styles: () => [..._theme.styles],
 );

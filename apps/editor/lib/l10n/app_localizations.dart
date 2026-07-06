@@ -493,6 +493,96 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'AI에게 폼 만들기를 요청해 보세요.'**
   String get aiEmptyState;
+
+  /// No description provided for @publish.
+  ///
+  /// In ko, this message translates to:
+  /// **'배포'**
+  String get publish;
+
+  /// No description provided for @unpublish.
+  ///
+  /// In ko, this message translates to:
+  /// **'배포 취소'**
+  String get unpublish;
+
+  /// No description provided for @publishedBadge.
+  ///
+  /// In ko, this message translates to:
+  /// **'게시됨'**
+  String get publishedBadge;
+
+  /// No description provided for @publicUrl.
+  ///
+  /// In ko, this message translates to:
+  /// **'공개 URL'**
+  String get publicUrl;
+
+  /// No description provided for @copyLink.
+  ///
+  /// In ko, this message translates to:
+  /// **'링크 복사'**
+  String get copyLink;
+
+  /// No description provided for @linkCopied.
+  ///
+  /// In ko, this message translates to:
+  /// **'링크가 복사되었습니다'**
+  String get linkCopied;
+
+  /// No description provided for @viewResponses.
+  ///
+  /// In ko, this message translates to:
+  /// **'응답 보기'**
+  String get viewResponses;
+
+  /// No description provided for @responsesTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'응답'**
+  String get responsesTitle;
+
+  /// No description provided for @exportCsv.
+  ///
+  /// In ko, this message translates to:
+  /// **'CSV 내보내기'**
+  String get exportCsv;
+
+  /// No description provided for @csvCopiedToClipboard.
+  ///
+  /// In ko, this message translates to:
+  /// **'CSV가 클립보드에 복사되었습니다'**
+  String get csvCopiedToClipboard;
+
+  /// No description provided for @noResponses.
+  ///
+  /// In ko, this message translates to:
+  /// **'아직 응답이 없습니다.'**
+  String get noResponses;
+
+  /// No description provided for @totalResponses.
+  ///
+  /// In ko, this message translates to:
+  /// **'총 응답 수'**
+  String get totalResponses;
+
+  /// No description provided for @distributionTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'문항별 응답 분포'**
+  String get distributionTitle;
+
+  /// No description provided for @submittedAt.
+  ///
+  /// In ko, this message translates to:
+  /// **'제출 시각'**
+  String get submittedAt;
+
+  /// No description provided for @guestCannotPublish.
+  ///
+  /// In ko, this message translates to:
+  /// **'게스트 폼은 배포할 수 없습니다. 먼저 로그인하세요.'**
+  String get guestCannotPublish;
 }
 
 class _AppLocalizationsDelegate

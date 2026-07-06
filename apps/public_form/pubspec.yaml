@@ -10,8 +10,14 @@ resolution: workspace
 
 dependencies:
   jaspr: ^0.23.1
+  jaspr_router: ^0.8.2
   form_factor:
     path: ../../packages/form_factor
+  formia_core:
+    path: ../../packages/formia_core
+  formia_data:
+    path: ../../packages/formia_data
+  supabase: ^2.6.0
 
 dev_dependencies:
   build_runner: ^2.10.0

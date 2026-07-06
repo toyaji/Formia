@@ -20,6 +20,8 @@ class DeploymentInfo {
   const DeploymentInfo({required this.status, this.shortId});
   final String status;
   final String? shortId;
+
+  bool get isPublished => status == 'published' && shortId != null;
 }
 
 /// The editor's only view of persistence. Implementations (Supabase, local

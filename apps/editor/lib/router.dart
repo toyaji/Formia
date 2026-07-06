@@ -6,6 +6,7 @@ import 'providers/auth_controller.dart';
 import 'ui/auth/login_page.dart';
 import 'ui/builder/builder_page.dart';
 import 'ui/dashboard/dashboard_page.dart';
+import 'ui/responses/response_list_page.dart';
 
 /// Formia is guest-first (02 §5) — there is no forced login gate. `/login` is
 /// reachable from the dashboard to upgrade a guest session; everything else
@@ -45,6 +46,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'editor',
         builder: (context, state) =>
             BuilderPage(formId: state.pathParameters['formId']!),
+      ),
+      GoRoute(
+        path: '/editor/:formId/responses',
+        name: 'responses',
+        builder: (context, state) =>
+            ResponseListPage(formId: state.pathParameters['formId']!),
       ),
     ],
   );

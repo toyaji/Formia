@@ -36,4 +36,27 @@ class SupabaseResponseRepository implements ResponseRepository {
       return Result.error(DataException('submit_failed', cause: e));
     }
   }
+
+  @override
+  Future<Result<List<ResponseRecord>>> list(String formId) async {
+    try {
+      final rows = await _client
+          .from('responses')
+          .select('id, data, metadata, submitted_at')
+          .eq('form_id', formId)
+          .order('submitted_at', ascending: false);
+      final records = (rows as List).map((r) {
+        final m = r as Map<String, dynamic>;
+        return ResponseRecord(
+          id: m['id'] as String,
+          data: (m['data'] as Map).cast<String, Object?>(),
+          metadata: (m['metadata'] as Map?)?.cast<String, Object?>(),
+          submittedAt: DateTime.parse(m['submitted_at'] as String),
+        );
+      }).toList();
+      return Result.ok(records);
+    } on Object catch (e) {
+      return Result.error(DataException('list_responses_failed', cause: e));
+    }
+  }
 }

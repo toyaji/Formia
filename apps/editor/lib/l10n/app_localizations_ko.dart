@@ -205,4 +205,49 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get aiEmptyState => 'AI에게 폼 만들기를 요청해 보세요.';
+
+  @override
+  String get publish => '배포';
+
+  @override
+  String get unpublish => '배포 취소';
+
+  @override
+  String get publishedBadge => '게시됨';
+
+  @override
+  String get publicUrl => '공개 URL';
+
+  @override
+  String get copyLink => '링크 복사';
+
+  @override
+  String get linkCopied => '링크가 복사되었습니다';
+
+  @override
+  String get viewResponses => '응답 보기';
+
+  @override
+  String get responsesTitle => '응답';
+
+  @override
+  String get exportCsv => 'CSV 내보내기';
+
+  @override
+  String get csvCopiedToClipboard => 'CSV가 클립보드에 복사되었습니다';
+
+  @override
+  String get noResponses => '아직 응답이 없습니다.';
+
+  @override
+  String get totalResponses => '총 응답 수';
+
+  @override
+  String get distributionTitle => '문항별 응답 분포';
+
+  @override
+  String get submittedAt => '제출 시각';
+
+  @override
+  String get guestCannotPublish => '게스트 폼은 배포할 수 없습니다. 먼저 로그인하세요.';
 }

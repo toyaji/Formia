@@ -9,6 +9,15 @@
         "export PATH=\"/Users/paul/projects/flutter/bin:$HOME/.pub-cache/bin:$PATH\" && cd apps/editor && flutter run -d chrome --web-port 5173"
       ],
       "port": 5173
+    },
+    {
+      "name": "public-form",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "export PATH=\"/Users/paul/projects/flutter/bin:$HOME/.pub-cache/bin:$PATH\" && cd apps/public_form && jaspr serve --port 8080"
+      ],
+      "port": 8080
     }
   ]
 }

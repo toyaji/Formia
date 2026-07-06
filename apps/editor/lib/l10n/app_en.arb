@@ -65,5 +65,20 @@
   "aiAccept": "Accept",
   "aiReject": "Reject",
   "aiTurnLocked": "AI is working…",
-  "aiEmptyState": "Ask the AI to help build your form."
+  "aiEmptyState": "Ask the AI to help build your form.",
+  "publish": "Publish",
+  "unpublish": "Unpublish",
+  "publishedBadge": "Published",
+  "publicUrl": "Public URL",
+  "copyLink": "Copy link",
+  "linkCopied": "Link copied",
+  "viewResponses": "View responses",
+  "responsesTitle": "Responses",
+  "exportCsv": "Export CSV",
+  "csvCopiedToClipboard": "CSV copied to clipboard",
+  "noResponses": "No responses yet.",
+  "totalResponses": "Total responses",
+  "distributionTitle": "Per-question distribution",
+  "submittedAt": "Submitted at",
+  "guestCannotPublish": "Guest forms can't be published. Sign in first."
 }

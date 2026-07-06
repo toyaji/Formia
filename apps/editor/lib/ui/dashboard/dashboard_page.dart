@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:formia_core/formia_core.dart';
+import 'package:formia_data/formia_data.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../providers/auth_controller.dart';
+import '../../providers/deployment_provider.dart';
 import '../../providers/forms_list_controller.dart';
 import '../../repository/local_draft_repository.dart';
 import '../../theme.dart';
@@ -116,31 +120,64 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                           style: TextStyle(color: FormiaColors.textMuted, fontSize: 12),
                         ),
                         onTap: () => context.push('/editor/${form.id}'),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete_outline),
-                          tooltip: t.deleteForm,
-                          onPressed: () async {
-                            final confirmed = await showDialog<bool>(
-                              context: context,
-                              builder: (context) => AlertDialog(
-                                title: Text(t.deleteForm),
-                                content: Text(t.deleteFormConfirm),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.of(context).pop(false),
-                                    child: Text(t.cancel),
-                                  ),
-                                  FilledButton(
-                                    onPressed: () => Navigator.of(context).pop(true),
-                                    child: Text(t.confirm),
-                                  ),
-                                ],
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (form.deployment?.isPublished ?? false) ...[
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: FormiaColors.successBg,
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Text(
+                                  t.publishedBadge,
+                                  style: const TextStyle(fontSize: 11, color: FormiaColors.success, fontWeight: FontWeight.w700),
+                                ),
                               ),
-                            );
-                            if (confirmed == true) {
-                              await ref.read(formsListControllerProvider.notifier).delete(form.id);
-                            }
-                          },
+                              IconButton(
+                                tooltip: t.copyLink,
+                                icon: const Icon(Icons.link),
+                                onPressed: () => _copyLink(context, form.deployment!.shortId!),
+                              ),
+                              IconButton(
+                                tooltip: t.viewResponses,
+                                icon: const Icon(Icons.bar_chart_outlined),
+                                onPressed: () => context.push('/editor/${form.id}/responses'),
+                              ),
+                            ],
+                            IconButton(
+                              tooltip: (form.deployment?.isPublished ?? false) ? t.unpublish : t.publish,
+                              icon: Icon((form.deployment?.isPublished ?? false) ? Icons.public_off : Icons.public),
+                              onPressed: () => _togglePublish(context, ref, form),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline),
+                              tooltip: t.deleteForm,
+                              onPressed: () async {
+                                final confirmed = await showDialog<bool>(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: Text(t.deleteForm),
+                                    content: Text(t.deleteFormConfirm),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.of(context).pop(false),
+                                        child: Text(t.cancel),
+                                      ),
+                                      FilledButton(
+                                        onPressed: () => Navigator.of(context).pop(true),
+                                        child: Text(t.confirm),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                                if (confirmed == true) {
+                                  await ref.read(formsListControllerProvider.notifier).delete(form.id);
+                                }
+                              },
+                            ),
+                          ],
                         ),
                       );
                     },
@@ -152,5 +189,31 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         },
       ),
     );
+  }
+
+  Future<void> _togglePublish(BuildContext context, WidgetRef ref, FormInfo form) async {
+    final t = AppLocalizations.of(context)!;
+    final repo = ref.read(deploymentRepositoryProvider);
+    if (repo == null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t.guestCannotPublish)));
+      return;
+    }
+    final isPublished = form.deployment?.isPublished ?? false;
+    final result = isPublished ? await repo.unpublish(form.id) : await repo.publish(form.id);
+    if (!context.mounted) return;
+    if (result is Error) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${t.genericError}: ${result.error}')));
+      return;
+    }
+    await ref.read(formsListControllerProvider.notifier).refresh();
+    if (!isPublished && result is Ok<DeploymentStatus> && context.mounted) {
+      _copyLink(context, result.value.shortId!);
+    }
+  }
+
+  void _copyLink(BuildContext context, String shortId) {
+    final t = AppLocalizations.of(context)!;
+    Clipboard.setData(ClipboardData(text: publicFormUrl(shortId)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t.linkCopied)));
   }
 }

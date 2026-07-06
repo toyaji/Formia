@@ -207,4 +207,50 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aiEmptyState => 'Ask the AI to help build your form.';
+
+  @override
+  String get publish => 'Publish';
+
+  @override
+  String get unpublish => 'Unpublish';
+
+  @override
+  String get publishedBadge => 'Published';
+
+  @override
+  String get publicUrl => 'Public URL';
+
+  @override
+  String get copyLink => 'Copy link';
+
+  @override
+  String get linkCopied => 'Link copied';
+
+  @override
+  String get viewResponses => 'View responses';
+
+  @override
+  String get responsesTitle => 'Responses';
+
+  @override
+  String get exportCsv => 'Export CSV';
+
+  @override
+  String get csvCopiedToClipboard => 'CSV copied to clipboard';
+
+  @override
+  String get noResponses => 'No responses yet.';
+
+  @override
+  String get totalResponses => 'Total responses';
+
+  @override
+  String get distributionTitle => 'Per-question distribution';
+
+  @override
+  String get submittedAt => 'Submitted at';
+
+  @override
+  String get guestCannotPublish =>
+      'Guest forms can\'t be published. Sign in first.';
 }
